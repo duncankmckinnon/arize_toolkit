@@ -1,5 +1,5 @@
 import pytest
-from arize_api.types import (
+from arize_toolkit.types import (
     PerformanceMetric,
     ComparisonOperator,
     MonitorCategory,

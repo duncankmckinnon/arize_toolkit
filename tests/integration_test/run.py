@@ -1,8 +1,8 @@
 import os
 from dotenv import load_dotenv
-from arize_api.client import Client
-from arize_api.model_managers import MonitorManager
-from arize_api.models import DriftMonitor, DataQualityMonitor, PerformanceMonitor
+from arize_toolkit import Client
+from arize_toolkit.model_managers import MonitorManager
+from arize_toolkit.models import DriftMonitor, DataQualityMonitor, PerformanceMonitor
 
 
 # Integration test for the Arize API
@@ -19,7 +19,7 @@ load_dotenv()
 
 def run_integration_tests():
     # Retrieve environment variables
-    arize_api_key = os.getenv("ARIZE_API_KEY")
+    arize_developer_key = os.getenv("ARIZE_DEVELOPER_KEY")
     organization = os.getenv("ORGANIZATION_NAME")
     space = os.getenv("SPACE_NAME")
     model_name = None
@@ -27,7 +27,7 @@ def run_integration_tests():
     client = Client(
         organization=organization,
         space=space,
-        arize_api_key=arize_api_key,
+        arize_developer_key=arize_developer_key,
         sleep_time=5,
     )
 

@@ -5,10 +5,10 @@ from gql import Client as GraphQLClient
 from gql.transport.requests import RequestsHTTPTransport
 import logging
 import os
-from arize_api.exceptions import ArizeAPIException
-from arize_api.model_managers import MonitorManager
-from arize_api.queries.space_queries import OrgIDandSpaceIDQuery
-from arize_api.queries.model_queries import (
+from arize_toolkit.exceptions import ArizeAPIException
+from arize_toolkit.model_managers import MonitorManager
+from arize_toolkit.queries.space_queries import OrgIDandSpaceIDQuery
+from arize_toolkit.queries.model_queries import (
     GetAllModelsQuery,
     GetModelQuery,
     GetModelByIDQuery,
@@ -16,7 +16,7 @@ from arize_api.queries.model_queries import (
     GetPerformanceMetricValuesQuery,
     DeleteDataMutation,
 )
-from arize_api.queries.language_models import (
+from arize_toolkit.queries.language_models import (
     CreateAnnotationMutation,
     GetPromptByIDQuery,
     GetPromptQuery,
@@ -27,7 +27,7 @@ from arize_api.queries.language_models import (
     CreatePromptMutation,
     CreatePromptVersionMutation,
 )
-from arize_api.queries.custom_metric_queries import (
+from arize_toolkit.queries.custom_metric_queries import (
     GetAllCustomMetricsQuery,
     GetCustomMetricQuery,
     GetCustomMetricByIDQuery,
@@ -36,7 +36,7 @@ from arize_api.queries.custom_metric_queries import (
     UpdateCustomMetricMutation,
     GetAllCustomMetricsByModelIdQuery,
 )
-from arize_api.queries.monitor_queries import (
+from arize_toolkit.queries.monitor_queries import (
     GetAllModelMonitorsQuery,
     GetMonitorQuery,
     GetMonitorByIDQuery,
@@ -45,10 +45,10 @@ from arize_api.queries.monitor_queries import (
     CreateDataQualityMonitorMutation,
     DeleteMonitorMutation,
 )
-from arize_api.utils import parse_datetime, FormattedPrompt
+from arize_toolkit.utils import parse_datetime, FormattedPrompt
 from pandas import DataFrame
 
-logger = logging.getLogger("arize_api")
+logger = logging.getLogger("arize_toolkit")
 
 
 class Client:
@@ -57,10 +57,10 @@ class Client:
     Args:
         - `organization` (str): The Arize organization name
         - `space` (str): The Arize space name
-        - `arize_api_key` (Optional[str]): The API key. This can be copied from the space settings page in Arize.
+        - `arize_developer_key` (Optional[str]): The API key. This can be copied from the space settings page in Arize.
         - `arize_app_url` (Optional[str]): The URL of the Arize API (default for SaaS is https://app.arize.com). For on-prem deployments, this will need to be set to the URL of Arize app.
         - `sleep_time` (Optional[int]): The number of seconds to sleep between API requests (may be needed if rate limiting is an issue)
-    (Note: ARIZE_API_KEY environment variable can be set instead of passing in `arize_api_key`)
+    (Note: ARIZE_DEVELOPER_KEY environment variable can be set instead of passing in `arize_developer_key`)
 
     Properties:
         space (str): The Arize space name
@@ -79,7 +79,7 @@ class Client:
         self,
         organization: str,
         space: str,
-        arize_api_key: Optional[str] = None,
+        arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
     ):
@@ -87,11 +87,11 @@ class Client:
         self.space = space
         self.sleep_time = sleep_time
         self.arize_app_url = arize_app_url
-        arize_api_key = arize_api_key or os.getenv("ARIZE_API_KEY")
+        arize_developer_key = arize_developer_key or os.getenv("ARIZE_DEVELOPER_KEY")
         self._graphql_client = GraphQLClient(
             transport=RequestsHTTPTransport(
                 url=f"{self.arize_app_url}/graphql",
-                headers={"x-api-key": arize_api_key},
+                headers={"x-api-key": arize_developer_key},
             )
         )
         self._set_org_and_space_id()

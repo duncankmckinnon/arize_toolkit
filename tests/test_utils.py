@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from typing import Optional
-from arize_api.utils import parse_datetime, _convert_to_dict
+from arize_toolkit.utils import parse_datetime, _convert_to_dict
 from pydantic import BaseModel
 from enum import Enum
 import pytest

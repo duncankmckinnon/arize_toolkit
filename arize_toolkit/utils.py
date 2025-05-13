@@ -3,7 +3,7 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict
 from typing import Any, Mapping, Sequence, Type, Union, get_origin, get_args
 import inspect
-from arize_api.constants import MAX_RECURSION_DEPTH
+from arize_toolkit.constants import MAX_RECURSION_DEPTH
 from functools import singledispatch
 import re
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from arize_api.models import (
+from arize_toolkit.models import (
     Prompt,
     PromptVersion,
     LLMMessageInput,
@@ -11,12 +11,12 @@ from arize_api.models import (
     CreatePromptVersionMutationInput,
     CreatePromptMutationInput,
 )
-from arize_api.types import (
+from arize_toolkit.types import (
     PromptVersionInputVariableFormatEnum,
     LLMIntegrationProvider,
     ExternalLLMProviderModel,
 )
-from arize_api.utils import FormattedPrompt
+from arize_toolkit.utils import FormattedPrompt
 
 
 class TestPromptVersion:

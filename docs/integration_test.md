@@ -20,7 +20,7 @@ Install required dependencies:
 
 ```bash
 pip install python-dotenv
-pip install arize-api
+pip install arize-toolkit
 ```
 
 ## Running Tests

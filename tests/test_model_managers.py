@@ -1,14 +1,14 @@
 import pytest
 from datetime import datetime
-from arize_api.models import (
+from arize_toolkit.models import (
     Monitor,
     MonitorContact,
     Dimension,
     MetricWindow,
     ModelEnvironment,
 )
-from arize_api.model_managers import MonitorManager
-from arize_api.types import (
+from arize_toolkit.model_managers import MonitorManager
+from arize_toolkit.types import (
     MonitorCategory,
     PerformanceMetric,
     DataQualityMetric,

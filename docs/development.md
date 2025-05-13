@@ -1,3 +1,19 @@
+# Development Setup
+
+To set up a development environment for this project, firstrun the bootstrap script to create a named virtual environment:
+
+```bash
+sh ./bin/bootstrap.sh
+```
+
+Then activate the virtual environment:
+
+```bash
+source .venv/bin/activate
+```
+
+You're ready to develop! The virtual environment will be created in the `.venv` directory with the name "arize-toolkit-venv".
+
 # Development Patterns
 
 ## Base Classes Explained

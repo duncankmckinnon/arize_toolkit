@@ -1,11 +1,11 @@
 from typing import List, Optional, Tuple
-from arize_api.queries.basequery import (
+from arize_toolkit.queries.basequery import (
     ArizeAPIException,
     BaseQuery,
     BaseResponse,
     BaseVariables,
 )
-from arize_api.models import (
+from arize_toolkit.models import (
     AnnotationMutationInput,
     Prompt,
     PromptVersion,

@@ -1,11 +1,11 @@
 from typing import List, Tuple, Optional
-from arize_api.queries.basequery import (
+from arize_toolkit.queries.basequery import (
     BaseQuery,
     BaseResponse,
     BaseVariables,
     ArizeAPIException,
 )
-from arize_api.models import CustomMetric, CustomMetricInput
+from arize_toolkit.models import CustomMetric, CustomMetricInput
 
 
 class GetAllCustomMetricsByModelIdQuery(BaseQuery):

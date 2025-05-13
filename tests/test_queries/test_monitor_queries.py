@@ -1,4 +1,4 @@
-from arize_api.queries.monitor_queries import (
+from arize_toolkit.queries.monitor_queries import (
     CreateDriftMonitorMutation,
     CreateDataQualityMonitorMutation,
     CreatePerformanceMonitorMutation,
@@ -7,7 +7,7 @@ from arize_api.queries.monitor_queries import (
     DeleteMonitorMutation,
     GetMonitorByIDQuery,
 )
-from arize_api.types import (
+from arize_toolkit.types import (
     MonitorCategory,
     DimensionCategory,
     ComparisonOperator,
@@ -16,7 +16,7 @@ from arize_api.types import (
     PerformanceMetric,
 )
 
-from arize_api.models import DataQualityMonitor, PerformanceMonitor, DriftMonitor
+from arize_toolkit.models import DataQualityMonitor, PerformanceMonitor, DriftMonitor
 
 
 class TestGetMonitorQuery:

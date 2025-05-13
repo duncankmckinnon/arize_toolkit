@@ -1,11 +1,15 @@
-# Arize API Client
+# Arize Toolkit
 
-A Python client for interacting with the Arize API.
+A Python toolkit for interacting with Arize. This package is a collection of tools for building workflows that involve model monitoring and observability. The entrypoint for the toolkit is the `Client` class, which is used to interact with the Arize API.
+
+## DISCLAIMER
+
+* This package is not affiliated with Arize. It is a community-supported project developed and maintained by an Arize Engineer. *
 
 ## Installation
 
 ```bash
-pip install arize-api
+pip install arize-toolkit
 ```
 
 ## Quick Start
@@ -13,21 +17,21 @@ pip install arize-api
 ### Client Parameters
 - `organization`: Your organization name from the Arize UI
 - `space`: Your space name within the organization from the Arize UI
-- `arize_api_key`: API authentication token
+- `arize_developer_key`: API authentication token
   - Found in the Arize UI under `Settings > Space Settings and Keys > API Key`
-  - Can be provided directly or loaded from the `ARIZE_API_KEY` environment variable
+  - Can be provided directly or loaded from the `ARIZE_DEVELOPER_KEY` environment variable
 - `arize_app_url`: The URL of the Arize app (only needs to be set for on-prem deployments)
 - `sleep_time`: Optional delay between paginated requests (in seconds)
 
 #### Example: Initialize the client
 ```python
-from arize_api.client import Client
+from arize_toolkit import Client
 
 # Initialize the client
 client = Client(
     organization="your_org_name",
     space="your_space_name",
-    arize_api_key="your_arize_api_key",  # Or set ARIZE_API_KEY environment variable
+    arize_developer_key="your_arize_developer_key",  # Or set ARIZE_DEVELOPER_KEY environment variable
     arize_app_url = "https://app.arize.com", # The URL of the Arize app
     sleep_time = 0, # The sleep time between API requests
 )

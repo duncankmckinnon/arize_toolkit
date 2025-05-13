@@ -1,5 +1,5 @@
 import pytest
-from arize_api.queries.custom_metric_queries import (
+from arize_toolkit.queries.custom_metric_queries import (
     GetAllCustomMetricsQuery,
     GetCustomMetricQuery,
     GetCustomMetricByIDQuery,

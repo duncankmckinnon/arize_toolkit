@@ -1,14 +1,14 @@
 from datetime import datetime
 from typing import List, Literal, Tuple, Optional
-from arize_api.queries.basequery import (
+from arize_toolkit.queries.basequery import (
     ArizeAPIException,
     BaseQuery,
     BaseResponse,
     BaseVariables,
 )
-from arize_api.models import Model
+from arize_toolkit.models import Model
 
-from arize_api.types import ModelEnvironment, PerformanceMetric, DataGranularity
+from arize_toolkit.types import ModelEnvironment, PerformanceMetric, DataGranularity
 from pydantic import Field
 
 

@@ -1,4 +1,4 @@
-from arize_api.models import (
+from arize_toolkit.models import (
     Monitor,
     MonitorDetailedType,
     PerformanceMonitor,
@@ -10,7 +10,7 @@ from arize_api.models import (
 )
 from typing import List
 
-from arize_api.models import DynamicAutoThreshold
+from arize_toolkit.models import DynamicAutoThreshold
 
 
 class MonitorManager:

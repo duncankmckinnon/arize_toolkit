@@ -1,8 +1,8 @@
 from time import sleep
 from typing import Optional, List, Tuple
 from gql import gql, Client as GraphQLClient
-from arize_api.exceptions import ArizeAPIException
-from arize_api.utils import Dictable
+from arize_toolkit.exceptions import ArizeAPIException
+from arize_toolkit.utils import Dictable
 
 
 class BaseVariables(Dictable):

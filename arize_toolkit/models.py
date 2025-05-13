@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional, Literal, Union, Dict, Any
 from pydantic import Field, model_validator
 
-from arize_api.types import (
+from arize_toolkit.types import (
     MonitorCategory,
     PerformanceMetric,
     ModelType,
@@ -16,7 +16,7 @@ from arize_api.types import (
     LLMIntegrationProvider,
     ExternalLLMProviderModel,
 )
-from arize_api.utils import GraphQLModel, FormattedPrompt
+from arize_toolkit.utils import GraphQLModel, FormattedPrompt
 
 #### Common GraphQL Models ####
 
@@ -238,6 +238,12 @@ class LLMMessageInput(GraphQLModel):
     toolCallId: Optional[str] = Field(default=None)
 
 
+class ToolChoiceTool(GraphQLModel):
+    tool: ToolInput
+
+class ToolChoiceChoice(GraphQLModel):
+    choice: Literal["auto", "none", "required"]
+
 class ToolChoiceInput(GraphQLModel):
     choice: Optional[Literal["auto", "none", "required"]] = Field(default=None)
     tool: Optional[ToolInput] = Field(default=None)
@@ -280,9 +286,6 @@ class PromptVersion(GraphQLModel):
     )
     inputVariableFormat: PromptVersionInputVariableFormatEnum = Field(
         description="The input variable format for determining prompt variables in the messages"
-    )
-    toolChoice: Optional[str] = Field(
-        default=None, description="The selected tool/function call"
     )
     toolCalls: Optional[List[Dict[str, Any]]] = Field(
         default=None,

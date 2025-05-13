@@ -1,5 +1,5 @@
 import pytest
-from arize_api.queries.model_queries import (
+from arize_toolkit.queries.model_queries import (
     GetAllModelsQuery,
     GetModelQuery,
     GetModelVolumeQuery,

@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch
-from arize_api.client import Client
-from arize_api.queries.basequery import ArizeAPIException
+from arize_toolkit.client import Client
+from arize_toolkit.queries.basequery import ArizeAPIException
 
 
 @pytest.fixture
 def mock_graphql_client():
     """Create a mock GraphQL client"""
-    with patch("arize_api.client.GraphQLClient") as mock_client:
+    with patch("arize_toolkit.client.GraphQLClient") as mock_client:
         # Mock the initial org/space lookup response
         mock_client.return_value.execute.return_value = {
             "account": {

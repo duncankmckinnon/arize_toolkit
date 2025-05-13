@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from arize_api.queries.language_models import (
+from arize_toolkit.queries.language_models import (
     CreateAnnotationMutation,
     GetPromptByIDQuery,
     GetPromptQuery,
@@ -10,14 +10,14 @@ from arize_api.queries.language_models import (
     CreatePromptMutation,
     CreatePromptVersionMutation,
 )
-from arize_api.types import (
+from arize_toolkit.types import (
     PromptVersionInputVariableFormatEnum,
     LLMIntegrationProvider,
     ExternalLLMProviderModel,
 )
 import pytest
 
-from arize_api.exceptions import ArizeAPIException
+from arize_toolkit.exceptions import ArizeAPIException
 
 
 @pytest.fixture

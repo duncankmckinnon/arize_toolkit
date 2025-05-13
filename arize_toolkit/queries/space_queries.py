@@ -1,5 +1,5 @@
 from typing import List, Optional, Tuple
-from arize_api.queries.basequery import (
+from arize_toolkit.queries.basequery import (
     ArizeAPIException,
     BaseQuery,
     BaseResponse,
