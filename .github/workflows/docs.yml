@@ -5,7 +5,6 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
       - 'docs_site/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
@@ -28,12 +27,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install mkdocs-material
       
-      - name: Copy docs to MkDocs directory
-        run: |
-          mkdir -p docs_site/docs
-          cp docs/*.md docs_site/docs/
-      
       - name: Deploy docs
         run: |
-          cd docs_site
-          mkdocs gh-deploy --force --config-file ../mkdocs.yml 
+          mkdocs gh-deploy --force 
