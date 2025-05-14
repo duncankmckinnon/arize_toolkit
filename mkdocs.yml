@@ -4,6 +4,7 @@ site_url: https://duncankmckinnon.github.io/arize_toolkit
 repo_url: https://github.com/duncankmckinnon/arize_toolkit
 repo_name: arize_toolkit
 docs_dir: docs_site/docs
+site_dir: site
 
 theme:
   name: material
