@@ -19,8 +19,8 @@ theme:
 
 nav:
   - Home: index.md
-  - Development: development.md
-  - Integration Tests: integration_test.md
+  - Development: developers/development.md
+  - Integration Tests: developers/integration_test.md
 
 markdown_extensions:
   - pymdownx.highlight

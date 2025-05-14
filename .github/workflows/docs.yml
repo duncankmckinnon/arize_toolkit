@@ -8,6 +8,13 @@ on:
       - 'docs_site/**'
       - 'mkdocs.yml'
       - '.github/workflows/docs.yml'
+  workflow_dispatch:  # Allow manual triggering
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
@@ -27,6 +34,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install mkdocs-material
       
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
       - name: Deploy docs
         run: |
-          mkdocs gh-deploy --force 
+          mkdocs gh-deploy --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
