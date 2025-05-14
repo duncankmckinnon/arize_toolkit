@@ -20,6 +20,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Model Operations: model_operations.md
   - Development: developers/development.md
   - Integration Tests: developers/integration_test.md
 
