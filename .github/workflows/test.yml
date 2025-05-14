@@ -31,10 +31,111 @@ jobs:
       run: |
         poetry install --with dev
     
-    - name: Run tests
+    - name: Run tests (Python < 3.12)
+      if: ${{ matrix.python-version != '3.12' }}
+      id: test-lower-versions
+      continue-on-error: true
       run: |
-        poetry run pytest -v --continue-on-collection-errors || echo "::warning::Tests failed but continuing workflow"
+        poetry run pytest -v --continue-on-collection-errors
+        echo "status=$?" >> $GITHUB_OUTPUT
+        
+    - name: Run tests (Python 3.12)
+      if: ${{ matrix.python-version == '3.12' }}
+      id: test-py312
+      continue-on-error: true
+      run: |
+        # Remove snapshottest from dependencies for Python 3.12
+        poetry remove snapshottest
+        # Run tests with plugin loading disabled for problematic plugins
+        poetry run pytest -v --continue-on-collection-errors -p no:snapshottest
+        echo "status=$?" >> $GITHUB_OUTPUT
     
     - name: Run type checking
+      id: type-check
+      continue-on-error: true
       run: |
-        poetry run mypy arize_toolkit || echo "Type checking failed but continuing" 
+        poetry run mypy arize_toolkit
+        echo "status=$?" >> $GITHUB_OUTPUT
+        
+    - name: Record test results
+      id: record-results
+      run: |
+        if [[ "${{ matrix.python-version }}" != "3.12" ]]; then
+          TEST_STATUS="${{ steps.test-lower-versions.outputs.status }}"
+        else
+          TEST_STATUS="${{ steps.test-py312.outputs.status }}"
+        fi
+        TYPE_CHECK_STATUS="${{ steps.type-check.outputs.status }}"
+        
+        if [[ "$TEST_STATUS" != "0" ]]; then
+          echo "::warning::Tests failed on Python ${{ matrix.python-version }}"
+        fi
+        if [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
+          echo "::warning::Type checking failed on Python ${{ matrix.python-version }}"
+        fi
+        
+        echo "test_status=$TEST_STATUS" >> $GITHUB_STEP_SUMMARY
+        echo "type_check_status=$TYPE_CHECK_STATUS" >> $GITHUB_STEP_SUMMARY
+        echo "python_version=${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+        
+        # Create artifacts for final step
+        mkdir -p test_results
+        echo "{\"test_status\": $TEST_STATUS, \"type_check_status\": $TYPE_CHECK_STATUS}" > test_results/python-${{ matrix.python-version }}.json
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}
+        path: test_results/
+        retention-days: 1
+  
+  summarize:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v3
+        with:
+          path: test_results
+      
+      - name: Analyze test results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Version | Tests | Type Checking |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------------|-------|---------------|" >> $GITHUB_STEP_SUMMARY
+          
+          FAILED=false
+          
+          for version in "3.9" "3.10" "3.11" "3.12"; do
+            JSON_FILE="test_results/test-results-$version/python-$version.json"
+            
+            if [ -f "$JSON_FILE" ]; then
+              TEST_STATUS=$(jq -r '.test_status' < "$JSON_FILE")
+              TYPE_CHECK_STATUS=$(jq -r '.type_check_status' < "$JSON_FILE")
+              
+              if [[ "$TEST_STATUS" != "0" ]]; then
+                TEST_RESULT="❌ Failed"
+                FAILED=true
+              else
+                TEST_RESULT="✅ Passed"
+              fi
+              
+              if [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
+                TYPE_CHECK_RESULT="❌ Failed"
+              else
+                TYPE_CHECK_RESULT="✅ Passed"
+              fi
+              
+              echo "| Python $version | $TEST_RESULT | $TYPE_CHECK_RESULT |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| Python $version | ⚠️ No Results | ⚠️ No Results |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          
+          if [[ "$FAILED" == "true" ]]; then
+            echo "::error::One or more test runs failed. See summary for details."
+            exit 1
+          else
+            echo "::notice::All tests completed successfully!"
+          fi

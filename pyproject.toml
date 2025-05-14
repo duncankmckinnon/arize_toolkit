@@ -32,7 +32,7 @@ pytest = "*"
 pytest-mock = "*"
 pytest-cov = "*"
 coverage = "*"
-snapshottest = "*"
+snapshottest = {version = "*", python = "<3.12"}
 mkdocs = "^1.4.0"
 mkdocs-material = "^9.0.0"
 
