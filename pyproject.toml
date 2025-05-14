@@ -34,6 +34,8 @@ pytest-mock = "*"
 pytest-cov = "*"
 coverage = "*"
 snapshottest = "*"
+mkdocs = "^1.4.0"
+mkdocs-material = "^9.0.0"
 
 [tool.poetry.group.integration.dependencies]
 python-dotenv = "*"

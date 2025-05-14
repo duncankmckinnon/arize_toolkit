@@ -9,7 +9,7 @@ This guide explains how to set up and run integration tests for the Arize API cl
 Create a `.env` file in the root directory with the following variables:
 
 ```bash
-ARIZE_API_KEY=your_api_key
+ARIZE_DEVELOPER_KEY=your_developer_key
 ORGANIZATION_NAME=your_organization
 SPACE_NAME=your_space_name
 ```
@@ -30,42 +30,64 @@ pip install arize-toolkit
 The simplest way to run integration tests is using the provided shell script:
 
 ```bash
-./bin/integration_test.sh
-```
-
-### Running Tests Manually
-
-You can also run the tests directly using Python:
-
-```bash
-python tests/integration_test/run.py
+sh bin/integration_test.sh
 ```
 
 ## Test Coverage
-
-The integration tests verify the following functionality:
 
 1. **Client Initialization**
    - Authenticates with API
    - Sets up organization and space context
 
-2. **Model Operations**
-   ```python
-   # Get all models in the space
-   models = client.get_all_models()
-   
-   # Get specific model details
-   model = client.get_model(model_name)
-   ```
+```python
+client = Client(
+    organization=os.getenv("ORGANIZATION_NAME"),
+    space=os.getenv("SPACE_NAME"),
+    arize_developer_key=os.getenv("ARIZE_DEVELOPER_KEY")
+)
+```
 
-3. **Monitor Operations**
+2. **Operations**
+
+   The integration tests should verify the following functionality for each set of operations:
+
+   - Get all objects 
+   -- For a list of objects, check that the response is a list
+   
+   - Select one of the objects listed and make sure the object can be retrieved by name and id
+   -- You can often test both of these by getting the object by name, so long as the get_object function first gets the object's id.
+
+   - Create an object
+   -- Use the name of the object and some other unique identifier to create a new identical object
+
+   - Update an object
+   -- Use the created object and add or change an attribute
+
+   - Delete an object
+   -- Use the created object and delete it by name
+
    ```python
    # Get all monitors for a model
-   monitors = client.get_all_monitors(model_id)
+   monitors = client.get_all_monitors(model_name)
    
+   # Get the name of the first monitor
+   monitor_name = monitors[0].name
+
    # Get specific monitor details
    monitor = client.get_monitor(monitor_name)
-   ```
+
+   # create a new monitor name
+   new_monitor_name = monitor_name + "_new"
+
+   # Create a new monitor
+   new_monitor_url = client.create_drift_monitor(new_monitor_name, ...)
+
+   # Update the new monitor
+   updated_monitor_url = client.update_monitor(new_monitor_name, ...)
+
+   # Delete the new monitor
+   monitor_deleted = client.delete_monitor(new_monitor_name)
+```
 
 ## Test Structure
 

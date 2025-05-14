@@ -217,4 +217,4 @@ new_monitor_url = client.copy_monitor("my_monitor_name", "my_model_name", "new_m
 ```
 
 ## Development
-For information about extending the client's architecture and development patterns, see [development docs](docs/development.md).
+For information about extending the client's architecture and development patterns, see [Development](docs_site/docs/development.md).
