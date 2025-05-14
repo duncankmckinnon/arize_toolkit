@@ -2,9 +2,9 @@
 
 A Python toolkit for interacting with Arize. This package is a collection of tools for building workflows that involve model monitoring and observability. The entrypoint for the toolkit is the `Client` class, which is used to interact with the Arize API.
 
-## DISCLAIMER
-
-* This package is not affiliated with Arize. It is a community-supported project developed and maintained by an Arize Engineer. *
+## Disclaimer
+Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
+It is a community-supported project developed and maintained by an Arize Engineer.
 
 ## Installation
 
