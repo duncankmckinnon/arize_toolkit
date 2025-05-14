@@ -40,7 +40,6 @@ def mock_prompt():
             }
         ],
         "inputVariableFormat": "f_string",
-        "toolChoice": "test",
         "toolCalls": [
             {
                 "id": "123",
@@ -251,7 +250,6 @@ class TestGetPromptByIDQuery:
         assert (
             result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         )
-        assert result.toolChoice == "test"
         assert result.toolCalls == [
             {
                 "id": "123",
@@ -295,7 +293,6 @@ class TestGetPromptQuery:
         assert (
             result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         )
-        assert result.toolChoice == "test"
         assert result.toolCalls == [
             {
                 "id": "123",
