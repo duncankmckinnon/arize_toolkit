@@ -38,13 +38,28 @@ jobs:
         poetry build
         poetry publish
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Upload release assets
+      uses: actions/upload-artifact@v4
       with:
-        files: |
+        name: distribution-packages
+        path: |
           dist/*.tar.gz
           dist/*.whl
-        generate_release_notes: true
+
+    - name: Create release notes
+      id: release_notes
+      if: startsWith(github.ref, 'refs/tags/')
+      run: |
+        # Extract tag name
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        # Generate simple release notes if needed
+        echo "Generated release for $TAG_NAME" > release_notes.md
+        echo "Version $(git describe --tags --abbrev=0)" >> release_notes.md
+        
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Use GitHub CLI to create release with assets
+        gh release create "${GITHUB_REF#refs/tags/}" ./dist/*.tar.gz ./dist/*.whl --notes-file release_notes.md --generate-notes 
