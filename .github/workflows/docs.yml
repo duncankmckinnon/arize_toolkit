@@ -1,4 +1,4 @@
-name: Publish docs
+name: Deploy docs to GitHub Pages
 
 on:
   push:
@@ -7,73 +7,46 @@ on:
     paths:
       - 'docs_site/**'
       - 'mkdocs.yml'
-      - '.github/workflows/docs.yml'
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
       
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
-      - name: Debug directory structure
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in docs_site directory:"
-          ls -la docs_site || echo "docs_site directory not found"
-          echo "Files in docs_site/docs directory:"
-          ls -la docs_site/docs || echo "docs_site/docs directory not found"
-          echo "Content of mkdocs.yml:"
-          cat mkdocs.yml
-      
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install mkdocs-material
+        run: pip install mkdocs-material
       
-      - name: Configure Git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Build with MkDocs
+        run: mkdocs build
       
-      - name: Build docs (debug)
-        run: |
-          mkdocs build --verbose
-          echo "Built site files:"
-          ls -la site/
-      
-      - name: Deploy docs
-        run: |
-          # Use custom deploy to be more explicit
-          # Create gh-pages branch if it doesn't exist
-          git checkout -B gh-pages
-          
-          # Remove existing files
-          rm -rf ./* || true
-          
-          # Copy built website files
-          cp -r site/* ./
-          
-          # Add .nojekyll file to prevent GitHub Pages from processing with Jekyll
-          touch .nojekyll
-          
-          # Add all files, commit and push
-          git add -A
-          git commit -m "Deploy documentation updates" || echo "No changes to commit"
-          git push -f origin gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2 
