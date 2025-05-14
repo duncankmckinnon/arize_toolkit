@@ -1,3 +1,7 @@
+[![Tests](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml)
+[![Documentation](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml)
+[![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
+
 # Arize Toolkit
 
 A Python toolkit for interacting with Arize. This package is a collection of tools for building workflows that involve model monitoring and observability. The entrypoint for the toolkit is the `Client` class, which is used to interact with the Arize API.
