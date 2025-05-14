@@ -2,17 +2,17 @@
 name = "arize_toolkit"
 version = "0.1.0"  # Replace with your version
 description = "A library to interact with Arize AI APIs"
-authors = ["Arize AI <support@arize.com>"]
-license = "BSD"
+authors = [{ name = "Duncan McKinnon" }]
+license = "MIT"
 readme = "README.md"
 homepage = "https://www.arize.com"
-keywords = ["arize"]
+keywords = ["arize", "observability", "monitoring", "graphql"]
 classifiers = [
-    "Development Status :: 1 - Planning",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: GraphQL",
