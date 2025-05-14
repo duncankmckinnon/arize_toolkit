@@ -15,8 +15,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: System :: GraphQL",
-    "Topic :: System :: Monitoring"
 ]
 
 [tool.poetry.dependencies]
