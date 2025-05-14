@@ -80,7 +80,8 @@ jobs:
         
         # Create artifacts for final step
         mkdir -p test_results
-        echo "{\"test_status\": $TEST_STATUS, \"type_check_status\": $TYPE_CHECK_STATUS}" > test_results/python-${{ matrix.python-version }}.json
+        # Properly create the JSON file
+        echo "{\"test_status\": \"$TEST_STATUS\", \"type_check_status\": \"$TYPE_CHECK_STATUS\"}" > test_results/python-${{ matrix.python-version }}.json
         
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -111,17 +112,28 @@ jobs:
             JSON_FILE="test_results/test-results-$version/python-$version.json"
             
             if [ -f "$JSON_FILE" ]; then
-              TEST_STATUS=$(jq -r '.test_status' < "$JSON_FILE")
-              TYPE_CHECK_STATUS=$(jq -r '.type_check_status' < "$JSON_FILE")
+              # Debug the JSON content
+              echo "Content of $JSON_FILE:"
+              cat "$JSON_FILE"
               
-              if [[ "$TEST_STATUS" != "0" ]]; then
+              # Parse values more safely
+              TEST_STATUS=$(cat "$JSON_FILE" | jq -r '.test_status' 2>/dev/null || echo "error")
+              TYPE_CHECK_STATUS=$(cat "$JSON_FILE" | jq -r '.type_check_status' 2>/dev/null || echo "error")
+              
+              if [[ "$TEST_STATUS" == "error" ]]; then
+                echo "Error parsing test status from $JSON_FILE"
+                TEST_RESULT="⚠️ Parse Error"
+              elif [[ "$TEST_STATUS" != "0" ]]; then
                 TEST_RESULT="❌ Failed"
                 FAILED=true
               else
                 TEST_RESULT="✅ Passed"
               fi
               
-              if [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
+              if [[ "$TYPE_CHECK_STATUS" == "error" ]]; then
+                echo "Error parsing type check status from $JSON_FILE"
+                TYPE_CHECK_RESULT="⚠️ Parse Error"
+              elif [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
                 TYPE_CHECK_RESULT="❌ Failed"
               else
                 TYPE_CHECK_RESULT="✅ Passed"
@@ -129,6 +141,7 @@ jobs:
               
               echo "| Python $version | $TEST_RESULT | $TYPE_CHECK_RESULT |" >> $GITHUB_STEP_SUMMARY
             else
+              echo "File not found: $JSON_FILE"
               echo "| Python $version | ⚠️ No Results | ⚠️ No Results |" >> $GITHUB_STEP_SUMMARY
             fi
           done
