@@ -66,7 +66,7 @@ client = Client(
    - Delete an object
    -- Use the created object and delete it by name
 
-   ```python
+```python
    # Get all monitors for a model
    monitors = client.get_all_monitors(model_name)
    
