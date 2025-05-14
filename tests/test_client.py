@@ -32,7 +32,7 @@ def mock_graphql_client():
 def client(mock_graphql_client):
     """Create a test client with mocked GraphQL client"""
     return Client(
-        organization="test_org", space="test_space", arize_api_key="test_token"
+        organization="test_org", space="test_space", arize_developer_key="test_token"
     )
 
 
@@ -43,7 +43,7 @@ class TestClientInitialization:
         client = Client(
             organization="test_org",
             space="test_space",
-            arize_api_key="test_token",
+            arize_developer_key="test_token",
         )
         assert client.organization == "test_org"
         assert client.space == "test_space"
