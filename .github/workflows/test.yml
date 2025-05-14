@@ -83,7 +83,7 @@ jobs:
         echo "{\"test_status\": $TEST_STATUS, \"type_check_status\": $TYPE_CHECK_STATUS}" > test_results/python-${{ matrix.python-version }}.json
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-results-${{ matrix.python-version }}
         path: test_results/
@@ -94,7 +94,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download all test results
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: test_results
       
