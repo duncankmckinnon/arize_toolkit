@@ -1,0 +1,25 @@
+name: CODEOWNERS Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: CODEOWNERS Validator
+        uses: mszostok/codeowners-validator@v0.7.4
+        with:
+          checks: "files,duppatterns,syntax"
+          experimental_checks: "notowned"
+          
+      - name: Check if PR is reviewed by CODEOWNERS
+        if: github.event.pull_request.merged != true
+        uses: mheap/github-action-required-labels@v3
+        with:
+          mode: exactly
+          count: 1
+          labels: "approved-by-codeowner" 

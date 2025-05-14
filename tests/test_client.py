@@ -32,7 +32,7 @@ def mock_graphql_client():
 def client(mock_graphql_client):
     """Create a test client with mocked GraphQL client"""
     return Client(
-        organization="test_org", space="test_space", arize_api_key="test_token"
+        organization="test_org", space="test_space", arize_developer_key="test_token"
     )
 
 
@@ -43,7 +43,7 @@ class TestClientInitialization:
         client = Client(
             organization="test_org",
             space="test_space",
-            arize_api_key="test_token",
+            arize_developer_key="test_token",
         )
         assert client.organization == "test_org"
         assert client.space == "test_space"
@@ -732,7 +732,6 @@ class TestLanguageModel:
                                     "tags": ["test_tag"],
                                     "commitMessage": "test_commit_message",
                                     "inputVariableFormat": "f_string",
-                                    "toolChoice": "test_tool_choice",
                                     "toolCalls": [
                                         {
                                             "id": "tool_call_id",
@@ -776,7 +775,6 @@ class TestLanguageModel:
                                     "tags": ["test_tag_2"],
                                     "commitMessage": "test_commit_message_2",
                                     "inputVariableFormat": "f_string",
-                                    "toolChoice": "test_tool_choice_2",
                                     "toolCalls": [
                                         {
                                             "id": "tool_call_id_2",
@@ -820,8 +818,6 @@ class TestLanguageModel:
         assert prompts[1]["commitMessage"] == "test_commit_message_2"
         assert prompts[0]["inputVariableFormat"] == "F_STRING"
         assert prompts[1]["inputVariableFormat"] == "F_STRING"
-        assert prompts[0]["toolChoice"] == "test_tool_choice"
-        assert prompts[1]["toolChoice"] == "test_tool_choice_2"
 
     def test_get_prompt_by_id(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
@@ -834,7 +830,6 @@ class TestLanguageModel:
                 "tags": ["test_tag"],
                 "commitMessage": "test_commit_message",
                 "inputVariableFormat": "f_string",
-                "toolChoice": "test_tool_choice",
                 "toolCalls": [
                     {
                         "id": "tool_call_id",
@@ -870,7 +865,6 @@ class TestLanguageModel:
         assert prompt_result["tags"] == ["test_tag"]
         assert prompt_result["commitMessage"] == "test_commit_message"
         assert prompt_result["inputVariableFormat"] == "F_STRING"
-        assert prompt_result["toolChoice"] == "test_tool_choice"
         assert prompt_result["toolCalls"] == [
             {
                 "id": "tool_call_id",
@@ -911,7 +905,6 @@ class TestLanguageModel:
                                 "tags": ["test_tag"],
                                 "commitMessage": "test_commit_message",
                                 "inputVariableFormat": "f_string",
-                                "toolChoice": "test_tool_choice",
                                 "toolCalls": [
                                     {
                                         "id": "tool_call_id",
@@ -945,7 +938,6 @@ class TestLanguageModel:
         assert prompt_result["tags"] == ["test_tag"]
         assert prompt_result["commitMessage"] == "test_commit_message"
         assert prompt_result["inputVariableFormat"] == "F_STRING"
-        assert prompt_result["toolChoice"] == "test_tool_choice"
         assert prompt_result["toolCalls"] == [
             {
                 "id": "tool_call_id",
@@ -980,7 +972,6 @@ class TestLanguageModel:
                                 "tags": ["test_tag"],
                                 "commitMessage": "test_commit_message",
                                 "inputVariableFormat": "f_string",
-                                "toolChoice": "test_tool_choice",
                                 "toolCalls": [
                                     {
                                         "id": "tool_call_id",
@@ -1158,7 +1149,6 @@ class TestLanguageModel:
                                     "content": "Hello, {variable_1} - i am {variable_2}",
                                 }
                             ],
-                            "toolChoice": "test_function_name",
                             "toolCalls": [
                                 {
                                     "type": "function",

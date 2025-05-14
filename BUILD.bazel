@@ -3,8 +3,8 @@ load("@rules_python//python:defs.bzl", "py_library")
 package(default_visibility = ["//visibility:public"])
 
 py_library(
-    name = "arize_api_public",
+    name = "arize_toolkit",
     srcs = [
-        "arize_api/__init__.py",
+        "arize_toolkit/__init__.py",
     ],
 )

@@ -1,0 +1,22 @@
+# This file defines the code owners for this repository
+# Code owners will automatically be requested for
+#review on PRs that modify their code
+# Format: file_pattern @user_or_team
+
+# Default owners for everything
+* @duncankmckinnon
+
+# Specific module owners
+/arize_toolkit/client.py @duncankmckinnon
+/arize_toolkit/models.py @duncankmckinnon
+/arize_toolkit/types.py @duncankmckinnon
+
+# Documentation owners
+/docs_site/ @duncankmckinnon
+*.md @duncankmckinnon
+
+# GitHub workflow owners
+/.github/ @duncankmckinnon
+
+# Test owners
+/tests/ @duncankmckinnon 

@@ -16,12 +16,25 @@ from arize_toolkit.models import DriftMonitor, DataQualityMonitor, PerformanceMo
 # Load environment variables from .env file
 load_dotenv()
 
+def load_env_vars():
+    arize_developer_key = os.getenv("ARIZE_DEVELOPER_KEY")
+    if not arize_developer_key:
+        raise ValueError("ARIZE_DEVELOPER_KEY must be set in the .env file")
+
+    organization = os.getenv("ORGANIZATION_NAME")
+    if not organization:
+        raise ValueError("ORGANIZATION_NAME must be set in the .env file")
+
+    space = os.getenv("SPACE_NAME")
+    if not space:
+        raise ValueError("SPACE_NAME must be set in the .env file")
+
+    return arize_developer_key, organization, space
+
 
 def run_integration_tests():
     # Retrieve environment variables
-    arize_developer_key = os.getenv("ARIZE_DEVELOPER_KEY")
-    organization = os.getenv("ORGANIZATION_NAME")
-    space = os.getenv("SPACE_NAME")
+    arize_developer_key, organization, space = load_env_vars()
     model_name = None
     # Initialize the client
     client = Client(

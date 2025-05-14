@@ -1,0 +1,35 @@
+site_name: Arize Toolkit
+site_description: Documentation for Arize Toolkit
+site_url: https://duncankmckinnon.github.io/arize_toolkit
+repo_url: https://github.com/duncankmckinnon/arize_toolkit
+repo_name: arize_toolkit
+docs_dir: docs_site/docs
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Development: development.md
+  - Integration Tests: integration_test.md
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed
+  - pymdownx.critic
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+plugins:
+  - search 
