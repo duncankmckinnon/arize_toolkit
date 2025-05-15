@@ -3,9 +3,11 @@
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
 # Arize Toolkit
 
-Welcome to the documentation for Arize Toolkit, a Python client for interacting with the Arize AI API.
+Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
 
-Check out the [latest docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
+## Disclaimer
+Although this package is used for development work with and within the Arize platform, it is not an Arize product.
+It is a open source project developed and maintained by an Arize Engineer.
 
 ## Disclaimer
 Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
