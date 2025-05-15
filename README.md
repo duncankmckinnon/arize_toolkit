@@ -9,7 +9,7 @@ Check out the [latest docs](https://duncankmckinnon.github.io/arize_toolkit) for
 
 ## Disclaimer
 Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
-It is a open source project developed and maintained by an Arize Engineer.  Feel free to add issues or reach out to in the Arize community Slack channel.
+It is a open source project developed and maintained by an Arize Engineer.  Feel free to add issues or reach out for help in the Arize community Slack channel.
 
 ## Overview
 
