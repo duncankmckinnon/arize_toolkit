@@ -9,6 +9,10 @@ Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the la
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
 It is a open source project developed and maintained by an Arize Engineer.
 
+## Disclaimer
+Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
+It is a open source project developed and maintained by an Arize Engineer.  Feel free to add issues or reach out for help in the Arize community Slack channel.
+
 ## Overview
 
 Arize Toolkit is a set of tools packaged as a Python client that lets you easily interact with Arize AI APIs.
