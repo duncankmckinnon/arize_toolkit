@@ -1198,7 +1198,7 @@ class Client:
         )
         return self.custom_metric_url(model_id, results.metric_id)
 
-    def delete_custom_metric_by_id(self, custom_metric_id: str, model_id: str) -> str:
+    def delete_custom_metric_by_id(self, custom_metric_id: str, model_id: str) -> bool:
         """Deletes a custom metric by ID.
 
         Args:
@@ -1206,7 +1206,7 @@ class Client:
             model_id (str): ID of the model to delete the custom metric for
 
         Returns:
-            str: ID of the model that the custom metric was deleted from
+            bool: True if the custom metric was deleted, False otherwise
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
@@ -1216,9 +1216,9 @@ class Client:
             customMetricId=custom_metric_id,
             modelId=model_id,
         )
-        return results.model_id
+        return results.model_id == model_id
 
-    def delete_custom_metric(self, model_name: str, metric_name: str) -> str:
+    def delete_custom_metric(self, model_name: str, metric_name: str) -> bool:
         """Deletes a custom metric by name.
 
         Args:
@@ -1226,7 +1226,7 @@ class Client:
             metric_name (str): Name of the custom metric to delete
 
         Returns:
-            str: ID of the model that the custom metric was deleted from
+            bool: True if the custom metric was deleted, False otherwise
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
@@ -1807,14 +1807,14 @@ class Client:
         )
         return self.monitor_url(results.monitor_id)
 
-    def delete_monitor_by_id(self, monitor_id: str) -> str:
+    def delete_monitor_by_id(self, monitor_id: str) -> bool:
         """Deletes a monitor by its ID.
 
         Args:
             monitor_id (str): ID of the monitor to delete
 
         Returns:
-            str: ID of the deleted monitor
+            bool: `True` if the monitor was deleted, `False` otherwise
 
         Raises:
             ArizeAPIException: If monitor deletion fails or there is an API error
@@ -1822,13 +1822,13 @@ class Client:
         results = DeleteMonitorMutation.run_graphql_mutation(
             self._graphql_client, monitorId=monitor_id
         )
-        return results.monitor_id
+        return results.monitor_id == monitor_id
 
     def delete_monitor(
         self,
         monitor_name: str,
         model_name: str,
-    ) -> str:
+    ) -> bool:
         """Deletes a monitor using its name and the name of the model it belongs to.
 
         Args:
@@ -1836,7 +1836,7 @@ class Client:
             model_name (str): Name of the model to delete the monitor from
 
         Returns:
-            str: ID of the deleted monitor
+            bool: `True` if the monitor was deleted, `False` otherwise
 
         Raises:
             ArizeAPIException: If monitor deletion fails or there is an API error
@@ -1863,9 +1863,9 @@ class Client:
         Args:
             current_monitor_name (str): Name of the monitor to copy
             current_model_name (str): Name of the model to copy the monitor from
-            new_model_name (Optional[str]): Name of the model to copy the monitor to (must provide either new_model_name or new_model_id)
-            new_model_id (Optional[str]): ID of the model to copy the monitor to (must provide either new_model_name or new_model_id)
+            new_model_name (Optional[str]): Name of the model to copy the monitor to (default is current model name)
             new_monitor_name (Optional[str]): Name of the new monitor (default copies current monitor name)
+            new_space_id (Optional[str]): ID of the space to copy the monitor to (default is current space)
             **kwargs: Additional keyword arguments to pass to the create_monitor function to update new monitor fields
 
         Returns:

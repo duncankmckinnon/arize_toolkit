@@ -20,7 +20,10 @@ theme:
 
 nav:
   - Home: index.md
-  - Model Operations: model_operations.md
+  - Model Tools: model_tools.md
+  - Monitor Tools: monitor_tools.md
+  - Custom Metrics Tools: custom_metrics_tools.md
+  - Language Model Tools: language_model_tools.md
   - Development: developers/development.md
   - Integration Tests: developers/integration_test.md
 

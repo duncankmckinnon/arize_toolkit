@@ -3,12 +3,18 @@
 Welcome to the documentation for Arize Toolkit, a Python client for interacting with the Arize AI API.
 
 ## Quick Links
-- [Model Operations](model_operations.md) - Information about model operations
+- [Model Tools](model_tools.md) - Documentation for model tools
+- [Monitor Tools](monitor_tools.md) - Documentation for monitor tools
+- [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools
+- [Language Model Tools](language_model_tools.md) - Documentation for language model tools
 
 ### For Developers
 - [Development Guide](developers/development.md) - Information about extending the toolkit
 - [Integration Tests](developers/integration_test.md) - Running integration tests
 
+## Disclaimer
+Although this package is used for development work with and within the Arize platform, it is not an Arize product.
+It is a open source project developed and maintained by an Arize Engineer.
 
 ## Overview
 
