@@ -1,6 +1,16 @@
-# Development Setup
+# Development
 
-To set up a development environment for this project, firstrun the bootstrap script to create a named virtual environment:
+## Setup
+
+The following instructions are for setting up a development environment for the arize_toolkit.
+Before you begin, make sure to clone the repository and navigate to the `arize_toolkit` directory:
+
+```bash
+git clone https://github.com/duncankmckinnon/arize_toolkit.git
+cd arize_toolkit
+```
+
+To set up a development environment for this project, firstrun the bootstrap script to create a named virtual environment and install the dependencies using poetry:
 
 ```bash
 sh ./bin/bootstrap.sh
@@ -14,8 +24,6 @@ source .venv/bin/activate
 
 You're ready to develop! The virtual environment will be created in the `.venv` directory with the name "arize-toolkit-venv".
 
-# Development Patterns
-
 ## Base Classes Explained
 
 ### 1. BaseVariables
@@ -23,35 +31,45 @@ You're ready to develop! The virtual environment will be created in the `.venv` 
 BaseVariables is the base class for all query variables. It provides a structure for defining the variables for a query 
 and ensures that the variables are validated and serialized correctly.
 
-It inherits from `Dictable`, which is a utility class that wraps a Pydantic BaseModel. This interface allows for consistent type conversions between graphql friendly dictionaries and objects.
+It inherits from `Dictable`, which is a utility class that wraps a Pydantic BaseModel. This interface allows for consistent type conversions between graphql friendly dictionaries and objects. All the model types in the arize_toolkit eventually inherit from `Dictable` so that they can be used in the same way.
 
 The `endCursor` field is used in pagination throughout Arize graphql, so it is included as an optional field by default.
 
-
-````python:arize_toolkit/queries/basequery.py
+```python
 class BaseVariables(Dictable):
     """Base class for all query variables"""
     endCursor: Optional[str] = None
-````
+```
 
 **Purpose:**
+
 - Validates input parameters for GraphQL queries using Pydantic
 - Ensures type safety for query variables
 - Provides automatic validation and serialization
 - Includes pagination support via `endCursor`
 
+#### Implementation in BaseQuery
+
+The `BaseQuery` class requires a `Variables` class that often inherits from `BaseVariables`. This allows for the variables to be validated and serialized correctly. When defining the `Variables` class you simply need to define the fields and types of variables used as input to the query.
+
 **Example Usage:**
-````python
+
+```python
 class GetModelQuery(BaseQuery):
     class Variables(BaseVariables):
         space_id: str
         model_name: str
-````
+```
 
-The BaseVariables class is a convenient tool for validating the input to the query, but in situations where the input to the mutation is a model type, it may be more convenient to override the BaseVariables class in the BaseQuery with the model type definition instead.
+The BaseVariables class is a convenient tool for validating the input to the query, but in situations where the input to the mutation is already represented by a model type, it may be more convenient to override the BaseVariables class in the BaseQuery with the model type definition instead.
 
 **Example of a mutation using an existing model type:**
+
 ```python
+class Thing(GraphQLModel):
+    id: str
+    name: str
+
 class CreateThingMutation(BaseQuery):
     class Variables(Thing):
         pass
@@ -64,28 +82,35 @@ and ensures that the response is validated and serialized correctly.
 
 Like BaseVariables, it inherits from `Dictable`, which is a utility class that wraps a Pydantic BaseModel.
 
-````python:arize_toolkit/queries/basequery.py
+```python
 class BaseResponse(Dictable):
     """Base class for all query responses"""
     pass
-````
+```
 
 **Purpose:**
+
 - Defines the structure and type validation for query and mutation responses
 - Ensures consistent response handling and error messages
 
 **Example Usage:**
-````python
+
+```python
 class GetModelQuery(BaseQuery):
     class QueryResponse(BaseResponse):
         id: str
         name: str
-````
+```
 
 As with BaseVariables, the BaseResponse class is a convenient tool for validating the response from the query, but in situations where the response is a model type, it may be more convenient to override the BaseResponse class in the BaseQuery with the model type definition instead.
 
 **Example of a mutation using an existing model type:**
+
 ```python
+class Thing(GraphQLModel):
+    id: str
+    name: str
+
 class GetThingQuery(BaseQuery):
     class QueryResponse(Thing):
         pass
@@ -98,20 +123,21 @@ It also allows for custom exception types per query, and handling for common exc
 
 The keyword_exceptions class variable is used to define the exceptions that are common to all queries, but don't provide useful information about the error. The ArizeAPIException class uses a keyword search to determine if a raised exception is related to a common issue, and if so, it will use more specific and actionable error messages defined in the keyword exception classes.
 
-````python:arize_toolkit/exceptions.py
+```python
 class ArizeAPIException(Exception):
     """Base class for all API exceptions"""
     keyword_exceptions = [RateLimitException, RetryException]
     message: str = "An error occurred while running the query"
     details: Optional[str] = None
-````
+```
 
 **Example Usage:**
-````python
+
+```python
 class GetModelQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting the id of a named model in the space"
-````
+```
 
 ### 4. BaseQuery
 
@@ -133,13 +159,13 @@ The base query handles logic around:
 
 So you will rarely need to add any additional functionality in your query implementations outside of the setup and parsing logic.
 
-````python:arize_toolkit/queries/basequery.py
+```python
 class BaseQuery:
     """Base class for all queries"""
     graphql_query: str
     query_description: str
 
-    class QueryVariables(BaseVariables):
+    class Variables(BaseVariables):
         # Define the variables for the query
         pass
 
@@ -157,128 +183,121 @@ class BaseQuery:
             query = gql(cls.graphql_query)
 
             # Relies on the QueryVariables class to validate the variables
-            result = client.execute(query, variable_values=cls.QueryVariables(**kwargs).model_dump())
+            result = client.execute(query, variable_values=cls.QueryVariables(**kwargs).to_dict(exclude_none=False))
 
             # Relies on the QueryResponse class to parse the result
             return cls._parse_graphql_result(result)
         except Exception as e:
             # Relies on the QueryException class to handle the exception
             raise cls.QueryException(details=str(e))
-````
-
-**Purpose:**
-1. **Query Execution:**
-   - Handles GraphQL query execution
-   - Manages variable validation
-   - Provides error handling
-
-2. **Pagination Support:**
-   - Built-in pagination through `iterate_over_pages`
-   - Handles cursor-based pagination
-   - Supports rate limiting via sleep_time
-
-3. **Response Parsing:**
-   - Standardizes response parsing
-   - Converts GraphQL responses to typed objects
-
-4. **Error Handling:**
-   - Handles common API errors
-   - Allows for custom exception types per query
-   - Provides detailed error messages
-
-## Benefits of This Architecture
-
-### 1. **Type Safety:**
-```python
-# Variables are validated at runtime
-def get_model(self, model_name: str):
-    # This will fail if model_name is not a string
-    results = GetModelQuery.run_graphql_query(
-        self._graphql_client, 
-        model_name=model_name
-    )
 ```
 
-### 2. **Consistent Error Handling:**
-```python
-try:
-    result = GetModelQuery.run_graphql_query(...)
-except GetModelQuery.QueryException as e:
-    # Handle specific query errors
-except ArizeAPIException as e:
-    # Handle general API errors
+## Implementing Patterns for Queries and Mutations
+
+### GraphQL Model Types
+
+
+
+### Parsing
+
+The base query handles parsing of the response from the API. This is done by the `_parse_graphql_result` method.
+For queries that retrieve a single item by its id, the base query will handle the parsing of the response into the model type.
+For other queries and mutations, you will need to implement the `_parse_graphql_result` method in your query implementation.
+
+The `_parse_graphql_result` method takes in the graphql query result as a dictionary and returns a tuple containing a list of the parsed response(s), a boolean indicating if there are more pages, and an optional endCursor to be used for pagination. For queries that retrieve a single item by its id, the base query will handle the parsing of the response into the model type.
+
+#### Base Implementation for Queries of Objects by Id
+
+For any query that retrieves a single item by its id, the base query will handle the parsing of the response into the model type. This is the base implementation because regardless of the object type, the response is always the same format:
+
+```json
+{
+    "node": {
+        "id": "123",
+        "name": "Thing",
+        ...
+    }
+}
 ```
 
-### 3. **Easy to Extend:**
 ```python
-class NewFeatureQuery(BaseQuery):
+class GetThingQuery(BaseQuery):
+    ...
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        # Default behavior for queries of objects by id
+        if "node" in result and result["node"] is not None:
+            result_node = result["node"]
+            return [cls.QueryResponse(**result_node)], False, None
+        else:
+            cls.raise_exception("Object not found")
+```
+
+#### Parsing Queries that Retrieve a List of Items
+
+For queries that retrieve a list of items, the base query will handle the parsing of the response into a list of model types.
+The form of these queries is often the same in Arize GraphQL, with an `endCursor` marker for pagination and a flag indicating if there are more pages to retrieve.
+
+**Example of a query that retrieves a list of items:**
+
+```python
+class GetThingsQuery(BaseQuery):
+    # Typical form of a query that retrieves a list of items - the node is the object type that is being retrieved
     graphql_query = """
-        query newFeature($param: String!) {
-            # New query definition
+        query getAllThings($space_id: ID!, $endCursor: String) {
+            node(id: $space_id) {
+                ... on Space {
+                    things (first: 10, after: $endCursor) {
+                        edges {
+                            node {""" + Thing.to_graphql_fields() + """ }
+                        }
+                        pageInfo {
+                            hasNextPage
+                            endCursor
+                        }
+                    }
+                }
+            }
         }
     """
-    # Just implement the required components
-```
-
-### 4. **Pagination Support:**
-```python
-# Automatically handles pagination
-results = GetAllModelsQuery.iterate_over_pages(
-    client, 
-    space_id="123",
-    sleep_time=1  # Rate limiting
-)
-```
-
-This architecture provides a robust foundation for building GraphQL queries while maintaining type safety, error handling, and extensibility.
-
-
-## Query Implementation Pattern
-
-Each query follows this structure, as seen in `space_queries.py`:
-
-```python
-class GetModelQuery(BaseQuery):
-    # 1. Define the GraphQL query string
-    graphql_query = """
-    query getModel($space_id: ID!, $model_name: String) {
-        # ... GraphQL query definition ...
-    }
-    """
-    query_description = "Get the id of a model in the space"
-
-    # 2. Define expected variables
-    class Variables(BaseVariables):
-        space_id: str
-        model_name: str
-
-    # 3. Define possible exceptions
-    class QueryException(ArizeAPIException):
-        message: str = "Error getting the id of a named model in the space"
-        
-    # 4. Define response structure
-    class QueryResponse(BaseResponse):
-        id: str
-
-    # 5. Implement response parsing
+    ...
     @classmethod
-    def _parse_graphql_result(cls, result: dict) -> Tuple[BaseResponse, bool, Optional[str]]:
-        # Parse and validate response
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        # Default behavior for queries of objects by id
+        if "edges" in result["node"]["things"] and result["node"]["things"]["edges"] is not None:
+            edges = result["node"]["things"]["edges"]
+            things = [cls.QueryResponse(**edge["node"]) for edge in edges]
+            
+            # Check if there are more pages to retrieve
+            page_info = result["node"]["things"]["pageInfo"]
+            hasNextPage = page_info["hasNextPage"]
+            endCursor = page_info["endCursor"]
+            return things, hasNextPage, endCursor
+        else:
+            cls.raise_exception("No things found")
 ```
 
-## Client Usage
+## Adding Functions to the Client
 
-The client provides a clean interface to run queries and retrieve data from the api:
+The client provides a clean interface to run queries and retrieve data from the api. It is the main interface for the arize_toolkit. Under the hood, each function exposed by the client uses base query classes to interact with the API and handle the response parsing and error handling.
 
-```python:sdk/python/api/arize_api/client.py
+**Example of a client function:**
+
+```python
 class Client:
-    def get_model(self, model_name: str):
-        results = GetModelQuery.run_graphql_query(
-            self._graphql_client, 
+    def get_model(self, model_name: str) -> Dict:
+        results, _, _ = GetModelQuery.run_graphql_query(
+            self._graphql_client,
+            space_id=self._space_id,
             model_name=model_name
         )
-        return results.id
+        # The results are a list of the model type defined in the QueryResponse class
+        return results[0].to_dict()
 ```
+
+While there is flexibility in how client functions are defined, there are some conventions that are used throughout the arize_toolkit
+
+
 
 ## Key Features
 
