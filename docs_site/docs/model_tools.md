@@ -1,13 +1,15 @@
 # Model Tools
 
 ## Overview
-This page documents every model-related helper that ships with `arize-toolkit`, 
-grouped by the day-to-day questions that arise when you are operating an ML system:
+In Arize, models reflect the inputs and outputs of your machine learning system.  They are the core unit of observability in Arize.  For more information about models in Arize check out the **[documentation on Arize observability](https://docs.arize.com/arize/machine-learning/machine-learning/what-is-ml-observability)**.
 
-1. "What models do I have, and where are they?"  
-2. "How much traffic have they processed?"  
-3. "Can I delete a slice of data?"  
-4. "What does performance look like over time?"
+In `arize_toolkit`, the `Client` exposes helpers for:
+
+1. Discovering and retrieving existing models
+2. Getting model inference volume over a given time period
+3. Deleting model data over a given time period
+4. Pulling performance metrics over time
+5. Getting a link to the model in the Arize UI
 
 For completeness, the full set of model helpers is repeated below.
 Click on the function name to jump to the detailed section.
@@ -377,7 +379,7 @@ f1_df.plot(x="metricDisplayDate", y="metricValue")
 
 ---
 
-## Putting it together
+## End-to-End Example
 
 Below is a miniature script that showcases how the model operations can be used in a typical troubleshooting loop:
 

@@ -1,7 +1,7 @@
 # Custom Metrics Tools
 
 ## Overview
-Custom metrics allow you to define bespoke SQL-like aggregations (e.g. `SELECT avg(prediction) FROM model`) and surface them across Arize.  They are particularly useful when the built-in metrics do not capture a domain-specific definition of performance or quality.
+Custom metrics allow you to define bespoke SQL-like aggregations (e.g. `SELECT avg(prediction) FROM model`) and surface them across Arize.  They are particularly useful when the built-in metrics do not capture a domain-specific definition of performance or quality. Use **[these reference documents](https://docs.arize.com/arize/machine-learning/machine-learning/how-to-ml/custom-metrics-api/custom-metric-syntax)** to understand the syntax of the SQL expressions in Arize Custom Metrics.
 
 `arize-toolkit` exposes helpers for:
 
@@ -14,14 +14,14 @@ Custom metrics allow you to define bespoke SQL-like aggregations (e.g. `SELECT a
 |-----------|--------|
 | List every custom metric (space-wide) | [`get_all_custom_metrics`](#get_all_custom_metrics) |
 | List metrics for a single model | [`get_all_custom_metrics_for_model`](#get_all_custom_metrics_for_model) |
-| Retrieve a metric by *id* | [`get_custom_metric_by_id`](#get_custom_metric_by_id) |
 | Retrieve a metric by *name* | [`get_custom_metric`](#get_custom_metric) |
+| Retrieve a metric by *id* | [`get_custom_metric_by_id`](#get_custom_metric_by_id) |
 | Quick-link to a metric in the UI | [`get_custom_metric_url`](#get_custom_metric_url) |
 | Create a metric | [`create_custom_metric`](#create_custom_metric) |
-| Delete by *id* | [`delete_custom_metric_by_id`](#delete_custom_metric_by_id) |
-| Delete by *name* | [`delete_custom_metric`](#delete_custom_metric) |
-| Update by *id* | [`update_custom_metric_by_id`](#update_custom_metric_by_id) |
 | Update by *name* | [`update_custom_metric`](#update_custom_metric) |
+| Update by *id* | [`update_custom_metric_by_id`](#update_custom_metric_by_id) |
+| Delete by *name* | [`delete_custom_metric`](#delete_custom_metric) |
+| Delete by *id* | [`delete_custom_metric_by_id`](#delete_custom_metric_by_id) |
 | Copy a metric to another model | [`copy_custom_metric`](#copy_custom_metric) |
 
 ---
@@ -118,36 +118,6 @@ print(metrics)
 
 ---
 
-### `get_custom_metric_by_id`
-```python
-metric: dict = client.get_custom_metric_by_id(custom_metric_id: str)
-```
-Retrieve a metric using its canonical id.
-
-**Parameters**
-
-* `custom_metric_id` – Canonical metric id
-
-**Returns**  
-
-A dictionary representing the metric.
-
-* `id` – Canonical metric id
-* `name` – Metric name
-* `description` – Free-text description
-* `metric` – SQL formula / expression
-* `requiresPositiveClass` – Whether the metric requires a positive-class label
-* `createdAt` – Datetime created
-
-**Example**
-
-```python
-metric = client.get_custom_metric_by_id("******")
-print(metric)
-```
-
----
-
 ### `get_custom_metric`
 ```python
 metric: dict = client.get_custom_metric(
@@ -182,6 +152,36 @@ print(metric)
 
 ---
 
+### `get_custom_metric_by_id`
+```python
+metric: dict = client.get_custom_metric_by_id(custom_metric_id: str)
+```
+Retrieve a metric using its canonical id.
+
+**Parameters**
+
+* `custom_metric_id` – Canonical metric id
+
+**Returns**  
+
+A dictionary representing the metric.
+
+* `id` – Canonical metric id
+* `name` – Metric name
+* `description` – Free-text description
+* `metric` – SQL formula / expression
+* `requiresPositiveClass` – Whether the metric requires a positive-class label
+* `createdAt` – Datetime created
+
+**Example**
+
+```python
+metric = client.get_custom_metric_by_id("******")
+print(metric)
+```
+
+---
+
 ### `get_custom_metric_url`
 ```python
 url: str = client.get_custom_metric_url(model_name: str, metric_name: str)
@@ -206,8 +206,9 @@ print(url)
 
 ---
 
-## Creation & Modification Helpers
+## Creating and Updating Custom Metrics
 
+These helpers are used to create and modify custom metrics.
 ### `create_custom_metric`
 ```python
 metric_url: str = client.create_custom_metric(
@@ -240,111 +241,6 @@ url = client.create_custom_metric(
     metric_description="Mean latency over all predictions",
 )
 print("Created at:", url)
-```
-
----
-
-### `delete_custom_metric_by_id`
-```python
-is_deleted: bool = client.delete_custom_metric_by_id(
-    custom_metric_id: str,
-    model_id: str,
-)
-```
-Deletes by canonical id.
-
-**Parameters**
-
-* `custom_metric_id` – Metric id
-* `model_id` – Canonical model id
-
-**Returns**
-
-`True` when deletion succeeds.
-
-**Example**
-
-```python
-client.delete_custom_metric_by_id(
-    custom_metric_id="******",
-    model_id="******",
-)
-print(f"Deleted: {is_deleted}")
-```
-
----
-
-### `delete_custom_metric`
-```python
-is_deleted: bool = client.delete_custom_metric(
-    model_name: str,
-    metric_name: str,
-)
-```
-Convenience wrapper that performs lookup then delegates to `delete_custom_metric_by_id`.
-
-**Parameters**
-
-* `model_name` – *Human-readable* model name
-* `metric_name` – Metric name
-
-**Returns**
-
-`True` when deletion succeeds.
-
-**Example**
-
-```python
-is_deleted = client.delete_custom_metric(
-    model_name="fraud-detection-v3",
-    metric_name="P95 prediction",
-)
-print(f"Deleted: {is_deleted}")
-```
-
----
-
-### `update_custom_metric_by_id`
-```python
-updated: dict = client.update_custom_metric_by_id(
-    custom_metric_id: str,
-    model_id: str,
-    name: str | None = None,
-    metric: str | None = None,
-    description: str | None = None,
-    environment: str | None = None,
-)
-```
-Any field left as `None` retains its previous value.
-
-**Parameters**
-
-* `custom_metric_id` – Metric id
-* `model_id` – Canonical model id
-* `name` – (optional) New metric name
-* `metric` – (optional) New SQL expression
-* `description` – (optional) New description
-* `environment` – (optional) New environment label
-
-**Returns**  
-
-A dictionary representing the updated metric.
-
-* `id` – Canonical metric id
-* `name` – Metric name
-* `description` – Free-text description
-* `metric` – SQL formula / expression
-* `requiresPositiveClass` – Whether the metric requires a positive-class label
-* `createdAt` – Datetime created
-
-**Example**
-
-```python
-updated = client.update_custom_metric_by_id(
-    custom_metric_id="******",
-    model_id="******",
-    description="95th percentile of prediction value",
-)
 ```
 
 ---
@@ -394,6 +290,122 @@ updated = client.update_custom_metric(
 
 ---
 
+### `update_custom_metric_by_id`
+```python
+updated: dict = client.update_custom_metric_by_id(
+    custom_metric_id: str,
+    model_id: str,
+    name: str | None = None,
+    metric: str | None = None,
+    description: str | None = None,
+    environment: str | None = None,
+)
+```
+Any field left as `None` retains its previous value.
+
+**Parameters**
+
+* `custom_metric_id` – Metric id
+* `model_id` – Canonical model id
+* `name` – (optional) New metric name
+* `metric` – (optional) New SQL expression
+* `description` – (optional) New description
+* `environment` – (optional) New environment label
+
+**Returns**  
+
+A dictionary representing the updated metric.
+
+* `id` – Canonical metric id
+* `name` – Metric name
+* `description` – Free-text description
+* `metric` – SQL formula / expression
+* `requiresPositiveClass` – Whether the metric requires a positive-class label
+* `createdAt` – Datetime created
+
+**Example**
+
+```python
+updated = client.update_custom_metric_by_id(
+    custom_metric_id="******",
+    model_id="******",
+    description="95th percentile of prediction value",
+)
+```
+
+---
+
+## Deleting Custom Metrics
+
+These helpers are used to delete custom metrics.
+
+
+### `delete_custom_metric`
+```python
+is_deleted: bool = client.delete_custom_metric(
+    model_name: str,
+    metric_name: str,
+)
+```
+Convenience wrapper that performs lookup then delegates to `delete_custom_metric_by_id`.
+
+**Parameters**
+
+* `model_name` – *Human-readable* model name
+* `metric_name` – Metric name
+
+**Returns**
+
+`True` when deletion succeeds.
+
+**Example**
+
+```python
+is_deleted = client.delete_custom_metric(
+    model_name="fraud-detection-v3",
+    metric_name="P95 prediction",
+)
+print(f"Deleted: {is_deleted}")
+```
+
+---
+
+### `delete_custom_metric_by_id`
+```python
+is_deleted: bool = client.delete_custom_metric_by_id(
+    custom_metric_id: str,
+    model_id: str,
+)
+```
+Deletes by canonical id.
+
+**Parameters**
+
+* `custom_metric_id` – Metric id
+* `model_id` – Canonical model id
+
+**Returns**
+
+`True` when deletion succeeds.
+
+**Example**
+
+```python
+client.delete_custom_metric_by_id(
+    custom_metric_id="******",
+    model_id="******",
+)
+print(f"Deleted: {is_deleted}")
+```
+
+---
+
+## Copying Custom Metrics
+
+These helpers are used to copy custom metrics between models. These methods are useful when you need to keep the definition of a metric but use it across different models. 
+
+When copying a metric, you can choose to change the name, environment, or description of the new metric, or keep all properties the same by omitting the optional parameters.
+
 ### `copy_custom_metric`
 ```python
 new_metric_url: str = client.copy_custom_metric(
@@ -406,16 +418,17 @@ new_metric_url: str = client.copy_custom_metric(
     new_model_environment: str = "production",
 )
 ```
-Copies a metric from one model to another (or duplicates it within the same model).
+Copies a metric from one model to another. Must provide either `new_model_name` or `new_model_id` to specify the destination model (cannot copy the same metric to the same model).
 
 **Parameters**
 
 * `current_metric_name` – Name of the metric to copy
 * `current_model_name` – Source model name
-* `new_model_name` / `new_model_id` – Destination model (provide either)
-* `new_metric_name` – Name for the new metric (defaults to original)
-* `new_metric_description` – Override the description
-* `new_model_environment` – Environment label for the new metric
+* `new_model_name` (optional) – Destination model name. Must provide either `new_model_name` or `new_model_id`.
+* `new_model_id` (optional) – Destination model id. Must provide either `new_model_name` or `new_model_id`.
+* `new_metric_name` (optional) – Name for the new metric (defaults to original)
+* `new_metric_description` (optional) – Override the description
+* `new_model_environment` (optional) – Environment label for the new metric
 
 **Returns**
 

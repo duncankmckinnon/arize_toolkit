@@ -2,8 +2,9 @@
 
 ## Overview
 
-Arize monitors allow you to track performance, drift, and data-quality issues in real-time and receive alerts when thresholds are breached.  
-The `Client` exposes helpers for:
+Arize monitors allow you to track performance, drift, and data-quality issues in real-time and receive alerts when thresholds are breached.  For more information about monitors in Arize check out the **[documentation on Arize monitors](https://docs.arize.com/arize/machine-learning/machine-learning/how-to-ml/monitors)**.
+
+For monitoring operations, the `Client` exposes helpers for:
 
 1. Discovering existing monitors  
 2. Creating new performance / drift / data-quality monitors
@@ -569,7 +570,7 @@ new_monitor_url = client.copy_monitor(
 
 ---
 
-## Putting it together
+## End-to-End Example
 
 Below is a miniature script that showcases how the monitor operations can be used to setup a basic monitoring system:
 
