@@ -1,4 +1,4 @@
-# Monitor Operations
+# Monitor Tools
 
 ## Overview
 
@@ -44,12 +44,15 @@ Fetches details for all monitors associated with a specific model.  This functio
 If both are provided, `model_id` takes precedence.
 
 **Parameters**
+
 * `model_name` (optional) – *Human-readable* model name. Provide **either** `model_id` **or** `model_name`.
 * `model_id` (optional) – Canonical model identifier. Provide **either** `model_id` **or** `model_name`.
 * `monitor_category` (optional) – Filter by category (`"performance"`, `"drift"`, `"dataQuality"`). If omitted, returns all.
 
-**Returns**  
+**Returns**
+
 A list of dictionaries, one per monitor.  Each dictionary contains the monitor's details.
+
 * `id` – the canonical identifier for the monitor
 * `name` – the human-readable name shown in the Arize UI
 * `createdAt` – the date and time the monitor was created
@@ -75,9 +78,10 @@ A list of dictionaries, one per monitor.  Each dictionary contains the monitor's
 ... other fields omitted due to differing monitor types
 
 **Example**
+
 ```python
 for m in client.get_all_monitors(model_name="fraud-detection-v3", monitor_category="performance"):
-    print(m["name"], m["status"])
+  print(m["name"], m["status"])
 ```
 
 ---
@@ -85,18 +89,21 @@ for m in client.get_all_monitors(model_name="fraud-detection-v3", monitor_catego
 ### `get_monitor`
 ```python
 monitor: dict = client.get_monitor(
-    model_name: str,
-    monitor_name: str,
+  model_name: str,
+  monitor_name: str,
 )
 ```
 Retrieves a single monitor by *name*.
 
 **Parameters**
+
 * `model_name` – *Human-readable* model name
 * `monitor_name` – Monitor name as shown in the UI
 
-**Returns**  
+**Returns**
+
 A dictionary containing the monitor's details.
+
 * `id` – the canonical identifier for the monitor
 * `name` – the human-readable name shown in the Arize UI
 * `createdAt` – the date and time the monitor was created
@@ -122,6 +129,7 @@ A dictionary containing the monitor's details.
 ... other fields omitted due to differing monitor types
 
 **Example**
+
 ```python
 monitor = client.get_monitor(model_name="fraud-detection-v3", monitor_name="Accuracy < 80%")
 print(monitor)
@@ -137,10 +145,13 @@ Fetches a monitor using its canonical id. This is useful when you have stored th
 Most of the object retrieval methods have methods for fetching by id or name.
 
 **Parameters**
+
 * `monitor_id` – Canonical monitor id
 
-**Returns**  
+**Returns**
+
 A dictionary containing the monitor's details.
+
 * `id` – the canonical identifier for the monitor
 * `name` – the human-readable name shown in the Arize UI
 * `createdAt` – the date and time the monitor was created
@@ -166,6 +177,7 @@ A dictionary containing the monitor's details.
 ... other fields omitted due to differing monitor types
 
 **Example**
+
 ```python
 monitor = client.get_monitor_by_id("1234567890")
 print(monitor)
@@ -180,17 +192,21 @@ url: str = client.get_monitor_url(monitor_name: str, model_name: str)
 Builds a deep-link that opens the monitor in the Arize UI – handy for dashboards or Slack alerts.
 
 **Parameters**
+
 * `monitor_name` – Name of the monitor in the UI
 * `model_name` – Name of the model the monitor belongs to
 
-**Returns**  
+**Returns**
+
 A URL string.
 
 **Example**
+
 ```python
 url = client.get_monitor_url(monitor_name="Accuracy < 80%", model_name="fraud-detection-v3")
 print(url)
 ```
+
 ---
 
 ## Creating Monitors
@@ -201,43 +217,46 @@ Only the truly required fields are marked as such; everything else can be omitte
 ### `create_performance_monitor`
 ```python
 monitor_url: str = client.create_performance_monitor(
-    name: str,
-    model_name: str,
-    model_environment_name: str,              # "production", "validation", "training", "tracing"
-    operator: str = "greaterThan",           # optional – comparison for threshold
-    performance_metric: str | None = None,   # required *unless* custom_metric_id provided
-    custom_metric_id: str | None = None,     # alternative to performance_metric
-    notes: str | None = None,
-    threshold: float | None = None,
-    std_dev_multiplier: float = 2.0,
-    prediction_class_value: str | None = None,
-    positive_class_value: str | None = None,
-    # ––– Alert scheduling / downtime (all optional) –––
-    downtime_start: datetime | str | None = None,
-    downtime_duration_hrs: int | None = None,
-    downtime_frequency_days: int | None = None,
-    scheduled_runtime_enabled: bool = False,
-    scheduled_runtime_cadence_seconds: int | None = None,
-    scheduled_runtime_days_of_week: list[int] | None = None,
-    evaluation_window_length_seconds: int = 259200,  # 3 days
-    delay_seconds: int = 0,
-    # ––– Double threshold mode (optional) –––
-    threshold_mode: str = "single",
-    threshold2: float | None = None,
-    operator2: str | None = None,
-    std_dev_multiplier2: float | None = None,
-    # ––– Notifications –––
-    email_addresses: list[str] | None = None,
+  name: str,
+  model_name: str,
+  model_environment_name: str,              # "production", "validation", "training", "tracing"
+  operator: str = "greaterThan",           # optional – comparison for threshold
+  performance_metric: str | None = None,   # required *unless* custom_metric_id provided
+  custom_metric_id: str | None = None,     # alternative to performance_metric
+  notes: str | None = None,
+  threshold: float | None = None,
+  std_dev_multiplier: float = 2.0,
+  prediction_class_value: str | None = None,
+  positive_class_value: str | None = None,
+  # ––– Alert scheduling / downtime (all optional) –––
+  downtime_start: datetime | str | None = None,
+  downtime_duration_hrs: int | None = None,
+  downtime_frequency_days: int | None = None,
+  scheduled_runtime_enabled: bool = False,
+  scheduled_runtime_cadence_seconds: int | None = None,
+  scheduled_runtime_days_of_week: list[int] | None = None,
+  evaluation_window_length_seconds: int = 259200,  # 3 days
+  delay_seconds: int = 0,
+  # ––– Double threshold mode (optional) –––
+  threshold_mode: str = "single",
+  threshold2: float | None = None,
+  operator2: str | None = None,
+  std_dev_multiplier2: float | None = None,
+  # ––– Notifications –––
+  email_addresses: list[str] | None = None,
 )
 ```
 Creates a new performance monitor. Returns a URL path to the newly created monitor.
+
 **Required parameters**
+
 * `name` – Friendly monitor name.
 * `model_name` – Model to attach the monitor to.
 * `model_environment_name` – Which environment to scope to (`"production"`, …).
 * *One of* `performance_metric` *or* `custom_metric_id` *or* `custom_metric_name`.
 
 **Optional parameters**
+
 * `operator` – Comparison operator for the primary threshold. Defaults to `"greaterThan"`.  
   Valid choices include `"greaterThan"`, `"lessThan"`, `"equalTo"`, `"greaterThanOrEqualTo"`, and `"lessThanOrEqualTo"`.
 * `notes` – Free-form notes or run-book link for the monitor.
@@ -267,17 +286,19 @@ Creates a new performance monitor. Returns a URL path to the newly created monit
 * `std_dev_multiplier2` – Standard-deviation multiplier for the secondary adaptive threshold.
 * `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
 
-**Returns**  
+**Returns**
+
 A URL path to the newly created monitor.
 
 **Example**
+
 ```python
 monitor_url = client.create_performance_monitor(
-    name="Accuracy < 80%",
-    model_name="fraud-detection-v3",
-    model_environment_name="production",
-    performance_metric="accuracy",
-    threshold=0.8,
+  name="Accuracy < 80%",
+  model_name="fraud-detection-v3",
+  model_environment_name="production",
+  performance_metric="accuracy",
+  threshold=0.8,
 )
 print("Created:", monitor_url)
 ```
@@ -287,37 +308,39 @@ print("Created:", monitor_url)
 ### `create_drift_monitor`
 ```python
 monitor_url: str = client.create_drift_monitor(
-    name: str,
-    model_name: str,
-    drift_metric: str = "psi",              # "psi", "js", "kl", "ks" …
-    dimension_category: str = "prediction", # or "featureLabel", etc.
-    operator: str = "greaterThan",
-    dimension_name: str | None = None,       # not needed for prediction drift
-    notes: str | None = None,
-    threshold: float | None = None,
-    std_dev_multiplier: float = 2.0,
-    prediction_class_value: str | None = None,
-    positive_class_value: str | None = None,
-    downtime_start: datetime | str | None = None,
-    downtime_duration_hrs: int | None = None,
-    downtime_frequency_days: int | None = None,
-    scheduled_runtime_enabled: bool = False,
-    scheduled_runtime_cadence_seconds: int | None = None,
-    scheduled_runtime_days_of_week: list[int] | None = None,
-    evaluation_window_length_seconds: int = 259200,  # 3 days
-    delay_seconds: int = 0,
-    email_addresses: list[str] | None = None,
+  name: str,
+  model_name: str,
+  drift_metric: str = "psi",              # "psi", "js", "kl", "ks" …
+  dimension_category: str = "prediction", # or "featureLabel", etc.
+  operator: str = "greaterThan",
+  dimension_name: str | None = None,       # not needed for prediction drift
+  notes: str | None = None,
+  threshold: float | None = None,
+  std_dev_multiplier: float = 2.0,
+  prediction_class_value: str | None = None,
+  positive_class_value: str | None = None,
+  downtime_start: datetime | str | None = None,
+  downtime_duration_hrs: int | None = None,
+  downtime_frequency_days: int | None = None,
+  scheduled_runtime_enabled: bool = False,
+  scheduled_runtime_cadence_seconds: int | None = None,
+  scheduled_runtime_days_of_week: list[int] | None = None,
+  evaluation_window_length_seconds: int = 259200,  # 3 days
+  delay_seconds: int = 0,
+  email_addresses: list[str] | None = None,
 )
 ```
 Creates a new drift monitor. Returns a URL path to the newly created monitor.
 
 **Required parameters**
+
 * `name` – Friendly monitor name.
 * `model_name` – Model to attach the monitor to.
 * `drift_metric` – Metric to monitor (`"psi"`, `"js"`, `"kl"`, `"ks"`).
 * `dimension_category` – Category of the dimension to monitor (`"prediction"`, `"featureLabel"`, etc.).
 
 **Optional parameters**
+
 * `operator` – Comparison operator for the primary threshold. Defaults to `"greaterThan"`.  
   Valid choices include `"greaterThan"`, `"lessThan"`, `"equalTo"`, `"greaterThanOrEqualTo"`, and `"lessThanOrEqualTo"`.
 * `dimension_name` – Name of the dimension to monitor. Not needed for prediction drift.
@@ -342,17 +365,19 @@ Creates a new drift monitor. Returns a URL path to the newly created monitor.
   Default is `0`.
 * `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
 
-**Returns**  
+**Returns**
+
 A URL path to the newly created monitor.
 
 **Example**
+
 ```python
 monitor_url = client.create_drift_monitor(
-    name="PSI > 0.2",
-    model_name="fraud-detection-v3",
-    drift_metric="psi",
-    dimension_category="prediction",
-    operator="greaterThan",
+  name="PSI > 0.2",
+  model_name="fraud-detection-v3",
+  drift_metric="psi",
+  dimension_category="prediction",
+  operator="greaterThan",
 )
 print("Created:", monitor_url)
 ```
@@ -362,37 +387,39 @@ print("Created:", monitor_url)
 ### `create_data_quality_monitor`
 ```python
 monitor_url: str = client.create_data_quality_monitor(
-    name: str,
-    model_name: str,
-    data_quality_metric: str,                # e.g. "percentEmpty", "cardinality"
-    model_environment_name: str,
-    operator: str = "greaterThan",
-    dimension_category: str = "prediction",
-    notes: str | None = None,
-    threshold: float | None = None,
-    std_dev_multiplier: float = 2.0,
-    prediction_class_value: str | None = None,
-    positive_class_value: str | None = None,
-    downtime_start: datetime | str | None = None,
-    downtime_duration_hrs: int | None = None,
-    downtime_frequency_days: int | None = None,
-    scheduled_runtime_enabled: bool = False,
-    scheduled_runtime_cadence_seconds: int | None = None,
-    scheduled_runtime_days_of_week: list[int] | None = None,
-    evaluation_window_length_seconds: int = 259200,  # 3 days
-    delay_seconds: int = 0,
-    email_addresses: list[str] | None = None,
+  name: str,
+  model_name: str,
+  data_quality_metric: str,                # e.g. "percentEmpty", "cardinality"
+  model_environment_name: str,
+  operator: str = "greaterThan",
+  dimension_category: str = "prediction",
+  notes: str | None = None,
+  threshold: float | None = None,
+  std_dev_multiplier: float = 2.0,
+  prediction_class_value: str | None = None,
+  positive_class_value: str | None = None,
+  downtime_start: datetime | str | None = None,
+  downtime_duration_hrs: int | None = None,
+  downtime_frequency_days: int | None = None,
+  scheduled_runtime_enabled: bool = False,
+  scheduled_runtime_cadence_seconds: int | None = None,
+  scheduled_runtime_days_of_week: list[int] | None = None,
+  evaluation_window_length_seconds: int = 259200,  # 3 days
+  delay_seconds: int = 0,
+  email_addresses: list[str] | None = None,
 )
 ```
 Creates a data-quality monitor. Returns a URL path to the newly created monitor.
 
 **Required parameters**
+
 * `name` – Friendly monitor name.
 * `model_name` – Model to attach the monitor to.
 * `data_quality_metric` – Metric to monitor (`"percentEmpty"`, `"cardinality"`, etc.).
 * `model_environment_name` – Which environment to scope to (`"production"`, …).
 
 **Optional parameters**
+
 * `operator` – Comparison operator for the primary threshold. Defaults to `"greaterThan"`.  
   Valid choices include `"greaterThan"`, `"lessThan"`, `"equalTo"`, `"greaterThanOrEqualTo"`, and `"lessThanOrEqualTo"`.
 * `dimension_category` – Category of the dimension to monitor (`"prediction"`, `"featureLabel"`, etc.).
@@ -415,18 +442,20 @@ Creates a data-quality monitor. Returns a URL path to the newly created monitor.
 * `delay_seconds` – How long to wait before evaluating newly-arrived data (to accommodate ingestion lag).
 * `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
 
-**Returns**  
+**Returns**
+
 A URL path to the newly created monitor.
 
 **Example**
+
 ```python
 monitor_url = client.create_data_quality_monitor(
-    name="Data Quality",
-    model_name="fraud-detection-v3",
-    data_quality_metric="percentEmpty",
-    model_environment_name="production",
-    operator="greaterThan",
-    dimension_category="prediction",
+  name="Data Quality",
+  model_name="fraud-detection-v3",
+  data_quality_metric="percentEmpty",
+  model_environment_name="production",
+  operator="greaterThan",
+  dimension_category="prediction",
 )
 print("Created:", monitor_url)
 ```
@@ -438,24 +467,28 @@ print("Created:", monitor_url)
 ### `delete_monitor`
 ```python
 is_deleted: bool = client.delete_monitor(
-    monitor_name: str,
-    model_name: str,
+  monitor_name: str,
+  model_name: str,
 )
 ```
 Deletes a monitor by *name* and returns a boolean indicating success.
 
 **Parameters**
+
 * `monitor_name` – Name of the monitor to delete
 * `model_name` – Name of the model the monitor belongs to
 
-**Returns**  
+**Returns**
+
 `True` if the monitor was deleted, `False` otherwise.
 
 **Example**
+
 ```python
 is_deleted = client.delete_monitor(monitor_name="Accuracy < 80%", model_name="fraud-detection-v3")
 print("Deleted:", is_deleted)
 ```
+
 ---
 
 ### `delete_monitor_by_id`
@@ -465,12 +498,15 @@ is_deleted: bool = client.delete_monitor_by_id(monitor_id: str)
 Deletes a monitor by canonical id. For use when you have stored the canonical id in a database or CI pipeline.
 
 **Parameters**
+
 * `monitor_id` – Canonical id of the monitor to delete
 
-**Returns**  
+**Returns**
+
 `True` if the monitor was deleted, `False` otherwise.
 
 **Example**
+
 ```python
 is_deleted = client.delete_monitor_by_id("1234567890")
 print("Deleted:", is_deleted)
@@ -485,17 +521,18 @@ This method can also be used to change specific fields of a monitor, while maint
 ### `copy_monitor`
 ```python
 new_monitor_url: str = client.copy_monitor(
-    current_monitor_name: str,
-    current_model_name: str,
-    new_monitor_name: str | None = None,
-    new_model_name: str | None = None,
-    new_space_id: str | None = None,
-    # Any field from the original monitor can be overridden via **kwargs
+  current_monitor_name: str,
+  current_model_name: str,
+  new_monitor_name: str | None = None,
+  new_model_name: str | None = None,
+  new_space_id: str | None = None,
+  # Any field from the original monitor can be overridden via **kwargs
 )
 ```
 Copies an existing monitor, optionally overriding fields. If `new_model_name` is not provided, the monitor is created in the same model using any provided `new_monitor_name` and any overridden fields. If `new_monitor_name` is not provided, the new monitor will use the same name as the original monitor.
 
 **Parameters**
+
 * `current_monitor_name` – Name of the monitor to copy
 * `current_model_name` – Name of the model the monitor belongs to
 * `new_monitor_name` – Name of the new monitor
@@ -503,28 +540,30 @@ Copies an existing monitor, optionally overriding fields. If `new_model_name` is
 * `new_space_id` – ID of the space to copy the monitor to
 * `**kwargs` – Any field from the original monitor can be overridden by passing in the field name and new value.
 
-**Returns**  
+**Returns**
+
 A URL path to the newly created monitor.
 
 **Example**
+
 ```python
 # Create a drift monitor for feature1
 drift_monitor_url = client.create_drift_monitor(
-    name="feature1 PSI > 0.259",
-    model_name="fraud-detection-v3",
-    drift_metric="psi",
-    dimension_category="featureLabel",
-    dimension_name="feature1",
-    operator="greaterThan",
-    threshold=0.259,
+  name="feature1 PSI > 0.259",
+  model_name="fraud-detection-v3",
+  drift_metric="psi",
+  dimension_category="featureLabel",
+  dimension_name="feature1",
+  operator="greaterThan",
+  threshold=0.259,
 )
 
 # Copy the monitor for feature2
 new_monitor_url = client.copy_monitor(
-    current_monitor_name="feature1 PSI > 0.259",
-    current_model_name="fraud-detection-v3",
-    new_monitor_name="feature2 PSI > 0.259",
-    dimension_name="feature2",
+  current_monitor_name="feature1 PSI > 0.259",
+  current_model_name="fraud-detection-v3",
+  new_monitor_name="feature2 PSI > 0.259",
+  dimension_name="feature2",
 )
 ```
 
@@ -538,54 +577,54 @@ Below is a miniature script that showcases how the monitor operations can be use
 from arize_toolkit import Client
 
 client = Client(
-    organization="my-org",
-    space="my-space",
+  organization="my-org",
+  space="my-space",
 )
 
 # 1. Delete any existing monitors
 for m in client.get_all_monitors(model_name="fraud-detection-v3", monitor_category="drift"):
-    client.delete_monitor(monitor_name=m["name"], model_name="fraud-detection-v3")
+  client.delete_monitor(monitor_name=m["name"], model_name="fraud-detection-v3")
     
 
 # 2. Create a basic performance monitor
 performance_monitor_url = client.create_performance_monitor(
-    name="Accuracy < 80%",
-    model_name="fraud-detection-v3",
-    model_environment_name="production",
-    performance_metric="accuracy",
-    threshold=0.8,
-    email_addresses=["alerts@my-org.com"],
+  name="Accuracy < 80%",
+  model_name="fraud-detection-v3",
+  model_environment_name="production",
+  performance_metric="accuracy",
+  threshold=0.8,
+  email_addresses=["alerts@my-org.com"],
 )
 
 # 3. Create a basic data-quality monitor
 data_quality_monitor_url = client.create_data_quality_monitor(
-    name="Data Quality",
-    model_name="fraud-detection-v3",
-    data_quality_metric="percentEmpty",
-    model_environment_name="production",
-    operator="greaterThan",
-    dimension_category="prediction",
-    email_addresses=["alerts@my-org.com"],
+  name="Data Quality",
+  model_name="fraud-detection-v3",
+  data_quality_metric="percentEmpty",
+  model_environment_name="production",
+  operator="greaterThan",
+  dimension_category="prediction",
+  email_addresses=["alerts@my-org.com"],
 )
 
 # 4. Create a basic drift monitor
 prediction_drift_monitor_url = client.create_drift_monitor(
-    name="PSI > 0.2",
-    model_name="fraud-detection-v3",
-    drift_metric="psi",
-    dimension_category="prediction",
-    operator="greaterThan",
-    threshold=0.2,
-    email_addresses=["alerts@my-org.com"],
+  name="PSI > 0.2",
+  model_name="fraud-detection-v3",
+  drift_metric="psi",
+  dimension_category="prediction",
+  operator="greaterThan",
+  threshold=0.2,
+  email_addresses=["alerts@my-org.com"],
 )
 
 # 5. Copy the drift monitor for a feature
 feature_drift_monitor_url = client.copy_monitor(
-    current_monitor_name="PSI > 0.2",
-    current_model_name="fraud-detection-v3",
-    new_monitor_name="feature PSI > 0.2",
-    dimension_category="featureLabel",
-    dimension_name="feature",
+  current_monitor_name="PSI > 0.2",
+  current_model_name="fraud-detection-v3",
+  new_monitor_name="feature PSI > 0.2",
+  dimension_category="featureLabel",
+  dimension_name="feature",
 )
 
 # 6. Print the monitor URLs
