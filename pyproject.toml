@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "arize_toolkit"
-version = "0.1.0"  # Replace with your version
+version = "1.0.0"
 description = "A library to interact with Arize AI APIs"
 authors = ["Duncan McKinnon <dmckinnon@arize.com>"]
 license = "MIT"
