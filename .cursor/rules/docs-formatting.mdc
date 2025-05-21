@@ -1,0 +1,80 @@
+---
+description: 
+globs: */docs/*.md
+alwaysApply: false
+---
+When editing or creating documentation files within the `docs_site/docs/` directory, please adhere to the following formatting guidelines:
+
+## Overall Document Structure
+
+1.  **Main Title**: Start each document with an H1 heading (e.g., `# Model Tools`).
+2.  **Overview Section**:
+    *   Follow the H1 with an `## Overview` (H2) section.
+    *   Include a brief introductory paragraph. If linking to external Arize documentation, use bold markdown links (e.g., `**[Relevant Arize Docs](mdc:https:/docs.arize.com/...)**`).
+    *   Provide a numbered list detailing the capabilities or tools covered in the document.
+    *   Include a summary table of operations and their corresponding helper function names:
+        ```markdown
+        | Operation | Helper |
+        |-----------|--------|
+        | Description of operation | [`function_name`](mdc:#function_name) |
+        ```
+        Ensure `function_name` in the link matches the H3 anchor for that function.
+
+## Main Content Sections
+
+*   Group related operations or topics under H2 headings (e.g., `## Model Operations`, `## Creating Monitors`).
+*   Use a horizontal rule (`---`) to visually separate major sections or before each new H3 function/method documentation block.
+
+## Individual Function/Method Documentation
+
+Each function or method should be documented as follows:
+
+1.  **Heading**: Use an H3 heading with the function name in backticks (e.g., `### `get_example_function``). This creates the anchor for the overview table.
+2.  **Signature**: Provide a Python code block showing the function signature.
+    *   For simple signatures:
+        ```python
+        result_type: type = client.function_name(param1: type, param2: type)
+        ```
+    *   For signatures with optional parameters or more complexity, show them clearly:
+        ```python
+        result: type = client.function_name(
+          required_param: str,
+          optional_param: str | None = None,  # optional
+          another_opt: bool = False           # optional
+        )
+        ```
+3.  **Description**: A concise explanation of what the function does.
+4.  **Parameters Section**:
+    *   Start with a bolded subheading: `**Parameters**`.
+    *   Use a bulleted list for each parameter:
+        *   `* `parameter_name` (optionality indication like `(optional)`) – Clear description of the parameter. Use italics for specific instructions like *Human-readable name* or *Canonical identifier*.
+        *   If parameters are mutually exclusive or have conditions, state them clearly (e.g., "Provide **either** `param_a` **or** `param_b`.").
+5.  **Returns Section**:
+    *   Start with a bolded subheading: `**Returns**`.
+    *   Describe the return value. If it's a complex type (like a list of dictionaries or an object), use a bulleted list to detail its structure or important fields:
+        *   `* `field_name` – Description of the field.`
+6.  **Example Section**:
+    *   Start with a bolded subheading: `**Example**`.
+    *   Provide a Python code block demonstrating practical usage of the function.
+        ```python
+        # Example usage
+        client = Client(...)
+        result = client.function_name(param_value_1, param_value_2)
+        print(result)
+        ```
+
+## General Formatting & Style Conventions
+
+*   **Code Blocks**: Always specify the language for syntax highlighting (e.g., ` ```python`).
+*   **Emphasis**:
+    *   Use backticks (`) for `function_names()`, `parameter_names`, specific string `values`, `file_paths/`, and `object_names`.
+    *   Use bold (`**text**`) for important notes, warnings (e.g., `**Note:** ...`), or to highlight key terms within descriptions.
+*   **Links**: Use standard Markdown links. For internal links to sections, ensure the anchor text is correct.
+*   **Consistency**: Maintain consistent terminology and phrasing when describing similar concepts across different documentation files.
+*   **Clarity**: Prioritize clear and concise language.
+
+Use the same formatting for all tool documentation.  Use as an example:
+[model_tools.md](mdc:docs_site/docs/model_tools.md)
+[monitor_tools.md](mdc:docs_site/docs/monitor_tools.md)
+[custom_metrics_tools.md](mdc:docs_site/docs/custom_metrics_tools.md)
+[language_model_tools.md](mdc:docs_site/docs/language_model_tools.md)
