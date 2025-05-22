@@ -3,10 +3,6 @@ name: Publish Python Package
 on:
   release:
     types: [created]
-  # Optionally also trigger on specific tags format
-  push:
-    tags:
-      - 'v*.*.*'  # e.g. v0.1.0, v1.0.0, etc.
 
 jobs:
   deploy:
@@ -32,34 +28,39 @@ jobs:
       run: |
         poetry config pypi-token.pypi "$PYPI_TOKEN"
 
-    - name: Build and publish
+    - name: Extract version from tag
+      id: get_version
       run: |
-        poetry version $(git describe --tags --abbrev=0)
+        # Get the tag name from the release
+        TAG_NAME="${{ github.event.release.tag_name }}"
+        # Remove 'v' prefix if it exists
+        VERSION=${TAG_NAME#v}
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+
+    - name: Update version in pyproject.toml
+      run: |
+        poetry version ${{ steps.get_version.outputs.version }}
+
+    - name: Build package
+      run: |
         poetry build
+
+    - name: Publish to PyPI
+      run: |
         poetry publish
 
-    - name: Upload release assets
+    - name: Upload release assets to GitHub
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Upload the built packages to the existing release
+        gh release upload "${{ steps.get_version.outputs.tag_name }}" ./dist/*.tar.gz ./dist/*.whl
+
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: distribution-packages
         path: |
           dist/*.tar.gz
           dist/*.whl
-
-    - name: Create release notes
-      id: release_notes
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        # Extract tag name
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        # Generate simple release notes if needed
-        echo "Generated release for $TAG_NAME" > release_notes.md
-        echo "Version $(git describe --tags --abbrev=0)" >> release_notes.md
-        
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Use GitHub CLI to create release with assets
-        gh release create "${GITHUB_REF#refs/tags/}" ./dist/*.tar.gz ./dist/*.whl --notes-file release_notes.md --generate-notes 
