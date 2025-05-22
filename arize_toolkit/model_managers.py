@@ -62,11 +62,11 @@ class MonitorManager:
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
-            dynamicAutoThreshold=DynamicAutoThreshold(
-                stdDevMultiplier=monitor.stdDevMultiplier
-            )
-            if monitor.stdDevMultiplier
-            else None,
+            dynamicAutoThreshold=(
+                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
+                if monitor.stdDevMultiplier
+                else None
+            ),
             contacts=monitor.contacts,
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
@@ -95,23 +95,27 @@ class MonitorManager:
             scheduledRuntimeDaysOfWeek=monitor.scheduledRuntimeDaysOfWeek,
             dataQualityMetric=monitor.dataQualityMetric,
             dimensionCategory=monitor.dimensionCategory,
-            dimensionName=monitor.primaryMetricWindow.dimension.name
-            if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
-            else None,
-            modelEnvironmentName=ModelEnvironment.production
-            if monitor.dimensionCategory != DimensionCategory.spanProperty
-            else ModelEnvironment.tracing,
+            dimensionName=(
+                monitor.primaryMetricWindow.dimension.name
+                if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
+                else None
+            ),
+            modelEnvironmentName=(
+                ModelEnvironment.production
+                if monitor.dimensionCategory != DimensionCategory.spanProperty
+                else ModelEnvironment.tracing
+            ),
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
             operator=monitor.operator,
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
-            dynamicAutoThreshold=DynamicAutoThreshold(
-                stdDevMultiplier=monitor.stdDevMultiplier
-            )
-            if monitor.stdDevMultiplier
-            else None,
+            dynamicAutoThreshold=(
+                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
+                if monitor.stdDevMultiplier
+                else None
+            ),
         )
 
     @classmethod
@@ -125,20 +129,22 @@ class MonitorManager:
             notes=monitor.notes,
             driftMetric=monitor.driftMetric,
             dimensionCategory=monitor.dimensionCategory,
-            dimensionName=monitor.primaryMetricWindow.dimension.name
-            if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
-            else None,
+            dimensionName=(
+                monitor.primaryMetricWindow.dimension.name
+                if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
+                else None
+            ),
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
             operator=monitor.operator,
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
-            dynamicAutoThreshold=DynamicAutoThreshold(
-                stdDevMultiplier=monitor.stdDevMultiplier
-            )
-            if monitor.stdDevMultiplier
-            else None,
+            dynamicAutoThreshold=(
+                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
+                if monitor.stdDevMultiplier
+                else None
+            ),
             contacts=monitor.contacts,
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
