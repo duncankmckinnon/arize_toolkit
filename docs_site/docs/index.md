@@ -7,6 +7,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 - [Monitor Tools](monitor_tools.md) - Documentation for monitor tools
 - [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
+- [Space, Organization, & Navigation Tools](space_tools.md) - Documentation for space, organization, & navigation tools
 
 ## Disclaimer
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
@@ -78,40 +79,6 @@ client = Client(..., sleep_time=0)
 
 # Update the sleep time in line
 lots_of_models = client.set_sleep_time(10).get_all_models()
-```
-
-### Switching Spaces and Organizations
-
-The `Client` class can be configured to switch to a different space or a space in a different organization. This is useful if you are working with multiple spaces or if you need to switch to a different space on the fly without having to create a new client.
-
-#### `set_space`
-```python
-space_url: str = client.set_space(space: str, organization: Optional[str] = None)
-```
-This will update the space and organization for the existing client. It will also return the full url of the new space, which is comprised of the organization and space ids.
-
-* **Parameters**
-  * `space` – The name of the space to switch to
-  * `organization` – *Optional* The name of the organization to switch to if different from the current organization
-
-* **Returns**
-  * `str` – The full url of the new space
-
-* **Example**
-```python
-client = Client(..., space="my_space")
-
-# get the current space url
-current_space_url = client.space_url
-
-# Get all models in the current space
-current_space_models = client.get_all_models()
-
-# Switch to a different space
-other_space_url = client.set_space(space="my_other_space", organization="my_other_organization")
-
-# Get all models in the new space
-other_space_models = client.get_all_models()
 ```
 
 ## For Developers
