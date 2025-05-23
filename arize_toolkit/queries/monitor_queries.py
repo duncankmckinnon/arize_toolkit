@@ -1,16 +1,7 @@
 from typing import List, Optional, Tuple
-from arize_toolkit.queries.basequery import (
-    BaseQuery,
-    BaseResponse,
-    BaseVariables,
-    ArizeAPIException,
-)
-from arize_toolkit.models import (
-    Monitor,
-    PerformanceMonitor,
-    DriftMonitor,
-    DataQualityMonitor,
-)
+
+from arize_toolkit.models import DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor
+from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
 class GetAllModelMonitorsQuery(BaseQuery):
@@ -48,9 +39,7 @@ class GetAllModelMonitorsQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         pageInfo = result["node"]["monitors"]["pageInfo"]
         edges = result["node"]["monitors"]["edges"]
         monitors = []
@@ -91,9 +80,7 @@ class GetMonitorQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         edges = result["node"]["monitors"]["edges"]
         if len(edges) == 0:
             cls.raise_exception("No monitor found with the given name")
@@ -141,9 +128,7 @@ class CreatePerformanceMonitorMutation(BaseQuery):
         }
         """
 
-    query_description = (
-        "Create a monitor for model performance for a given model and metric"
-    )
+    query_description = "Create a monitor for model performance for a given model and metric"
 
     class Variables(PerformanceMonitor):
         pass
@@ -155,9 +140,7 @@ class CreatePerformanceMonitorMutation(BaseQuery):
         monitor_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         create_result = result["createPerformanceMonitor"]
         if "monitor" not in create_result:
             cls.raise_exception("no monitor id returned")
@@ -178,9 +161,7 @@ class CreateDriftMonitorMutation(BaseQuery):
         }
     }
     """
-    query_description = (
-        "Create a monitor for drift using a drift metric on a given model dimension"
-    )
+    query_description = "Create a monitor for drift using a drift metric on a given model dimension"
 
     class Variables(DriftMonitor):
         pass
@@ -192,9 +173,7 @@ class CreateDriftMonitorMutation(BaseQuery):
         monitor_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         create_result = result["createDriftMonitor"]
         if "monitor" not in create_result:
             cls.raise_exception("no monitor id returned")
@@ -227,9 +206,7 @@ class CreateDataQualityMonitorMutation(BaseQuery):
         monitor_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         create_result = result["createDataQualityMonitor"]
         if "monitor" not in create_result:
             cls.raise_exception("no monitor id returned")
@@ -262,9 +239,7 @@ class DeleteMonitorMutation(BaseQuery):
         monitor_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         delete_result = result["deleteMonitor"]
         if "monitor" not in delete_result:
             cls.raise_exception("no monitor id returned")

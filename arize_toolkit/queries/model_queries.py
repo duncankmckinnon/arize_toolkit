@@ -1,15 +1,11 @@
 from datetime import datetime
-from typing import List, Literal, Tuple, Optional
-from arize_toolkit.queries.basequery import (
-    ArizeAPIException,
-    BaseQuery,
-    BaseResponse,
-    BaseVariables,
-)
-from arize_toolkit.models import Model
+from typing import List, Literal, Optional, Tuple
 
-from arize_toolkit.types import ModelEnvironment, PerformanceMetric, DataGranularity
 from pydantic import Field
+
+from arize_toolkit.models import Model
+from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
+from arize_toolkit.types import DataGranularity, ModelEnvironment, PerformanceMetric
 
 
 class GetModelByIDQuery(BaseQuery):
@@ -67,14 +63,8 @@ class GetModelQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if (
-            "node" not in result
-            or "models" not in result["node"]
-            or "edges" not in result["node"]["models"]
-        ):
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or "models" not in result["node"] or "edges" not in result["node"]["models"]:
             cls.raise_exception("No model found with the given name")
         result = result["node"]["models"]["edges"]
         if len(result) == 0:
@@ -121,9 +111,7 @@ class GetAllModelsQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         page_info = result["node"]["models"]["pageInfo"]
         has_next_page = page_info["hasNextPage"]
         end_cursor = page_info["endCursor"]
@@ -157,9 +145,7 @@ class GetModelVolumeQuery(BaseQuery):
         totalVolume: int
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         result = result["node"]
         if "modelPredictionVolume" not in result:
             cls.raise_exception("No model prediction volume found with the given id")
@@ -174,9 +160,7 @@ class DeleteDataMutation(BaseQuery):
         }
     }
     """
-    query_description = (
-        "Delete data from a model for a given time range and environment"
-    )
+    query_description = "Delete data from a model for a given time range and environment"
 
     class Variables(BaseVariables):
         modelId: str
@@ -191,9 +175,7 @@ class DeleteDataMutation(BaseQuery):
         success: bool
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "deleteData" not in result:
             cls.raise_exception("No data deleted")
         return [cls.QueryResponse(success=True)], False, None
@@ -246,20 +228,13 @@ class GetPerformanceMetricValuesQuery(BaseQuery):
         metricValue: Optional[float] = Field(default=-1.0)
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         result = result["node"]
-        if (
-            "performanceMetricOverTime" not in result
-            or "dataWindows" not in result["performanceMetricOverTime"]
-        ):
+        if "performanceMetricOverTime" not in result or "dataWindows" not in result["performanceMetricOverTime"]:
             cls.raise_exception("No performance metric values found")
         data_windows = result["performanceMetricOverTime"]["dataWindows"]
         if len(data_windows) == 0:
-            cls.raise_exception(
-                "Empty data windows - no performance metric values found during the given time range"
-            )
+            cls.raise_exception("Empty data windows - no performance metric values found during the given time range")
         return (
             [cls.QueryResponse(**data_window) for data_window in data_windows],
             False,

@@ -1,11 +1,13 @@
+import inspect
+import re
 from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, ConfigDict
-from typing import Any, Mapping, Sequence, Type, Union, get_origin, get_args
-import inspect
-from arize_toolkit.constants import MAX_RECURSION_DEPTH
 from functools import singledispatch
-import re
+from typing import Any, Mapping, Sequence, Type, Union, get_args, get_origin
+
+from pydantic import BaseModel, ConfigDict
+
+from arize_toolkit.constants import MAX_RECURSION_DEPTH
 
 
 @singledispatch
@@ -83,23 +85,15 @@ class GraphQLModel(Dictable):
                 base_type = field_type
 
                 # Unwrap Optional
-                if get_origin(field_type) is Union and type(None) in get_args(
-                    field_type
-                ):
-                    base_type = next(
-                        t for t in get_args(field_type) if t is not type(None)
-                    )
+                if get_origin(field_type) is Union and type(None) in get_args(field_type):
+                    base_type = next(t for t in get_args(field_type) if t is not type(None))
 
                 # Unwrap List
                 if get_origin(base_type) is list:
                     base_type = get_args(base_type)[0]
 
                 # Check if it's a Pydantic model
-                if (
-                    inspect.isclass(base_type)
-                    and issubclass(base_type, BaseModel)
-                    and base_type != model_class
-                ):
+                if inspect.isclass(base_type) and issubclass(base_type, BaseModel) and base_type != model_class:
                     nested_fields = _get_field_string(base_type)
                     fields.append(f"{field_name} {{ {nested_fields} }}")
                 else:
@@ -120,33 +114,21 @@ class GraphQLModel(Dictable):
 
             fields = []
             for field_name, field_info in model_class.model_fields.items():
-                if (
-                    field_name == "id"
-                    or field_name == "createdDate"
-                    or field_name == "updatedAt"
-                ):
+                if field_name == "id" or field_name == "createdDate" or field_name == "updatedAt":
                     continue
                 field_type = field_info.annotation
                 base_type = field_type
 
                 # Unwrap Optional
-                if get_origin(field_type) is Union and type(None) in get_args(
-                    field_type
-                ):
-                    base_type = next(
-                        t for t in get_args(field_type) if t is not type(None)
-                    )
+                if get_origin(field_type) is Union and type(None) in get_args(field_type):
+                    base_type = next(t for t in get_args(field_type) if t is not type(None))
 
                     # Unwrap List
                 if get_origin(base_type) is list:
                     base_type = get_args(base_type)[0]
 
                 # Check if it's a Pydantic model
-                if (
-                    inspect.isclass(base_type)
-                    and issubclass(base_type, BaseModel)
-                    and base_type != model_class
-                ):
+                if inspect.isclass(base_type) and issubclass(base_type, BaseModel) and base_type != model_class:
                     nested_fields = _get_field_string(base_type)
                     fields.append(f"{field_name}: {{ {nested_fields} }}")
                 else:
@@ -210,11 +192,7 @@ def parse_iso8601(value: str) -> datetime:
 def parse_ymd_div(value: str, div: str = "-") -> datetime:
     format_str = f"%Y{div}%m{div}%d"
     if len(value) > 10:
-        format_str = (
-            f"%Y{div}%m{div}%d %H:%M:%S"
-            if value.count(":") == 2
-            else f"%Y{div}%m{div}%d %H:%M"
-        )
+        format_str = f"%Y{div}%m{div}%d %H:%M:%S" if value.count(":") == 2 else f"%Y{div}%m{div}%d %H:%M"
     return datetime.strptime(value, format_str)
 
 
@@ -269,9 +247,7 @@ def parse_date_with_div(value: str, div="/") -> datetime:
         return datetime.strptime(value, format_str)
     except ValueError:
         # If parsing fails with detected format, try the alternate
-        alternate_format = (
-            f"%d{div}%m{div}%Y" if format_str.startswith("%m") else f"%m{div}%d{div}%Y"
-        )
+        alternate_format = f"%d{div}%m{div}%Y" if format_str.startswith("%m") else f"%m{div}%d{div}%Y"
         if len(value) > 10:
             alternate_format += format_str[format_str.index(" ") :]
         return datetime.strptime(value, alternate_format)
@@ -405,13 +381,13 @@ def parse_datetime(date_repr: Any) -> datetime:
         datetime.datetime(2024, 4, 15, 12, 0, 0, tzinfo=timezone.utc)
         >>> parse_datetime(1712985600.0)
         datetime.datetime(2024, 4, 15, 12, 0, 0, tzinfo=timezone.utc)
+
     """
     return DatetimeParser.run(date_repr)
 
 
 class FormattedPrompt(Mapping[str, Any]):
-    """
-    Base class for formatted prompts that can be unpacked as kwargs
+    """Base class for formatted prompts that can be unpacked as kwargs
     to plug into LLM provider client libraries.
 
     This abstraction allows provider-specific formatted prompts to be
