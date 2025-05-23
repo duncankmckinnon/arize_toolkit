@@ -3,6 +3,7 @@
 Welcome to the documentation for Arize Toolkit, a Python client for interacting with the Arize AI API.
 
 ## Tools
+
 - [Model Tools](model_tools.md) - Documentation for model tools
 - [Monitor Tools](monitor_tools.md) - Documentation for monitor tools
 - [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools
@@ -10,6 +11,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 - [Space, Organization, & Navigation Tools](space_tools.md) - Documentation for space, organization, & navigation tools
 
 ## Disclaimer
+
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
 It is a open source project developed and maintained by an Arize Engineer.
 
@@ -32,9 +34,11 @@ pip install arize_toolkit
 ```
 
 ## Client Setup
+
 The `Client` class is the entrypoint for interacting with the toolkit. It provides maintains the connection information for making requests to the Arize APIs, and offers a wide range of operations for interacting with models, monitors, dashboards, and more.
 
 ### API Key
+
 To create a client, you need to provide your Arize API key. Use this reference to [get your API key](https://docs.arize.com/arize/reference/authentication-and-security/api-keys) from the Arize UI.
 
 ![Arize UI Path](images/api_key_ref.png)
@@ -49,29 +53,35 @@ For the example below, the organization is `Demo Models` and the space is `Demo 
 
 ### For On Prem deployments
 
-For SaaS users, the default API endpoint is always going to be `https://api.arize.com`. 
+For SaaS users, the default API endpoint is always going to be `https://api.arize.com`.
 If you are using an on prem deployment of Arize, you will need to provide the `api_url` parameter.
 This parameters should just be the base url of your Arize instance.
 
 ### Sleep Time
+
 The `Client` class can be configured to wait a certain amount of time between requests. This is useful to avoid rate limiting.
-The default sleep time is 0 seconds. When instantiating the client, you can set the `sleep_time` parameter to the number of seconds to wait between requests. This can save time if you are making a large number or requests or getting a large amount of data.  If you start seeing rate limit errors, you can increase this value.  There is a helper function in the client to update the sleep time in line:
+The default sleep time is 0 seconds. When instantiating the client, you can set the `sleep_time` parameter to the number of seconds to wait between requests. This can save time if you are making a large number or requests or getting a large amount of data. If you start seeing rate limit errors, you can increase this value. There is a helper function in the client to update the sleep time in line:
 
 #### `set_sleep_time`
+
 ```python
 from arize_toolkit import Client
 
 client: Client = client.set_sleep_time(sleep_time: int)
 ```
+
 This will update the sleep time for the existing client in line.
 
-* **Parameters**
-  * `sleep_time` – The number of seconds to wait between requests
+- **Parameters**
 
-* **Returns**
-  * `Client` – The updated client
+  - `sleep_time` – The number of seconds to wait between requests
 
-* **Example**
+- **Returns**
+
+  - `Client` – The updated client
+
+- **Example**
+
 ```python
 from arize_toolkit import Client
 
@@ -82,5 +92,6 @@ lots_of_models = client.set_sleep_time(10).get_all_models()
 ```
 
 ## For Developers
+
 - [Development Guide](developers/development.md) - Information about extending the toolkit
 - [Integration Tests](developers/integration_test.md) - Running integration tests

@@ -1,0 +1,92 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+When asked to create a new GraphQL operation, follow the **two-phase workflow** below so the generated code slots cleanly into the existing repo.
+
+--------------------------------------------------------------------
+I.  Questions you MUST ask the user
+--------------------------------------------------------------------
+1. Operation kind – **query** or **mutation**?
+2. Desired Python *query* class name.
+3. Target query file (e.g. `model_queries.py`, `monitor_queries.py`).
+4. Full GraphQL text (triple-quoted string).
+5. Short description for `query_description`.
+6. Variables
+   • Simple list of `name: PythonType` **or** say "uses complex input".
+7. Response for **one** item
+   • Field list + types **or** existing model name.
+8. Pagination?  (single node / edges list + pageInfo).
+9. Custom exception message.
+
+--------------------------------------------------------------------
+II.  Model phase  ‑ `arize_toolkit/models.py`
+--------------------------------------------------------------------
+*If* variables (**mutation**) or response (**query**) are complex **and** no existing model fits:
+
+```python
+from arize_toolkit.utils import GraphQLModel
+from typing import Optional, List, Dict, Any
+from pydantic import Field
+
+class {NewModel}(GraphQLModel):
+    """Auto-generated for {reason}"""
+    field_a: str
+    field_b: Optional[int] = None
+```
+• Append under the thematic `####` section (e.g. "Model GraphQL Models").
+• Update a present `__all__` list.
+
+--------------------------------------------------------------------
+III. Query phase  ‑ `arize_toolkit/queries/{file}`
+--------------------------------------------------------------------
+```python
+from typing import List, Optional, Tuple
+from arize_toolkit.models import {AnyModels}
+from arize_toolkit.queries.basequery import (
+    ArizeAPIException, BaseQuery, BaseResponse, BaseVariables,
+)
+
+class {QueryClass}(BaseQuery):
+    graphql_query = """{ GraphQL text }"""
+    query_description = "{description}"
+
+    class Variables({VariablesParent}):
+        # if not inheriting list fields
+        pass
+
+    class QueryException(ArizeAPIException):
+        message: str = "{exception}"
+
+    class QueryResponse({ResponseParent}):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        # Single-node default
+        if result.get("node"):
+            return [cls.QueryResponse(**result["node"])], False, None
+        # Edges default
+        edges = (result.get("node", {})
+                     .get("items", {})
+                     .get("edges", []))
+        if edges:
+            items = [cls.QueryResponse(**e["node"]) for e in edges]
+            page = result["node"]["items"].get("pageInfo", {})
+            return items, page.get("hasNextPage", False), page.get("endCursor")
+        cls.raise_exception("Unexpected response structure")
+```
+* Insert class just before EOF.
+* Respect **import order**: stdlib → third-party → first-party.
+
+--------------------------------------------------------------------
+IV. Style & tooling
+--------------------------------------------------------------------
+• Code must pass Black (88 cols), isort, flake8.
+• No unused imports; keep line-length ≤88.
+
+--------------------------------------------------------------------
+V. After edits
+--------------------------------------------------------------------
+Print paths of every file changed.

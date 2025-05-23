@@ -1,22 +1,10 @@
-import pytest
 from datetime import datetime
-from arize_toolkit.models import (
-    Monitor,
-    MonitorContact,
-    Dimension,
-    MetricWindow,
-    ModelEnvironment,
-)
+
+import pytest
+
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.types import (
-    MonitorCategory,
-    PerformanceMetric,
-    DataQualityMetric,
-    DriftMetric,
-    DimensionCategory,
-    ComparisonOperator,
-    DimensionDataType,
-)
+from arize_toolkit.models import Dimension, MetricWindow, ModelEnvironment, Monitor, MonitorContact
+from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DimensionDataType, DriftMetric, MonitorCategory, PerformanceMetric
 
 
 class TestMonitorManager:
@@ -147,9 +135,7 @@ class TestMonitorManager:
         """Test extraction of different monitor types"""
         # Test performance monitor
         monitor = Monitor(**monitor_test_data["performance"])
-        result = MonitorManager.extract_monitor_type(
-            space_id="test_space", model_name="test_model", monitor=monitor
-        )
+        result = MonitorManager.extract_monitor_type(space_id="test_space", model_name="test_model", monitor=monitor)
         assert result.name == "accuracy_monitor"
         assert result.performanceMetric == PerformanceMetric.accuracy
         assert result.threshold == 0.95
@@ -157,9 +143,7 @@ class TestMonitorManager:
 
         # Test data quality monitor
         monitor = Monitor(**monitor_test_data["data_quality"])
-        result = MonitorManager.extract_monitor_type(
-            space_id="test_space", model_name="test_model", monitor=monitor
-        )
+        result = MonitorManager.extract_monitor_type(space_id="test_space", model_name="test_model", monitor=monitor)
         assert result.name == "missing_values_monitor"
         assert result.dataQualityMetric == DataQualityMetric.percentEmpty
         assert result.threshold == 0.1
@@ -167,9 +151,7 @@ class TestMonitorManager:
 
         # Test drift monitor
         monitor = Monitor(**monitor_test_data["drift"])
-        result = MonitorManager.extract_monitor_type(
-            space_id="test_space", model_name="test_model", monitor=monitor
-        )
+        result = MonitorManager.extract_monitor_type(space_id="test_space", model_name="test_model", monitor=monitor)
         assert result.name == "feature_drift_monitor"
         assert result.driftMetric == DriftMetric.js
         assert result.threshold == 0.5
@@ -177,9 +159,7 @@ class TestMonitorManager:
 
         # Test range threshold monitor
         monitor = Monitor(**monitor_test_data["range_threshold"])
-        result = MonitorManager.extract_monitor_type(
-            space_id="test_space", model_name="test_model", monitor=monitor
-        )
+        result = MonitorManager.extract_monitor_type(space_id="test_space", model_name="test_model", monitor=monitor)
         assert result.name == "range_monitor"
         assert result.thresholdMode == "range"
         assert result.threshold == 0.8
@@ -198,9 +178,7 @@ class TestMonitorManager:
             Monitor(**monitor_test_data["range_threshold"]),
         ]
 
-        results = MonitorManager.process_monitors(
-            space_id="test_space", model_name="test_model", monitors=monitors
-        )
+        results = MonitorManager.process_monitors(space_id="test_space", model_name="test_model", monitors=monitors)
 
         assert len(results) == 4
         assert results[0].name == "accuracy_monitor"

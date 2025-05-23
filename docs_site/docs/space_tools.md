@@ -4,21 +4,21 @@
 
 These tools and properties on the `Client` object help you manage the client's active connection to specific Arize Spaces and Organizations. They also provide convenient methods for generating URLs to various entities within the Arize platform, based on the currently configured space.
 
-| Operation                   | Helper Method/Property      |
+| Operation | Helper Method/Property |
 |-----------------------------|-----------------------------|
-| Switch active Space         | [`switch_space`](#switch_space) |
-| Get current Space URL       | [`space_url`](#space_url) (Property) |
-| Get Model URL               | [`model_url`](#model_url)         |
-| Get Custom Metric URL       | [`custom_metric_url`](#custom_metric_url) |
-| Get Monitor URL             | [`monitor_url`](#monitor_url)     |
-| Get Prompt Hub Prompt URL   | [`prompt_url`](#prompt_url)        |
-| Get Prompt Hub Version URL  | [`prompt_version_url`](#prompt_version_url) |
+| Switch active Space | [`switch_space`](#switch_space) |
+| Get current Space URL | [`space_url`](#space_url) (Property) |
+| Get Model URL | [`model_url`](#model_url) |
+| Get Custom Metric URL | [`custom_metric_url`](#custom_metric_url) |
+| Get Monitor URL | [`monitor_url`](#monitor_url) |
+| Get Prompt Hub Prompt URL | [`prompt_url`](#prompt_url) |
+| Get Prompt Hub Version URL | [`prompt_version_url`](#prompt_version_url) |
 
----
+______________________________________________________________________
 
 ## Client Methods & Properties
 
----
+______________________________________________________________________
 
 ### `switch_space`
 
@@ -30,12 +30,12 @@ Switches the client's active space and, optionally, the organization. This metho
 
 **Parameters**
 
-*   `space` (str) – The name of the Arize space to switch to.
-*   `organization` (Optional[str]) – The name of the Arize organization. If omitted, the client's current organization (used during initialization) is assumed.
+- `space` (str) – The name of the Arize space to switch to.
+- `organization` (Optional[str]) – The name of the Arize organization. If omitted, the client's current organization (used during initialization) is assumed.
 
 **Returns**
 
-*   `str` – The full URL to the new active space in the Arize UI.
+- `str` – The full URL to the new active space in the Arize UI.
 
 **Example**
 
@@ -53,7 +53,7 @@ for org, space in org_space_pairs:
     all_models.extend(client.get_all_models())
 ```
 
----
+______________________________________________________________________
 
 ### `space_url`
 
@@ -65,7 +65,7 @@ This is a read-only property that returns the full URL to the current active spa
 
 **Returns**
 
-*   `str` – The URL of the current active space.
+- `str` – The URL of the current active space.
 
 **Example**
 
@@ -73,7 +73,7 @@ This is a read-only property that returns the full URL to the current active spa
 print(f"The URL for the current space is: {client.space_url}")
 ```
 
----
+______________________________________________________________________
 
 ### `model_url`
 
@@ -85,11 +85,11 @@ Constructs and returns a direct URL to a specific model's page within the curren
 
 **Parameters**
 
-*   `model_id` (str) – The unique identifier of the model.
+- `model_id` (str) – The unique identifier of the model.
 
 **Returns**
 
-*   `str` – The full URL to the model's page.
+- `str` – The full URL to the model's page.
 
 **Example**
 
@@ -99,7 +99,7 @@ url = client.model_url(model_id=your_model_id)
 print(f"Link to model {your_model_id}: {url}")
 ```
 
----
+______________________________________________________________________
 
 ### `custom_metric_url`
 
@@ -111,12 +111,12 @@ Constructs and returns a direct URL to a specific custom metric's page, associat
 
 **Parameters**
 
-*   `model_id` (str) – The unique identifier of the model to which the custom metric belongs.
-*   `custom_metric_id` (str) – The unique identifier of the custom metric.
+- `model_id` (str) – The unique identifier of the model to which the custom metric belongs.
+- `custom_metric_id` (str) – The unique identifier of the custom metric.
 
 **Returns**
 
-*   `str` – The full URL to the custom metric's page.
+- `str` – The full URL to the custom metric's page.
 
 **Example**
 
@@ -127,7 +127,7 @@ url = client.custom_metric_url(model_id=your_model_id, custom_metric_id=your_met
 print(f"Link to custom metric {your_metric_id} for model {your_model_id}: {url}")
 ```
 
----
+______________________________________________________________________
 
 ### `monitor_url`
 
@@ -139,11 +139,11 @@ Constructs and returns a direct URL to a specific monitor's page within the Ariz
 
 **Parameters**
 
-*   `monitor_id` (str) – The unique identifier of the monitor.
+- `monitor_id` (str) – The unique identifier of the monitor.
 
 **Returns**
 
-*   `str` – The full URL to the monitor's page.
+- `str` – The full URL to the monitor's page.
 
 **Example**
 
@@ -153,7 +153,7 @@ url = client.monitor_url(monitor_id=your_monitor_id)
 print(f"Link to monitor {your_monitor_id}: {url}")
 ```
 
----
+______________________________________________________________________
 
 ### `prompt_url`
 
@@ -165,11 +165,11 @@ Constructs and returns a direct URL to a specific prompt in the Arize Prompt Hub
 
 **Parameters**
 
-*   `prompt_id` (str) – The unique identifier of the prompt.
+- `prompt_id` (str) – The unique identifier of the prompt.
 
 **Returns**
 
-*   `str` – The full URL to the prompt's page in the Prompt Hub.
+- `str` – The full URL to the prompt's page in the Prompt Hub.
 
 **Example**
 
@@ -180,7 +180,7 @@ url = client.prompt_url(prompt_id=your_prompt_id)
 print(f"Link to prompt {your_prompt_id} in Prompt Hub: {url}")
 ```
 
----
+______________________________________________________________________
 
 ### `prompt_version_url`
 
@@ -192,12 +192,12 @@ Constructs and returns a direct URL to a specific version of a prompt in the Ari
 
 **Parameters**
 
-*   `prompt_id` (str) – The unique identifier of the prompt.
-*   `prompt_version_id` (str) – The unique identifier of the prompt version.
+- `prompt_id` (str) – The unique identifier of the prompt.
+- `prompt_version_id` (str) – The unique identifier of the prompt version.
 
 **Returns**
 
-*   `str` – The full URL to the specific prompt version's page in the Prompt Hub.
+- `str` – The full URL to the specific prompt version's page in the Prompt Hub.
 
 **Example**
 
@@ -205,6 +205,8 @@ Constructs and returns a direct URL to a specific version of a prompt in the Ari
 # Assume these are valid IDs
 your_prompt_id = "promptABC"
 your_version_id = "version123"
-url = client.prompt_version_url(prompt_id=your_prompt_id, prompt_version_id=your_version_id)
+url = client.prompt_version_url(
+    prompt_id=your_prompt_id, prompt_version_id=your_version_id
+)
 print(f"Link to prompt {your_prompt_id} version {your_version_id}: {url}")
-``` 
+```

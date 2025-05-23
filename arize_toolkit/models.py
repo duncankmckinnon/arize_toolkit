@@ -1,22 +1,23 @@
 from datetime import datetime
-from typing import List, Optional, Literal, Union, Dict, Any
+from typing import Any, Dict, List, Literal, Optional, Union
+
 from pydantic import Field, model_validator
 
 from arize_toolkit.types import (
+    ComparisonOperator,
+    DataQualityMetric,
+    DimensionCategory,
+    DimensionDataType,
+    DriftMetric,
+    ExternalLLMProviderModel,
+    LLMIntegrationProvider,
+    ModelEnvironment,
+    ModelType,
     MonitorCategory,
     PerformanceMetric,
-    ModelType,
-    DimensionCategory,
-    ComparisonOperator,
-    DriftMetric,
-    DataQualityMetric,
-    ModelEnvironment,
-    DimensionDataType,
     PromptVersionInputVariableFormatEnum,
-    LLMIntegrationProvider,
-    ExternalLLMProviderModel,
 )
-from arize_toolkit.utils import GraphQLModel, FormattedPrompt
+from arize_toolkit.utils import FormattedPrompt, GraphQLModel
 
 #### Common GraphQL Models ####
 
@@ -105,9 +106,7 @@ class Monitor(GraphQLModel):
     notes: Optional[str] = Field(default=None)
     contacts: Optional[List[MonitorContact]] = Field(default=None)
     dimensionCategory: Optional[DimensionCategory] = Field(default=None)
-    status: Optional[Literal["triggered", "cleared", "noData"]] = Field(
-        default="noData"
-    )
+    status: Optional[Literal["triggered", "cleared", "noData"]] = Field(default="noData")
     isTriggered: Optional[bool] = Field(default=False)
     isManaged: Optional[bool] = Field(default=None)
     threshold: Optional[float] = Field(default=None)
@@ -241,8 +240,10 @@ class LLMMessageInput(GraphQLModel):
 class ToolChoiceTool(GraphQLModel):
     tool: ToolInput
 
+
 class ToolChoiceChoice(GraphQLModel):
     choice: Literal["auto", "none", "required"]
+
 
 class ToolChoiceInput(GraphQLModel):
     choice: Optional[Literal["auto", "none", "required"]] = Field(default=None)
@@ -278,32 +279,18 @@ class PromptVersion(GraphQLModel):
     """Version of a prompt template"""
 
     id: str = Field(description="The ID of the prompt version")
-    commitMessage: str = Field(
-        description="The commit message describing the changes in this version"
-    )
-    messages: List[Dict[str, Any]] = Field(
-        description="The list of messages making up the prompt template"
-    )
-    inputVariableFormat: PromptVersionInputVariableFormatEnum = Field(
-        description="The input variable format for determining prompt variables in the messages"
-    )
+    commitMessage: str = Field(description="The commit message describing the changes in this version")
+    messages: List[Dict[str, Any]] = Field(description="The list of messages making up the prompt template")
+    inputVariableFormat: PromptVersionInputVariableFormatEnum = Field(description="The input variable format for determining prompt variables in the messages")
     toolCalls: Optional[List[Dict[str, Any]]] = Field(
         default=None,
         description="The list of tool/function calls defined for this version",
     )
-    llmParameters: Dict[str, Any] = Field(
-        description="The LLM parameters for execution with the prompt"
-    )
-    provider: LLMIntegrationProvider = Field(
-        description="The LLM provider used for execution with the prompt"
-    )
-    modelName: Optional[ExternalLLMProviderModel] = Field(
-        default=None, description="The LLM model used for execution with the prompt"
-    )
+    llmParameters: Dict[str, Any] = Field(description="The LLM parameters for execution with the prompt")
+    provider: LLMIntegrationProvider = Field(description="The LLM provider used for execution with the prompt")
+    modelName: Optional[ExternalLLMProviderModel] = Field(default=None, description="The LLM model used for execution with the prompt")
     createdAt: datetime = Field(description="The datetime the version was created")
-    createdBy: Optional[User] = Field(
-        default=None, description="The user who created the version"
-    )
+    createdBy: Optional[User] = Field(default=None, description="The user who created the version")
 
     def format(self, **variables) -> FormattedPrompt:
         """Convert the prompt version to an OpenAI formatted prompt"""
@@ -323,35 +310,23 @@ class Prompt(PromptVersion):
     """A prompt template that can be saved and versioned"""
 
     name: str = Field(description="The name of the prompt")
-    description: Optional[str] = Field(
-        default=None, description="The description of the saved prompt"
-    )
-    tags: Optional[List[str]] = Field(
-        default=None, description="Tags associated with the prompt"
-    )
+    description: Optional[str] = Field(default=None, description="The description of the saved prompt")
+    tags: Optional[List[str]] = Field(default=None, description="Tags associated with the prompt")
     updatedAt: datetime = Field(description="The datetime the prompt was last updated")
 
 
 class CreatePromptBaseMutationInput(GraphQLModel):
-    spaceId: str = Field(
-        description="The ID of the space to create the prompt version in"
-    )
+    spaceId: str = Field(description="The ID of the space to create the prompt version in")
     commitMessage: str = Field(description="The commit message for the prompt version")
-    messages: List[LLMMessageInput] = Field(
-        description="The messages for the prompt version"
-    )
+    messages: List[LLMMessageInput] = Field(description="The messages for the prompt version")
     inputVariableFormat: PromptVersionInputVariableFormatEnum = Field(
         default=PromptVersionInputVariableFormatEnum.F_STRING,
         description="The input variable format for determining prompt variables in the messages",
     )
     provider: LLMIntegrationProvider = Field(default=LLMIntegrationProvider.openAI)
     model: Optional[str] = Field(default=None)
-    invocationParams: InvocationParamsInput = Field(
-        default_factory=lambda: InvocationParamsInput()
-    )
-    providerParams: ProviderParamsInput = Field(
-        default_factory=lambda: ProviderParamsInput()
-    )
+    invocationParams: InvocationParamsInput = Field(default_factory=lambda: InvocationParamsInput())
+    providerParams: ProviderParamsInput = Field(default_factory=lambda: ProviderParamsInput())
 
 
 class CreatePromptVersionMutationInput(CreatePromptBaseMutationInput):
@@ -360,9 +335,5 @@ class CreatePromptVersionMutationInput(CreatePromptBaseMutationInput):
 
 class CreatePromptMutationInput(CreatePromptBaseMutationInput):
     name: str = Field(description="The name of the prompt")
-    description: Optional[str] = Field(
-        default=None, description="The description of the prompt"
-    )
-    tags: Optional[List[str]] = Field(
-        default=None, description="Tags associated with the prompt"
-    )
+    description: Optional[str] = Field(default=None, description="The description of the prompt")
+    tags: Optional[List[str]] = Field(default=None, description="Tags associated with the prompt")

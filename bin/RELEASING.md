@@ -6,11 +6,13 @@ This document explains the process for releasing new versions of the Arize Toolk
 
 Before you can release a new version, you need:
 
-1. **PyPI API Token**: 
+1. **PyPI API Token**:
+
    - Generate a token at [PyPI Settings](https://pypi.org/manage/account/token/)
    - Add it as a repository secret in GitHub with the name `PYPI_API_TOKEN`
 
-2. **Write Access to the Repository**:
+1. **Write Access to the Repository**:
+
    - You need to be able to create tags and releases
 
 ## Release Process
@@ -18,6 +20,7 @@ Before you can release a new version, you need:
 ### Option 1: Manual Release (Recommended for important releases)
 
 1. **Update CHANGELOG.md** (if you have one):
+
    ```markdown
    # Changelog
 
@@ -27,20 +30,23 @@ Before you can release a new version, you need:
    - Changed: Updated Z
    ```
 
-2. **Create and push a tag**:
+1. **Create and push a tag**:
+
    ```bash
    git tag v0.1.0
    git push origin v0.1.0
    ```
 
-3. **Create a GitHub Release**:
+1. **Create a GitHub Release**:
+
    - Go to the [Releases page](https://github.com/duncankmckinnon/arize_toolkit/releases)
    - Click "Draft a new release"
    - Select your tag
    - Add a title and description
    - Click "Publish release"
 
-4. **Monitor the Workflow**:
+1. **Monitor the Workflow**:
+
    - Go to the [Actions tab](https://github.com/duncankmckinnon/arize_toolkit/actions)
    - You should see the "Release Python Package to PyPI" workflow running
    - The workflow will:
@@ -72,4 +78,4 @@ Always prefix with "v" (e.g., `v1.0.0`).
 
 - Verify the package is available on [PyPI](https://pypi.org/project/arize-toolkit/)
 - Test installation with `pip install arize-toolkit`
-- Announce the release to users if applicable 
+- Announce the release to users if applicable

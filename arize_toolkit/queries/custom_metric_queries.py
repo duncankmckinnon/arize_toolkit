@@ -1,11 +1,7 @@
-from typing import List, Tuple, Optional
-from arize_toolkit.queries.basequery import (
-    BaseQuery,
-    BaseResponse,
-    BaseVariables,
-    ArizeAPIException,
-)
+from typing import List, Optional, Tuple
+
 from arize_toolkit.models import CustomMetric, CustomMetricInput
+from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
 class GetAllCustomMetricsByModelIdQuery(BaseQuery):
@@ -42,18 +38,14 @@ class GetAllCustomMetricsByModelIdQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         edges = result["node"]["customMetrics"]["edges"]
         if not edges:
             cls.raise_exception("No custom metrics found for the given model ID")
         page_info = result["node"]["customMetrics"]["pageInfo"]
         has_next_page = page_info["hasNextPage"]
         end_cursor = page_info["endCursor"]
-        custom_metric_list = [
-            cls.QueryResponse(**custom_metric["node"]) for custom_metric in edges
-        ]
+        custom_metric_list = [cls.QueryResponse(**custom_metric["node"]) for custom_metric in edges]
         return custom_metric_list, has_next_page, end_cursor
 
 
@@ -98,9 +90,7 @@ class GetAllCustomMetricsQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if not result["node"]["models"]["edges"]:
             cls.raise_exception(details="No model found with the given name")
         model_result = result["node"]["models"]["edges"][0]["node"]
@@ -110,10 +100,7 @@ class GetAllCustomMetricsQuery(BaseQuery):
         has_next_page = page_info["hasNextPage"]
         end_cursor = page_info["endCursor"]
         custom_metrics = model_result["customMetrics"]["edges"]
-        custom_metric_list = [
-            cls.QueryResponse(**custom_metric["node"])
-            for custom_metric in custom_metrics
-        ]
+        custom_metric_list = [cls.QueryResponse(**custom_metric["node"]) for custom_metric in custom_metrics]
         return custom_metric_list, has_next_page, end_cursor
 
 
@@ -155,9 +142,7 @@ class GetCustomMetricQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if not result["node"]["models"]["edges"]:
             cls.raise_exception("No model found with the given name")
         model_result = result["node"]["models"]["edges"][0]["node"]
@@ -214,9 +199,7 @@ class CreateCustomMetricMutation(BaseQuery):
         metric_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         create_result = result["createCustomMetric"]
         if "customMetric" not in create_result:
             cls.raise_exception("no custom metric id returned")
@@ -250,9 +233,7 @@ class DeleteCustomMetricMutation(BaseQuery):
         model_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         delete_result = result["deleteCustomMetric"]
         if "model" not in delete_result or "id" not in delete_result["model"]:
             cls.raise_exception("no model id returned")
@@ -283,9 +264,7 @@ class UpdateCustomMetricMutation(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         update_result = result["updateCustomMetric"]
         if "customMetric" not in update_result:
             cls.raise_exception("no custom metric id returned")

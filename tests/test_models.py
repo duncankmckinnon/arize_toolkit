@@ -1,21 +1,17 @@
 from datetime import datetime, timezone
 
 from arize_toolkit.models import (
+    CreatePromptBaseMutationInput,
+    CreatePromptMutationInput,
+    CreatePromptVersionMutationInput,
+    FunctionDetailsInput,
+    LLMMessageInput,
     Prompt,
     PromptVersion,
-    LLMMessageInput,
     ToolInput,
-    FunctionDetailsInput,
     User,
-    CreatePromptBaseMutationInput,
-    CreatePromptVersionMutationInput,
-    CreatePromptMutationInput,
 )
-from arize_toolkit.types import (
-    PromptVersionInputVariableFormatEnum,
-    LLMIntegrationProvider,
-    ExternalLLMProviderModel,
-)
+from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, PromptVersionInputVariableFormatEnum
 from arize_toolkit.utils import FormattedPrompt
 
 
@@ -43,10 +39,7 @@ class TestPromptVersion:
         assert prompt_version.commitMessage == "Initial version"
         assert prompt_version.messages[0]["role"] == "system"
         assert prompt_version.messages[1]["content"] == "Tell me about {topic}"
-        assert (
-            prompt_version.inputVariableFormat
-            == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert prompt_version.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert prompt_version.llmParameters == {"temperature": 0.7}
         assert prompt_version.provider == LLMIntegrationProvider.openAI
         assert prompt_version.modelName == ExternalLLMProviderModel.GPT_4o_MINI
@@ -71,21 +64,14 @@ class TestPromptVersion:
             createdAt=datetime(2023, 1, 1, tzinfo=timezone.utc),
         )
 
-        formatted_prompt = prompt_version.format(
-            topic="machine learning", format="simple terms"
-        )
+        formatted_prompt = prompt_version.format(topic="machine learning", format="simple terms")
 
         assert isinstance(formatted_prompt, FormattedPrompt)
         assert formatted_prompt.messages[0]["role"] == "system"
         assert formatted_prompt.messages[0]["content"] == "You are a helpful assistant."
         assert formatted_prompt.messages[1]["role"] == "user"
-        assert (
-            formatted_prompt.messages[1]["content"]
-            == "Tell me about machine learning in simple terms"
-        )
-        assert formatted_prompt.kwargs == {
-            "model": ExternalLLMProviderModel.GPT_4o_MINI
-        }
+        assert formatted_prompt.messages[1]["content"] == "Tell me about machine learning in simple terms"
+        assert formatted_prompt.kwargs == {"model": ExternalLLMProviderModel.GPT_4o_MINI}
 
 
 class TestPrompt:
@@ -120,9 +106,7 @@ class TestPrompt:
         assert prompt.commitMessage == "Initial version"
         assert prompt.messages[0]["role"] == "system"
         assert prompt.messages[1]["content"] == "Tell me about {topic}"
-        assert (
-            prompt.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert prompt.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert prompt.llmParameters == {"temperature": 0.7}
         assert prompt.provider == LLMIntegrationProvider.openAI
         assert prompt.modelName == ExternalLLMProviderModel.GPT_4o_MINI
@@ -152,18 +136,13 @@ class TestPrompt:
             updatedAt=datetime(2023, 1, 2, tzinfo=timezone.utc),
         )
 
-        formatted_prompt = prompt.format(
-            topic="machine learning", format="simple terms"
-        )
+        formatted_prompt = prompt.format(topic="machine learning", format="simple terms")
 
         assert isinstance(formatted_prompt, FormattedPrompt)
         assert formatted_prompt.messages[0]["role"] == "system"
         assert formatted_prompt.messages[0]["content"] == "You are a helpful assistant."
         assert formatted_prompt.messages[1]["role"] == "user"
-        assert (
-            formatted_prompt.messages[1]["content"]
-            == "Tell me about machine learning in simple terms"
-        )
+        assert formatted_prompt.messages[1]["content"] == "Tell me about machine learning in simple terms"
 
 
 class TestFormattedPrompt:
@@ -191,9 +170,7 @@ class TestFormattedPrompt:
         assert "temperature" in keys
 
         # Test unpacking for LLM provider use
-        kwargs = {
-            key: formatted_prompt[key] for key in formatted_prompt if key != "messages"
-        }
+        kwargs = {key: formatted_prompt[key] for key in formatted_prompt if key != "messages"}
         assert kwargs == {"model": "gpt-4", "temperature": 0.7}
 
 

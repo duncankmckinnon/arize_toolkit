@@ -37,30 +37,170 @@ jobs:
         VERSION=${TAG_NAME#v}
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "🏷️ Processing release: $TAG_NAME (version: $VERSION)"
 
     - name: Update version in pyproject.toml
       run: |
         poetry version ${{ steps.get_version.outputs.version }}
+        echo "📝 Updated pyproject.toml version to ${{ steps.get_version.outputs.version }}"
+
+    - name: Run tests before publishing
+      run: |
+        echo "🧪 Installing dependencies and running tests..."
+        poetry install --with dev
+        poetry run pytest -v
+        echo "✅ All tests passed!"
 
     - name: Build package
       run: |
+        echo "🔨 Building package..."
         poetry build
+        echo "📦 Package built successfully!"
+        ls -la dist/
 
     - name: Publish to PyPI
       run: |
+        echo "🚀 Publishing to PyPI..."
         poetry publish
+        echo "✅ Successfully published to PyPI!"
+
+    - name: Generate additional release notes
+      id: release_notes
+      run: |
+        # Get build information
+        BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+        POETRY_VERSION=$(poetry --version)
+        
+        # Safely handle release body (escape any problematic characters)
+        RELEASE_BODY=$(cat << 'RELEASE_BODY_EOF'
+        ${{ github.event.release.body }}
+        RELEASE_BODY_EOF
+        )
+        
+        # Create enhanced release notes file with proper variable expansion
+        cat > enhanced_release_notes.md << NOTES_EOF
+        ## 🚀 Release ${{ steps.get_version.outputs.tag_name }}
+
+        ### 📦 PyPI Package
+        This release has been published to PyPI: https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/
+
+        ### 🔧 Installation
+        \`\`\`bash
+        pip install arize-toolkit==${{ steps.get_version.outputs.version }}
+        # or
+        poetry add arize-toolkit@${{ steps.get_version.outputs.version }}
+        \`\`\`
+
+        ### 📋 Original Release Notes
+        NOTES_EOF
+        
+        # Append the release body safely
+        echo "$RELEASE_BODY" >> enhanced_release_notes.md
+        
+        # Append build information
+        cat >> enhanced_release_notes.md << BUILD_INFO_EOF
+
+        ### 🏗️ Build Information
+        - **Built from commit:** ${{ github.sha }}
+        - **Build date:** ${BUILD_DATE}
+        - **Python version:** 3.10
+        - **Poetry version:** ${POETRY_VERSION}
+        BUILD_INFO_EOF
+        
+        echo "📝 Generated enhanced release notes"
+
+    - name: Update GitHub release with enhanced notes
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "📤 Updating GitHub release with enhanced notes..."
+        if gh release edit "${{ steps.get_version.outputs.tag_name }}" --notes-file enhanced_release_notes.md; then
+          echo "✅ Successfully updated release notes"
+        else
+          echo "⚠️ Failed to update release notes, but continuing..."
+        fi
 
     - name: Upload release assets to GitHub
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        # Upload the built packages to the existing release
-        gh release upload "${{ steps.get_version.outputs.tag_name }}" ./dist/*.tar.gz ./dist/*.whl
+        echo "📎 Uploading release assets..."
+        
+        # Check if distribution files exist
+        if ls dist/*.tar.gz 1> /dev/null 2>&1 && ls dist/*.whl 1> /dev/null 2>&1; then
+          if gh release upload "${{ steps.get_version.outputs.tag_name }}" dist/*.tar.gz dist/*.whl --clobber; then
+            echo "✅ Successfully uploaded release assets"
+          else
+            echo "❌ Failed to upload release assets"
+            exit 1
+          fi
+        else
+          echo "❌ No distribution files found in dist/"
+          ls -la dist/
+          exit 1
+        fi
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: distribution-packages
+        name: distribution-packages-${{ steps.get_version.outputs.tag_name }}
         path: |
           dist/*.tar.gz
           dist/*.whl
+        retention-days: 30
+
+    - name: Create changelog entry
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Create or update CHANGELOG.md if it exists
+        if [ -f "CHANGELOG.md" ]; then
+          echo "📚 Updating existing CHANGELOG.md"
+          
+          # Backup existing changelog
+          cp CHANGELOG.md CHANGELOG.md.bak
+          
+          # Get current date
+          CURRENT_DATE=$(date -u +"%Y-%m-%d")
+          
+          # Safely handle release body for changelog
+          RELEASE_BODY_SAFE=$(cat << 'CHANGELOG_BODY_EOF'
+        ${{ github.event.release.body }}
+        CHANGELOG_BODY_EOF
+        )
+          
+          # Create new changelog entry
+          echo "# Changelog" > temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "## [${{ steps.get_version.outputs.tag_name }}] - ${CURRENT_DATE}" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "$RELEASE_BODY_SAFE" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "**PyPI:** https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          echo "---" >> temp_changelog.md
+          echo "" >> temp_changelog.md
+          
+          # Append existing changelog content (skip header if it exists)
+          if grep -q "^# Changelog" CHANGELOG.md.bak; then
+            # Skip the first line if it contains the changelog header
+            tail -n +2 CHANGELOG.md.bak >> temp_changelog.md
+          else
+            # Append entire file if no header
+            cat CHANGELOG.md.bak >> temp_changelog.md
+          fi
+          
+          # Replace original with updated version
+          mv temp_changelog.md CHANGELOG.md
+          rm CHANGELOG.md.bak
+          
+          echo "✅ Updated CHANGELOG.md with release ${{ steps.get_version.outputs.tag_name }}"
+        else
+          echo "ℹ️ No CHANGELOG.md found, skipping changelog update"
+        fi
+
+    - name: Summary
+      run: |
+        echo "🎉 Release ${{ steps.get_version.outputs.tag_name }} completed successfully!"
+        echo "📦 PyPI: https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/"
+        echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.tag_name }}"

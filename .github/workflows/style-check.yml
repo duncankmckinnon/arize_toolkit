@@ -1,0 +1,35 @@
+name: Style Check
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs_site/**"
+      - "README.md"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Poetry
+        run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install project (with dev deps)
+        run: |
+          poetry install --with dev
+
+      - name: Install pre-commit
+        run: |
+          pip install pre-commit
+
+      - name: Run pre-commit (all files)
+        run: |
+          pre-commit run --all-files --show-diff-on-failure 

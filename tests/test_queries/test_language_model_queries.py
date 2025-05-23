@@ -1,23 +1,20 @@
 from datetime import datetime, timezone
-from arize_toolkit.queries.language_models import (
-    CreateAnnotationMutation,
-    GetPromptByIDQuery,
-    GetPromptQuery,
-    GetAllPromptVersionsQuery,
-    GetPromptVersionByIDQuery,
-    UpdatePromptMutation,
-    DeletePromptMutation,
-    CreatePromptMutation,
-    CreatePromptVersionMutation,
-)
-from arize_toolkit.types import (
-    PromptVersionInputVariableFormatEnum,
-    LLMIntegrationProvider,
-    ExternalLLMProviderModel,
-)
+
 import pytest
 
 from arize_toolkit.exceptions import ArizeAPIException
+from arize_toolkit.queries.language_models import (
+    CreateAnnotationMutation,
+    CreatePromptMutation,
+    CreatePromptVersionMutation,
+    DeletePromptMutation,
+    GetAllPromptVersionsQuery,
+    GetPromptByIDQuery,
+    GetPromptQuery,
+    GetPromptVersionByIDQuery,
+    UpdatePromptMutation,
+)
+from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, PromptVersionInputVariableFormatEnum
 
 
 @pytest.fixture
@@ -111,9 +108,7 @@ class TestCreateAnnotationMutation:
             ),
         ],
     )
-    def test_create_annotation_mutation_success(
-        self, gql_client, annotations, model_environment, note
-    ):
+    def test_create_annotation_mutation_success(self, gql_client, annotations, model_environment, note):
         mock_response = {"updateAnnotations": {"clientMutationId": None}}
         gql_client.execute.return_value = mock_response
         # Execute the query
@@ -158,9 +153,7 @@ class TestCreatePromptMutation:
         assert result.description == "test"
         assert result.tags == ["test"]
         assert result.messages == [{"role": "user", "content": "test"}]
-        assert (
-            result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert result.provider == LLMIntegrationProvider.openAI
         assert result.modelName == ExternalLLMProviderModel.GPT_3_5_TURBO
         assert isinstance(result.createdAt, datetime)
@@ -185,9 +178,7 @@ class TestCreatePromptMutation:
 
 
 class TestCreatePromptVersionMutation:
-    def test_create_prompt_version_mutation_success(
-        self, gql_client, mock_prompt_version
-    ):
+    def test_create_prompt_version_mutation_success(self, gql_client, mock_prompt_version):
         # Mock the GraphQL response
         mock_response = {"createPromptVersion": {"promptVersion": mock_prompt_version}}
         gql_client.execute.return_value = mock_response
@@ -208,9 +199,7 @@ class TestCreatePromptVersionMutation:
         assert result.id == "123"
         assert result.commitMessage == "test"
         assert result.messages == [{"role": "user", "content": "test"}]
-        assert (
-            result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert result.provider == LLMIntegrationProvider.openAI
         assert result.modelName == ExternalLLMProviderModel.GPT_3_5_TURBO
         assert isinstance(result.createdAt, datetime)
@@ -221,9 +210,7 @@ class TestCreatePromptVersionMutation:
         gql_client.execute.return_value = mock_response
 
         # Execute the mutation and expect exception
-        with pytest.raises(
-            ArizeAPIException, match="Error in creating a prompt version"
-        ) as e:
+        with pytest.raises(ArizeAPIException, match="Error in creating a prompt version") as e:
             CreatePromptVersionMutation.run_graphql_mutation(
                 gql_client,
                 spaceId="space123",
@@ -247,9 +234,7 @@ class TestGetPromptByIDQuery:
         assert result.createdBy.name == "test"
         assert result.createdBy.email == "test@test.com"
         assert result.messages == [{"role": "user", "content": "test"}]
-        assert (
-            result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert result.toolCalls == [
             {
                 "id": "123",
@@ -268,9 +253,7 @@ class TestGetPromptByIDQuery:
     def test_get_prompt_by_id_failure(self, gql_client):
         mock_response = {"node": None}
         gql_client.execute.return_value = mock_response
-        with pytest.raises(
-            ArizeAPIException, match="Error in getting a prompt by ID"
-        ) as e:
+        with pytest.raises(ArizeAPIException, match="Error in getting a prompt by ID") as e:
             GetPromptByIDQuery.run_graphql_query(gql_client, prompt_id="123")
         assert str(e.value).endswith("Object not found")
 
@@ -279,9 +262,7 @@ class TestGetPromptQuery:
     def test_get_prompt(self, gql_client, mock_prompt):
         mock_response = {"node": {"prompts": {"edges": [{"node": mock_prompt}]}}}
         gql_client.execute.return_value = mock_response
-        result = GetPromptQuery.run_graphql_query(
-            gql_client, space_id="123", prompt_name="test"
-        )
+        result = GetPromptQuery.run_graphql_query(gql_client, space_id="123", prompt_name="test")
         assert result.id == "123"
         assert result.name == "test"
         assert result.description == "test"
@@ -290,9 +271,7 @@ class TestGetPromptQuery:
         assert result.createdBy.name == "test"
         assert result.createdBy.email == "test@test.com"
         assert result.messages == [{"role": "user", "content": "test"}]
-        assert (
-            result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert result.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert result.toolCalls == [
             {
                 "id": "123",
@@ -311,12 +290,8 @@ class TestGetPromptQuery:
     def test_get_prompt_failure(self, gql_client):
         mock_response = {"node": {"prompts": {"edges": []}}}
         gql_client.execute.return_value = mock_response
-        with pytest.raises(
-            ArizeAPIException, match="Error in getting a prompt by name"
-        ) as e:
-            GetPromptQuery.run_graphql_query(
-                gql_client, space_id="123", prompt_name="test"
-            )
+        with pytest.raises(ArizeAPIException, match="Error in getting a prompt by name") as e:
+            GetPromptQuery.run_graphql_query(gql_client, space_id="123", prompt_name="test")
         assert str(e.value).endswith("No prompts found")
 
 
@@ -373,36 +348,26 @@ class TestGetAllPromptVersionsQuery:
             },
         ]
         gql_client.execute.side_effect = mock_response
-        result = GetAllPromptVersionsQuery.iterate_over_pages(
-            gql_client, space_id="123", prompt_name="test"
-        )
+        result = GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
         assert len(result) == 2
         prompt_version1 = result[0]
         assert prompt_version1.id == "123"
         assert prompt_version1.commitMessage == "test"
-        assert prompt_version1.createdAt == datetime(
-            2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc
-        )
+        assert prompt_version1.createdAt == datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         assert prompt_version1.provider == LLMIntegrationProvider.openAI
         assert prompt_version1.modelName == ExternalLLMProviderModel.GPT_3_5_TURBO
         prompt_version2 = result[1]
         assert prompt_version2.id == "1234"
         assert prompt_version2.commitMessage == "test2"
-        assert prompt_version2.createdAt == datetime(
-            2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc
-        )
+        assert prompt_version2.createdAt == datetime(2024, 1, 2, 0, 0, 0, tzinfo=timezone.utc)
         assert prompt_version2.provider == LLMIntegrationProvider.awsBedrock
         assert prompt_version2.modelName is None
 
     def test_get_all_prompt_versions_failure(self, gql_client):
         mock_response = {"node": {"prompts": {"edges": []}}}
         gql_client.execute.return_value = mock_response
-        with pytest.raises(
-            ArizeAPIException, match="Error in getting all prompt versions"
-        ):
-            GetAllPromptVersionsQuery.iterate_over_pages(
-                gql_client, space_id="123", prompt_name="test"
-            )
+        with pytest.raises(ArizeAPIException, match="Error in getting all prompt versions"):
+            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
 
     def test_get_all_prompt_versions_failure_no_prompts(self, gql_client):
         mock_response = {
@@ -426,18 +391,14 @@ class TestGetAllPromptVersionsQuery:
         }
         gql_client.execute.return_value = mock_response
         with pytest.raises(ArizeAPIException, match="No versions found"):
-            GetAllPromptVersionsQuery.iterate_over_pages(
-                gql_client, space_id="123", prompt_name="test"
-            )
+            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
 
 
 class TestGetPromptVersionByIDQuery:
     def test_get_prompt_version_by_id(self, gql_client, mock_prompt_version):
         mock_response = {"node": mock_prompt_version}
         gql_client.execute.return_value = mock_response
-        result = GetPromptVersionByIDQuery.run_graphql_query(
-            gql_client, prompt_version_id="123"
-        )
+        result = GetPromptVersionByIDQuery.run_graphql_query(gql_client, prompt_version_id="123")
         assert result.id == "123"
         assert result.commitMessage == "test"
         assert result.createdAt == datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
@@ -447,12 +408,8 @@ class TestGetPromptVersionByIDQuery:
     def test_get_prompt_version_by_id_failure(self, gql_client):
         mock_response = {"node": None}
         gql_client.execute.return_value = mock_response
-        with pytest.raises(
-            ArizeAPIException, match="Error in getting a prompt version by ID"
-        ) as e:
-            GetPromptVersionByIDQuery.run_graphql_query(
-                gql_client, prompt_version_id="123"
-            )
+        with pytest.raises(ArizeAPIException, match="Error in getting a prompt version by ID") as e:
+            GetPromptVersionByIDQuery.run_graphql_query(gql_client, prompt_version_id="123")
         assert str(e.value).endswith("Object not found")
 
 
@@ -477,24 +434,18 @@ class TestUpdatePromptMutation:
         mock_response = {"editPrompt": {"prompt": None}}
         gql_client.execute.return_value = mock_response
         with pytest.raises(ArizeAPIException, match="Error in updating a prompt"):
-            UpdatePromptMutation.run_graphql_mutation(
-                gql_client, spaceId="123", promptId="123"
-            )
+            UpdatePromptMutation.run_graphql_mutation(gql_client, spaceId="123", promptId="123")
 
 
 class TestDeletePromptMutation:
     def test_delete_prompt(self, gql_client):
         mock_response = {"deletePrompt": {"success": True}}
         gql_client.execute.return_value = mock_response
-        result = DeletePromptMutation.run_graphql_mutation(
-            gql_client, spaceId="123", promptId="123"
-        )
+        result = DeletePromptMutation.run_graphql_mutation(gql_client, spaceId="123", promptId="123")
         assert result.success is True
 
     def test_delete_prompt_failure(self, gql_client):
         mock_response = {"deletePrompt": None}
         gql_client.execute.return_value = mock_response
         with pytest.raises(ArizeAPIException, match="Error in deleting a prompt"):
-            DeletePromptMutation.run_graphql_mutation(
-                gql_client, spaceId="123", promptId="123"
-            )
+            DeletePromptMutation.run_graphql_mutation(gql_client, spaceId="123", promptId="123")

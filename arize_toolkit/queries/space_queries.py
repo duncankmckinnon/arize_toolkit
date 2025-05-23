@@ -1,10 +1,6 @@
 from typing import List, Optional, Tuple
-from arize_toolkit.queries.basequery import (
-    ArizeAPIException,
-    BaseQuery,
-    BaseResponse,
-    BaseVariables,
-)
+
+from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
 class OrgIDandSpaceIDQuery(BaseQuery):
@@ -42,23 +38,12 @@ class OrgIDandSpaceIDQuery(BaseQuery):
         space_id: str
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if (
-            "account" not in result
-            or "organizations" not in result["account"]
-            or "edges" not in result["account"]["organizations"]
-            or len(result["account"]["organizations"]["edges"]) == 0
-        ):
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "account" not in result or "organizations" not in result["account"] or "edges" not in result["account"]["organizations"] or len(result["account"]["organizations"]["edges"]) == 0:
             cls.raise_exception("No organization found with the given name")
         node = result["account"]["organizations"]["edges"][0]["node"]
         organization_id = node["id"]
-        if (
-            "spaces" not in node
-            or "edges" not in node["spaces"]
-            or len(node["spaces"]["edges"]) == 0
-        ):
+        if "spaces" not in node or "edges" not in node["spaces"] or len(node["spaces"]["edges"]) == 0:
             cls.raise_exception("No space found with the given name")
         space_id = node["spaces"]["edges"][0]["node"]["id"]
         return (
