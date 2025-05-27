@@ -10,6 +10,11 @@ repos:
     hooks:
       - id: isort
         args: ["-overwrite-in-place","--profile=black", "--line-length=200"]
+  - repo: https://github.com/pycqa/flake8
+    rev: "7.2.0"
+    hooks:
+      - id: flake8
+        args: ["--max-line-length=200", "--ignore=E266,W503"]
   - repo: https://github.com/executablebooks/mdformat
     rev: 0.7.22
     hooks:

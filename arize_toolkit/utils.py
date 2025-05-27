@@ -249,7 +249,7 @@ def parse_date_with_div(value: str, div="/") -> datetime:
         # If parsing fails with detected format, try the alternate
         alternate_format = f"%d{div}%m{div}%Y" if format_str.startswith("%m") else f"%m{div}%d{div}%Y"
         if len(value) > 10:
-            alternate_format += format_str[format_str.index(" ") :]
+            alternate_format += format_str[format_str.index(" ") :]  # noqa: E203
         return datetime.strptime(value, alternate_format)
 
 
@@ -262,7 +262,7 @@ def parse_date_with_slashes(value: str) -> datetime:
 
 
 def parse_date_with_dots(value: str) -> datetime:
-    return parse_date_with_div(value, "\.")
+    return parse_date_with_div(value, ".")
 
 
 class DatetimeParser:

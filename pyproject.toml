@@ -50,3 +50,6 @@ build-backend = "poetry_dynamic_versioning.backend"
 enable = true
 vcs = "git"
 style = "pep440"
+
+[tool.flake8]
+ignore = ["E266", "W503"]
