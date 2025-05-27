@@ -37,7 +37,7 @@ jobs:
     - name: Run black
       run: poetry run black . --check --line-length 200 --exclude .venv
     - name: Run isort
-      run: poetry run isort . --check-only --profile black --line-length 200 --skip-glob .venv/*
+      run: poetry run isort . --check-only --profile black --line-length 200 --skip .venv
     - name: Run flake8
       run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203 --exclude=.venv
     - name: Run mdformat
