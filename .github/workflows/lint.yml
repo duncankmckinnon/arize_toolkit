@@ -35,10 +35,10 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
     - name: Run black
-      run: poetry run black . --check --line-length 200
+      run: poetry run black . --check --line-length 200 --exclude .venv
     - name: Run isort
-      run: poetry run isort . --check-only --profile black --line-length 200
+      run: poetry run isort . --check-only --profile black --line-length 200 --skip-glob .venv/*
     - name: Run flake8
-      run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203
+      run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203 --exclude=.venv
     - name: Run mdformat
-      run: poetry run mdformat . --check 
+      run: poetry run mdformat . --check --exclude .venv 
