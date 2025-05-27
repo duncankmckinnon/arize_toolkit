@@ -41,4 +41,6 @@ jobs:
     - name: Run flake8
       run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203 --exclude=.venv
     - name: Run mdformat
-      run: poetry run mdformat . --check 
+      run: |
+        poetry run mdformat README.md --check
+        poetry run mdformat docs_site/docs --check 

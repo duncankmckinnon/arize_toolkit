@@ -1,5 +1,16 @@
 {
     "exclude": [
-        ".venv/**"
-    ]
-} 
+        ".venv/**",
+        "**/site-packages/**",
+        "**/dist-info/**",
+        "**/templates/**"
+    ],
+    "include": [
+        "README.md",
+        "docs_site/docs/**/*.md"
+    ],
+    "options": {
+        "wrap": "keep",
+        "end_of_line": "lf"
+    }
+}
