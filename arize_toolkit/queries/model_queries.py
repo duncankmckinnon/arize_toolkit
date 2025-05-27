@@ -10,7 +10,7 @@ from arize_toolkit.types import DataGranularity, ModelEnvironment, PerformanceMe
 
 class GetModelByIDQuery(BaseQuery):
     graphql_query = (
-        """ 
+        """
     query getModel($model_id: ID!) {
         node(id: $model_id) {
             ... on Model {"""
@@ -184,8 +184,8 @@ class DeleteDataMutation(BaseQuery):
 class GetPerformanceMetricValuesQuery(BaseQuery):
     graphql_query = """
     query getMetricValue(
-        $modelId: ID!, 
-        $startDate: DateTime!, 
+        $modelId: ID!,
+        $startDate: DateTime!,
         $endDate: DateTime!,
         $metric: PerformanceMetric!,
         $environment: ModelEnvironmentName!,
@@ -194,8 +194,8 @@ class GetPerformanceMetricValuesQuery(BaseQuery):
         node(id:$modelId){
             ... on Model{
             performanceMetricOverTime(
-                startTime:$startDate, 
-                endTime:$endDate, 
+                startTime:$startDate,
+                endTime:$endDate,
                 performanceMetric:$metric,
                 environmentName:$environment,
                 timeZone: "UTC",

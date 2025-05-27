@@ -201,7 +201,7 @@ def parse_ymd_slash(value: str) -> datetime:
 
 
 def parse_ymd_dot(value: str) -> datetime:
-    return parse_ymd_div(value, "\.")
+    return parse_ymd_div(value, ".")
 
 
 def parse_unix_timestamp(value: str) -> datetime:
