@@ -1,52 +1,47 @@
-from datetime import datetime, timedelta, timezone
-from time import sleep
-from typing import List, Literal, Optional, Tuple, Dict, Union
-from gql import Client as GraphQLClient
-from gql.transport.requests import RequestsHTTPTransport
 import logging
 import os
+from datetime import datetime, timedelta, timezone
+from time import sleep
+from typing import Dict, List, Literal, Optional, Tuple, Union
+
+from gql import Client as GraphQLClient
+from gql.transport.requests import RequestsHTTPTransport
+from pandas import DataFrame
+
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.queries.space_queries import OrgIDandSpaceIDQuery
-from arize_toolkit.queries.model_queries import (
-    GetAllModelsQuery,
-    GetModelQuery,
-    GetModelByIDQuery,
-    GetModelVolumeQuery,
-    GetPerformanceMetricValuesQuery,
-    DeleteDataMutation,
+from arize_toolkit.queries.custom_metric_queries import (
+    CreateCustomMetricMutation,
+    DeleteCustomMetricMutation,
+    GetAllCustomMetricsByModelIdQuery,
+    GetAllCustomMetricsQuery,
+    GetCustomMetricByIDQuery,
+    GetCustomMetricQuery,
+    UpdateCustomMetricMutation,
 )
 from arize_toolkit.queries.language_models import (
     CreateAnnotationMutation,
-    GetPromptByIDQuery,
-    GetPromptQuery,
-    GetAllPromptVersionsQuery,
-    GetAllPromptsQuery,
-    UpdatePromptMutation,
-    DeletePromptMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,
+    DeletePromptMutation,
+    GetAllPromptsQuery,
+    GetAllPromptVersionsQuery,
+    GetPromptByIDQuery,
+    GetPromptQuery,
+    UpdatePromptMutation,
 )
-from arize_toolkit.queries.custom_metric_queries import (
-    GetAllCustomMetricsQuery,
-    GetCustomMetricQuery,
-    GetCustomMetricByIDQuery,
-    CreateCustomMetricMutation,
-    DeleteCustomMetricMutation,
-    UpdateCustomMetricMutation,
-    GetAllCustomMetricsByModelIdQuery,
-)
+from arize_toolkit.queries.model_queries import DeleteDataMutation, GetAllModelsQuery, GetModelByIDQuery, GetModelQuery, GetModelVolumeQuery, GetPerformanceMetricValuesQuery
 from arize_toolkit.queries.monitor_queries import (
-    GetAllModelMonitorsQuery,
-    GetMonitorQuery,
-    GetMonitorByIDQuery,
-    CreatePerformanceMonitorMutation,
-    CreateDriftMonitorMutation,
     CreateDataQualityMonitorMutation,
+    CreateDriftMonitorMutation,
+    CreatePerformanceMonitorMutation,
     DeleteMonitorMutation,
+    GetAllModelMonitorsQuery,
+    GetMonitorByIDQuery,
+    GetMonitorQuery,
 )
-from arize_toolkit.utils import parse_datetime, FormattedPrompt
-from pandas import DataFrame
+from arize_toolkit.queries.space_queries import OrgIDandSpaceIDQuery
+from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
 logger = logging.getLogger("arize_toolkit")
 
@@ -70,6 +65,7 @@ class Client:
         sleep_time (int): The sleep time between API requests
         arize_app_url (str): The URL of the Arize API
         space_url (str): The URL of the current space
+
     """
 
     org_id: str
@@ -97,9 +93,7 @@ class Client:
         self._set_org_and_space_id()
 
     def _set_org_and_space_id(self) -> None:
-        results = OrgIDandSpaceIDQuery.run_graphql_query(
-            self._graphql_client, organization=self.organization, space=self.space
-        )
+        results = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=self.organization, space=self.space)
         self.org_id = results.organization_id
         self.space_id = results.space_id
 
@@ -111,6 +105,7 @@ class Client:
 
         Returns:
             Client: The updated client
+
         """
         self.sleep_time = sleep_time
         return self
@@ -124,12 +119,11 @@ class Client:
 
         Returns:
             str: The URL of the new space
+
         """
         space = space
         organization = organization or self.organization
-        result = OrgIDandSpaceIDQuery.run_graphql_query(
-            self._graphql_client, organization=organization, space=space
-        )
+        result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
         if self.space_id != result.space_id:
             self.org_id = result.organization_id
             self.space_id = result.space_id
@@ -139,9 +133,7 @@ class Client:
 
     @property
     def space_url(self) -> str:
-        return (
-            f"{self.arize_app_url}/organizations/{self.org_id}/spaces/{self.space_id}"
-        )
+        return f"{self.arize_app_url}/organizations/{self.org_id}/spaces/{self.space_id}"
 
     def model_url(self, model_id: str) -> str:
         return f"{self.space_url}/models/{model_id}"
@@ -171,10 +163,9 @@ class Client:
 
         Raises:
             ArizeAPIException: If there is an error retrieving models from the API
+
         """
-        results = GetAllModelsQuery.iterate_over_pages(
-            self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time
-        )
+        results = GetAllModelsQuery.iterate_over_pages(self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time)
         return [result.to_dict() for result in results]
 
     def get_model_by_id(self, model_id: str) -> dict:
@@ -193,10 +184,9 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
-        results = GetModelByIDQuery.run_graphql_query(
-            self._graphql_client, model_id=model_id, space_id=self.space_id
-        )
+        results = GetModelByIDQuery.run_graphql_query(self._graphql_client, model_id=model_id, space_id=self.space_id)
         return results.to_dict()
 
     def get_model(self, model_name: str) -> dict:
@@ -215,10 +205,9 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
-        results = GetModelQuery.run_graphql_query(
-            self._graphql_client, model_name=model_name, space_id=self.space_id
-        )
+        results = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
         return results.to_dict()
 
     def get_model_url(self, model_name: str) -> str:
@@ -229,10 +218,9 @@ class Client:
 
         Returns:
             str: The path to the model
+
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client, model_name=model_name, space_id=self.space_id
-        )
+        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
         return self.model_url(model.id)
 
     def get_model_volume_by_id(
@@ -255,6 +243,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         if start_time:
             start_time = parse_datetime(start_time)
@@ -289,15 +278,14 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         model = GetModelQuery.run_graphql_query(
             self._graphql_client,
             model_name=model_name,
             space_id=self.space_id,
         )
-        return self.get_model_volume_by_id(
-            model_id=model.id, start_time=start_time, end_time=end_time
-        )
+        return self.get_model_volume_by_id(model_id=model.id, start_time=start_time, end_time=end_time)
 
     def get_total_volume(
         self,
@@ -318,6 +306,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the space is not found or there is an API error
+
         """
         if start_time:
             start_time = parse_datetime(start_time)
@@ -361,6 +350,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         if start_time:
             start_time = parse_datetime(start_time)
@@ -400,6 +390,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         model = GetModelQuery.run_graphql_query(
             self._graphql_client,
@@ -434,8 +425,8 @@ class Client:
         Returns:
             Union[List[dict], DataFrame]: A list of dictionaries containing the performance metric over time for each data window or
             a pandas DataFrame with columns "metricDisplayDate" and "metricValue"
-        """
 
+        """
         if not model_id and not model_name:
             raise ValueError("Either model_id or model_name must be provided")
         if not model_id:
@@ -509,8 +500,8 @@ class Client:
         Raises:
             ValueError: If neither model_id nor model_name is provided or annotation_type does not match annotation given
             ArizeAPIException: If the model is not found or there is an API error
-        """
 
+        """
         if not model_id and not model_name:
             raise ValueError("Either model_id or model_name must be provided")
         if not model_id:
@@ -568,6 +559,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         results = GetAllPromptsQuery.iterate_over_pages(
             self._graphql_client,
@@ -603,6 +595,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         result = GetPromptByIDQuery.run_graphql_query(
             self._graphql_client,
@@ -636,6 +629,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         result = GetPromptQuery.run_graphql_query(
             self._graphql_client,
@@ -656,6 +650,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         prompt = GetPromptQuery.run_graphql_query(
             self._graphql_client,
@@ -686,6 +681,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         results = GetAllPromptVersionsQuery.iterate_over_pages(
             self._graphql_client,
@@ -804,6 +800,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         if tools or tool_choice:
             invocation_params = invocation_params or {}
@@ -823,9 +820,7 @@ class Client:
             variables["promptId"] = prompt_id
             variables["provider"] = provider or prompt["provider"]
             variables["model"] = model_name or prompt["modelName"]
-            variables["inputVariableFormat"] = (
-                input_variable_format or prompt["inputVariableFormat"]
-            )
+            variables["inputVariableFormat"] = input_variable_format or prompt["inputVariableFormat"]
             if provider_params:
                 variables["providerParams"] = provider_params
             if invocation_params and prompt["toolCalls"]:
@@ -885,12 +880,10 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
-        """
 
+        """
         if not updated_name and not description and not tags:
-            raise ValueError(
-                "At least one of updated_name, description, or tags must be provided to update a prompt"
-            )
+            raise ValueError("At least one of updated_name, description, or tags must be provided to update a prompt")
         if not updated_name:
             updated_name = self.get_prompt_by_id(prompt_id)["name"]
 
@@ -924,18 +917,14 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
-        """
 
+        """
         if not updated_name and not description and not tags:
-            raise ValueError(
-                "At least one of updated_name, description, or tags must be provided to update a prompt"
-            )
+            raise ValueError("At least one of updated_name, description, or tags must be provided to update a prompt")
 
         prompt_id = self.get_prompt(prompt_name)["id"]
         name = updated_name if updated_name else prompt_name
-        return self.update_prompt_by_id(
-            prompt_id, name=name, description=description, tags=tags
-        )
+        return self.update_prompt_by_id(prompt_id, name=name, description=description, tags=tags)
 
     def delete_prompt_by_id(self, prompt_id: str) -> bool:
         """Deletes a prompt.
@@ -948,6 +937,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         result = DeletePromptMutation.run_graphql_mutation(
             self._graphql_client,
@@ -967,13 +957,12 @@ class Client:
 
         Raises:
             ArizeAPIException: If the prompt is not found or there is an API error
+
         """
         prompt_id = self.get_prompt(prompt_name)["id"]
         return self.delete_prompt_by_id(prompt_id)
 
-    def get_all_custom_metrics(
-        self, model_name: Optional[str] = None
-    ) -> Union[List[dict], Dict[str, List[dict]]]:
+    def get_all_custom_metrics(self, model_name: Optional[str] = None) -> Union[List[dict], Dict[str, List[dict]]]:
         """Retrieves all custom metrics for all models in the space.
         If model_name is provided, retrieves custom metrics for the specified model.
         Otherwise, retrieves custom metrics for all models in the space by model name.
@@ -1009,6 +998,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If there is an API error
+
         """
         if model_name:
             return self.get_all_custom_metrics_for_model(model_name=model_name)
@@ -1021,18 +1011,12 @@ class Client:
             for model in models:
                 if model.id:
                     try:
-                        results[model.name] = self.get_all_custom_metrics_for_model(
-                            model_id=model.id
-                        )
+                        results[model.name] = self.get_all_custom_metrics_for_model(model_id=model.id)
                     except ArizeAPIException as e:
-                        logger.warning(
-                            f"Error getting custom metrics for model {model.name}: {e}"
-                        )
+                        logger.warning(f"Error getting custom metrics for model {model.name}: {e}")
             return results
 
-    def get_all_custom_metrics_for_model(
-        self, model_name: Optional[str] = None, model_id: Optional[str] = None
-    ) -> List[dict]:
+    def get_all_custom_metrics_for_model(self, model_name: Optional[str] = None, model_id: Optional[str] = None) -> List[dict]:
         """Retrieves all custom metrics for a specific model. Model must be specified by either model_name or model_id.
 
         Args:
@@ -1051,6 +1035,7 @@ class Client:
         Raises:
             ValueError: If neither model_name nor model_id is provided
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         if not model_name and not model_id:
             raise ValueError("Either model_name or model_id must be provided")
@@ -1086,6 +1071,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         results = GetCustomMetricByIDQuery.run_graphql_query(
             self._graphql_client,
@@ -1111,6 +1097,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         results = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
@@ -1132,10 +1119,9 @@ class Client:
 
         Raises:
             ArizeAPIException: If the model or custom metric is not found or there is an API error
+
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client, model_name=model_name, space_id=self.space_id
-        )
+        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
@@ -1173,6 +1159,7 @@ class Client:
         Raises:
             ValueError: If neither model_id nor model_name is provided
             ArizeAPIException: If metric creation fails or there is an API error
+
         """
         if not model_id:
             if not model_name:
@@ -1210,6 +1197,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         results = DeleteCustomMetricMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1230,6 +1218,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         model = GetModelQuery.run_graphql_query(
             self._graphql_client,
@@ -1275,6 +1264,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         custom_metric = self.get_custom_metric_by_id(custom_metric_id)
         inputs = {
@@ -1283,8 +1273,7 @@ class Client:
             "name": name or custom_metric["name"],
             "metric": metric or custom_metric["metric"],
             "description": description or custom_metric["description"],
-            "modelEnvironmentName": environment
-            or custom_metric["modelEnvironmentName"],
+            "modelEnvironmentName": environment or custom_metric["modelEnvironmentName"],
         }
         results = UpdateCustomMetricMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1323,6 +1312,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         model = GetModelQuery.run_graphql_query(
             self._graphql_client,
@@ -1375,6 +1365,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the custom metric is not found or there is an API error
+
         """
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
@@ -1391,9 +1382,7 @@ class Client:
             metric_environment=new_model_environment,
         )
 
-    def get_all_monitors(
-        self, model_id: str = None, model_name: str = None, monitor_category: str = None
-    ) -> List[dict]:
+    def get_all_monitors(self, model_id: str = None, model_name: str = None, monitor_category: str = None) -> List[dict]:
         """Retrieves all monitors for a specific model.
 
         Args:
@@ -1420,6 +1409,7 @@ class Client:
         Raises:
             ValueError: If neither model_id nor model_name is provided
             ArizeAPIException: If the model is not found or there is an API error
+
         """
         if not model_id:
             if not model_name:
@@ -1455,6 +1445,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the monitor is not found or there is an API error
+
         """
         result = GetMonitorQuery.run_graphql_query(
             self._graphql_client,
@@ -1484,6 +1475,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the monitor is not found or there is an API error
+
         """
         results = GetMonitorByIDQuery.run_graphql_query(
             self._graphql_client,
@@ -1503,6 +1495,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If the monitor is not found or there is an API error
+
         """
         monitor = GetMonitorQuery.run_graphql_query(
             self._graphql_client,
@@ -1572,11 +1565,10 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
+
         """
         if performance_metric is None and custom_metric_id is None:
-            raise ValueError(
-                "Either performance_metric or custom_metric_id must be provided"
-            )
+            raise ValueError("Either performance_metric or custom_metric_id must be provided")
         results = CreatePerformanceMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1588,16 +1580,9 @@ class Client:
                 "customMetricId": custom_metric_id,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": ({"stdDevMultiplier": std_dev_multiplier} if not threshold else None),
+                "contacts": [{"notificationChannelType": "email", "emailAddress": email_address} for email_address in email_addresses or []],
+                "downtimeStart": (parse_datetime(downtime_start) if downtime_start else None),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,
@@ -1672,6 +1657,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
+
         """
         results = CreateDriftMonitorMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1685,16 +1671,9 @@ class Client:
                 "driftMetric": drift_metric,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": ({"stdDevMultiplier": std_dev_multiplier} if not threshold else None),
+                "contacts": [{"notificationChannelType": "email", "emailAddress": email_address} for email_address in email_addresses or []],
+                "downtimeStart": (parse_datetime(downtime_start) if downtime_start else None),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,
@@ -1768,6 +1747,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
+
         """
         results = CreateDataQualityMonitorMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1781,16 +1761,9 @@ class Client:
                 "notes": notes,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": ({"stdDevMultiplier": std_dev_multiplier} if not threshold else None),
+                "contacts": [{"notificationChannelType": "email", "emailAddress": email_address} for email_address in email_addresses or []],
+                "downtimeStart": (parse_datetime(downtime_start) if downtime_start else None),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,
@@ -1818,10 +1791,9 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor deletion fails or there is an API error
+
         """
-        results = DeleteMonitorMutation.run_graphql_mutation(
-            self._graphql_client, monitorId=monitor_id
-        )
+        results = DeleteMonitorMutation.run_graphql_mutation(self._graphql_client, monitorId=monitor_id)
         return results.monitor_id == monitor_id
 
     def delete_monitor(
@@ -1840,6 +1812,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor deletion fails or there is an API error
+
         """
         monitor = GetMonitorQuery.run_graphql_query(
             self._graphql_client,
@@ -1873,6 +1846,7 @@ class Client:
 
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
+
         """
         current_monitor = GetMonitorQuery.run_graphql_query(
             self._graphql_client,

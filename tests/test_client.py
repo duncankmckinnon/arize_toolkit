@@ -1,5 +1,7 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 from arize_toolkit.client import Client
 from arize_toolkit.queries.basequery import ArizeAPIException
 
@@ -16,9 +18,7 @@ def mock_graphql_client():
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "test_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
                             }
                         }
                     ]
@@ -31,9 +31,7 @@ def mock_graphql_client():
 @pytest.fixture
 def client(mock_graphql_client):
     """Create a test client with mocked GraphQL client"""
-    return Client(
-        organization="test_org", space="test_space", arize_developer_key="test_token"
-    )
+    return Client(organization="test_org", space="test_space", arize_developer_key="test_token")
 
 
 class TestClientInitialization:
@@ -106,9 +104,7 @@ class TestModel:
         assert not result["isDemoModel"]
 
         # Test model not found
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {"models": {"edges": []}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"models": {"edges": []}}}
 
         with pytest.raises(ArizeAPIException) as exc_info:
             client.get_model("non_existent_model")
@@ -239,9 +235,7 @@ class TestModel:
 
     def test_delete_data_by_id(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
-        mock_graphql_client.return_value.execute.return_value = {
-            "deleteData": {"clientMutationId": None}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"deleteData": {"clientMutationId": None}}
         result = client.delete_data_by_id("test_model_id", "2021-01-01T00:00:00Z")
         assert result
 
@@ -268,9 +262,7 @@ class TestModel:
             },
             {"deleteData": {"clientMutationId": None}},
         ]
-        result = client.delete_data(
-            "test_model", "2021-01-01", "2021-01-02", "preproduction"
-        )
+        result = client.delete_data("test_model", "2021-01-01", "2021-01-02", "preproduction")
         assert result
         assert mock_graphql_client.return_value.execute.call_count == 2
 
@@ -334,9 +326,7 @@ class TestCustomMetrics:
             },
         ]
 
-        mock_graphql_client.return_value.execute.side_effect = (
-            mock_custom_metrics_response
-        )
+        mock_graphql_client.return_value.execute.side_effect = mock_custom_metrics_response
 
         results = client.get_all_custom_metrics(model_name="test_model")
         assert len(results) == 20
@@ -405,9 +395,7 @@ class TestCustomMetrics:
             current_metric_name="custom_metric_1",
             new_model_name="new_model",
         )
-        assert new_metric_id == client.custom_metric_url(
-            "test_model_id", "new_custom_metric_id"
-        )
+        assert new_metric_id == client.custom_metric_url("test_model_id", "new_custom_metric_id")
         assert mock_graphql_client.return_value.execute.call_count == 3
 
 
@@ -678,11 +666,8 @@ class TestMonitors:
             ),
         ],
     )
-    def test_create_performance_monitor_validation(
-        self, client, mock_graphql_client, input, expected_error
-    ):
+    def test_create_performance_monitor_validation(self, client, mock_graphql_client, input, expected_error):
         """Test creating a performance metric monitor with invalid parameters"""
-
         # Reset mock for this test
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -998,9 +983,7 @@ class TestLanguageModel:
         }
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        formatted_prompt = client.get_formatted_prompt(
-            "prompt_id", variable_1="John", variable_2="a software engineer"
-        )
+        formatted_prompt = client.get_formatted_prompt("prompt_id", variable_1="John", variable_2="a software engineer")
         assert formatted_prompt.messages == [
             {
                 "id": "message_id",
