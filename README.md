@@ -1,5 +1,3 @@
-# Arize Toolkit
-
 <div align="center">
   <img src="docs_site/docs/images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
 </div>
