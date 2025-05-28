@@ -1,11 +1,6 @@
 import pytest
-from arize_toolkit.types import (
-    PerformanceMetric,
-    ComparisonOperator,
-    MonitorCategory,
-    ModelType,
-    InputValidationEnum,
-)
+
+from arize_toolkit.types import ComparisonOperator, InputValidationEnum, ModelType, MonitorCategory, PerformanceMetric
 
 
 class TestInputValidationEnum:
@@ -42,7 +37,6 @@ class TestInputValidationEnum:
 
     def test_comparison_operator(self):
         """Test ComparisonOperator enum validation"""
-
         # Test valid operators
         assert ComparisonOperator.from_input("greaterThan") == "greaterThan"
         assert ComparisonOperator.from_input("Greater Than") == "greaterThan"
@@ -52,13 +46,10 @@ class TestInputValidationEnum:
         # Test invalid operator
         with pytest.raises(ValueError) as exc_info:
             ComparisonOperator.from_input("invalid_operator")
-        assert "invalid_operator is not a valid ComparisonOperator" in str(
-            exc_info.value
-        )
+        assert "invalid_operator is not a valid ComparisonOperator" in str(exc_info.value)
 
     def test_monitor_category(self):
         """Test MonitorCategory enum validation"""
-
         # Test valid categories
         assert MonitorCategory.from_input("performance") == "performance"
         assert MonitorCategory.from_input("Performance") == "performance"
@@ -72,7 +63,6 @@ class TestInputValidationEnum:
 
     def test_model_type(self):
         """Test ModelType enum validation"""
-
         # Test valid model types
         assert ModelType.from_input("score_categorical") == "score_categorical"
         assert ModelType.from_input("Classification") == "score_categorical"
@@ -97,19 +87,13 @@ class TestInputValidationEnum:
 
         # Check for duplicate values in each enum
         performance_metric_values = get_all_values(PerformanceMetric)
-        assert len(performance_metric_values) == sum(
-            len(member.value) for member in PerformanceMetric
-        )
+        assert len(performance_metric_values) == sum(len(member.value) for member in PerformanceMetric)
 
         comparison_operator_values = get_all_values(ComparisonOperator)
-        assert len(comparison_operator_values) == sum(
-            len(member.value) for member in ComparisonOperator
-        )
+        assert len(comparison_operator_values) == sum(len(member.value) for member in ComparisonOperator)
 
         monitor_category_values = get_all_values(MonitorCategory)
-        assert len(monitor_category_values) == sum(
-            len(member.value) for member in MonitorCategory
-        )
+        assert len(monitor_category_values) == sum(len(member.value) for member in MonitorCategory)
 
         model_type_values = get_all_values(ModelType)
         assert len(model_type_values) == sum(len(member.value) for member in ModelType)

@@ -1,40 +1,31 @@
-from arize_toolkit.models import (
-    Monitor,
-    MonitorDetailedType,
-    PerformanceMonitor,
-    DataQualityMonitor,
-    DriftMonitor,
-    MonitorCategory,
-    ModelEnvironment,
-    DimensionCategory,
-    MonitorContact,
-    MonitorContactInput,
-)
 from typing import List, Optional
 
-from arize_toolkit.models import DynamicAutoThreshold
+from arize_toolkit.models import (
+    DataQualityMonitor,
+    DimensionCategory,
+    DriftMonitor,
+    DynamicAutoThreshold,
+    ModelEnvironment,
+    Monitor,
+    MonitorCategory,
+    MonitorContact,
+    MonitorContactInput,
+    MonitorDetailedType,
+    PerformanceMonitor,
+)
 
 
 class MonitorManager:
     @classmethod
-    def process_monitors(
-        cls, space_id: str, model_name: str, monitors: List[Monitor]
-    ) -> List[MonitorDetailedType]:
-        return [
-            cls.extract_monitor_type(space_id, model_name, monitor)
-            for monitor in monitors
-        ]
+    def process_monitors(cls, space_id: str, model_name: str, monitors: List[Monitor]) -> List[MonitorDetailedType]:
+        return [cls.extract_monitor_type(space_id, model_name, monitor) for monitor in monitors]
 
     @classmethod
-    def extract_monitor_type_from_dict(
-        cls, space_id: str, model_name: str, monitor: dict
-    ) -> MonitorDetailedType:
+    def extract_monitor_type_from_dict(cls, space_id: str, model_name: str, monitor: dict) -> MonitorDetailedType:
         return cls.extract_monitor_type(space_id, model_name, Monitor(**monitor))
 
     @classmethod
-    def extract_monitor_type(
-        cls, space_id: str, model_name: str, monitor: Monitor
-    ) -> MonitorDetailedType:
+    def extract_monitor_type(cls, space_id: str, model_name: str, monitor: Monitor) -> MonitorDetailedType:
         if monitor.monitorCategory == MonitorCategory.performance:
             return cls.performance_monitor(space_id, model_name, monitor)
         elif monitor.monitorCategory == MonitorCategory.dataQuality:
@@ -45,9 +36,7 @@ class MonitorManager:
             raise ValueError("Monitor type not supported")
 
     @classmethod
-    def create_monitor_contacts(
-        cls, monitor_contacts: Optional[List[MonitorContact]] = None
-    ) -> MonitorContactInput:
+    def create_monitor_contacts(cls, monitor_contacts: Optional[List[MonitorContact]] = None) -> MonitorContactInput:
         if monitor_contacts is None:
             return None
         else:
@@ -70,9 +59,7 @@ class MonitorManager:
             return contacts
 
     @classmethod
-    def performance_monitor(
-        cls, space_id: str, model_name: str, monitor: Monitor
-    ) -> PerformanceMonitor:
+    def performance_monitor(cls, space_id: str, model_name: str, monitor: Monitor) -> PerformanceMonitor:
         return PerformanceMonitor(
             spaceId=space_id,
             modelName=model_name,
@@ -89,11 +76,7 @@ class MonitorManager:
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
-            dynamicAutoThreshold=(
-                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
-                if monitor.stdDevMultiplier
-                else None
-            ),
+            dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
             contacts=cls.create_monitor_contacts(monitor.contacts),
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
@@ -105,9 +88,7 @@ class MonitorManager:
         )
 
     @classmethod
-    def data_quality_monitor(
-        cls, space_id: str, model_name: str, monitor: Monitor
-    ) -> DataQualityMonitor:
+    def data_quality_monitor(cls, space_id: str, model_name: str, monitor: Monitor) -> DataQualityMonitor:
         return DataQualityMonitor(
             spaceId=space_id,
             modelName=model_name,
@@ -122,33 +103,19 @@ class MonitorManager:
             scheduledRuntimeDaysOfWeek=monitor.scheduledRuntimeDaysOfWeek,
             dataQualityMetric=monitor.dataQualityMetric,
             dimensionCategory=monitor.dimensionCategory,
-            dimensionName=(
-                monitor.primaryMetricWindow.dimension.name
-                if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
-                else None
-            ),
-            modelEnvironmentName=(
-                ModelEnvironment.production
-                if monitor.dimensionCategory != DimensionCategory.spanProperty
-                else ModelEnvironment.tracing
-            ),
+            dimensionName=(monitor.primaryMetricWindow.dimension.name if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension else None),
+            modelEnvironmentName=(ModelEnvironment.production if monitor.dimensionCategory != DimensionCategory.spanProperty else ModelEnvironment.tracing),
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
             operator=monitor.operator,
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
-            dynamicAutoThreshold=(
-                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
-                if monitor.stdDevMultiplier
-                else None
-            ),
+            dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
         )
 
     @classmethod
-    def drift_monitor(
-        cls, space_id: str, model_name: str, monitor: Monitor
-    ) -> DriftMonitor:
+    def drift_monitor(cls, space_id: str, model_name: str, monitor: Monitor) -> DriftMonitor:
         return DriftMonitor(
             spaceId=space_id,
             modelName=model_name,
@@ -156,22 +123,14 @@ class MonitorManager:
             notes=monitor.notes,
             driftMetric=monitor.driftMetric,
             dimensionCategory=monitor.dimensionCategory,
-            dimensionName=(
-                monitor.primaryMetricWindow.dimension.name
-                if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension
-                else None
-            ),
+            dimensionName=(monitor.primaryMetricWindow.dimension.name if monitor.primaryMetricWindow and monitor.primaryMetricWindow.dimension else None),
             threshold=monitor.threshold,
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
             operator=monitor.operator,
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
-            dynamicAutoThreshold=(
-                DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier)
-                if monitor.stdDevMultiplier
-                else None
-            ),
+            dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
             contacts=cls.create_monitor_contacts(monitor.contacts),
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,

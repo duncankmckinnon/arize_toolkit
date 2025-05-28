@@ -1,0 +1,46 @@
+name: Lint and Format
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+    - name: Add Poetry to PATH
+      run: |
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.create true
+        poetry config virtualenvs.in-project true
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    - name: Run black
+      run: poetry run black . --check --line-length 200 --exclude .venv
+    - name: Run isort
+      run: poetry run isort . --check-only --profile black --line-length 200 --skip .venv
+    - name: Run flake8
+      run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203 --exclude=.venv
+    - name: Run mdformat
+      run: |
+        poetry run mdformat README.md --check
+        poetry run mdformat docs_site/docs --check 

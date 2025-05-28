@@ -33,10 +33,23 @@ coverage = "*"
 snapshottest = {version = "*", python = "<3.12"}
 mkdocs = "^1.4.0"
 mkdocs-material = "^9.0.0"
+black = "25.1.0"
+flake8 = "7.2.0"
+isort = "5.13.2"
+mdformat = "0.7.22"
+mdformat-black = "0.1.1"
 
 [tool.poetry.group.integration.dependencies]
 python-dotenv = "*"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+vcs = "git"
+style = "pep440"
+
+[tool.flake8]
+ignore = ["E266", "W503", "E203"]

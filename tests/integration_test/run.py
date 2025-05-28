@@ -1,9 +1,10 @@
 import os
+
 from dotenv import load_dotenv
+
 from arize_toolkit import Client
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.models import DriftMonitor, DataQualityMonitor, PerformanceMonitor
-
+from arize_toolkit.models import DataQualityMonitor, DriftMonitor, PerformanceMonitor
 
 # Integration test for the Arize API
 # This script runs on an Arize account with Developer Access
@@ -112,13 +113,9 @@ def run_integration_tests():
         if monitors:
             monitor_name = monitors.pop(0)["name"]  # Get the first monitor name
             print(f"Running get_monitor query for monitor: {monitor_name}...")
-            monitor = client.get_monitor(
-                model_name=model_name, monitor_name=monitor_name
-            )
+            monitor = client.get_monitor(model_name=model_name, monitor_name=monitor_name)
             print(f"Monitor ID for {monitor_name}: {monitor['id']}")
-            print(
-                f"Monitor Category for {monitor_name}: {monitor.get('monitorCategory')}"
-            )
+            print(f"Monitor Category for {monitor_name}: {monitor.get('monitorCategory')}")
 
             if monitor:
                 monitor_creator = MonitorManager.extract_monitor_type_from_dict(
@@ -129,16 +126,8 @@ def run_integration_tests():
                 print(f"Monitor Creator: {monitor_creator.to_dict(exclude_none=True)}")
                 old_id = client.delete_monitor_by_id(monitor_id=monitor["id"])
                 print(f"Deleted monitor with ID: {old_id}")
-                email_addresses = [
-                    email.emailAddress
-                    for email in monitor_creator.contacts
-                    if email.notificationChannelType == "email"
-                ]
-                integration_key_ids = [
-                    integration_key.integrationKeyId
-                    for integration_key in monitor_creator.contacts
-                    if integration_key.notificationChannelType == "integration"
-                ]
+                email_addresses = [email.emailAddress for email in monitor_creator.contacts if email.notificationChannelType == "email"]
+                integration_key_ids = [integration_key.integrationKeyId for integration_key in monitor_creator.contacts if integration_key.notificationChannelType == "integration"]
                 if isinstance(monitor_creator, PerformanceMonitor):
                     performance_monitor = client.create_performance_monitor(
                         name=monitor_creator.name,
@@ -153,11 +142,7 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(
-                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                            if monitor_creator.dynamicAutoThreshold
-                            else None
-                        ),
+                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
                     )
                     print(f"Performance Monitor: {performance_monitor}")
                 elif isinstance(monitor_creator, DataQualityMonitor):
@@ -173,11 +158,7 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(
-                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                            if monitor_creator.dynamicAutoThreshold
-                            else None
-                        ),
+                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
                     )
                     print(f"Data Quality Monitor: {data_quality_monitor}")
                 elif isinstance(monitor_creator, DriftMonitor):
@@ -192,11 +173,7 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(
-                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                            if monitor_creator.dynamicAutoThreshold
-                            else None
-                        ),
+                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
                     )
                     print(f"Drift Monitor: {drift_monitor}")
         # Add more client queries as needed

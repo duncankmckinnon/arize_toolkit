@@ -1,17 +1,7 @@
 from typing import List, Optional, Tuple
-from arize_toolkit.queries.basequery import (
-    ArizeAPIException,
-    BaseQuery,
-    BaseResponse,
-    BaseVariables,
-)
-from arize_toolkit.models import (
-    AnnotationMutationInput,
-    Prompt,
-    PromptVersion,
-    CreatePromptMutationInput,
-    CreatePromptVersionMutationInput,
-)
+
+from arize_toolkit.models import AnnotationMutationInput, CreatePromptMutationInput, CreatePromptVersionMutationInput, Prompt, PromptVersion
+from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
 class CreateAnnotationMutation(BaseQuery):
@@ -34,9 +24,7 @@ class CreateAnnotationMutation(BaseQuery):
         success: bool
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "updateAnnotations" not in result:
             cls.raise_exception("No annotations updated")
         return [cls.QueryResponse(success=True)], False, None
@@ -97,13 +85,8 @@ class GetPromptQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if (
-            not result["node"]["prompts"]["edges"]
-            or len(result["node"]["prompts"]["edges"]) == 0
-        ):
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
             cls.raise_exception("No prompts found")
         prompt = result["node"]["prompts"]["edges"][0]["node"]
         return [cls.QueryResponse(**prompt)], False, None
@@ -174,13 +157,8 @@ class GetAllPromptVersionsQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if (
-            not result["node"]["prompts"]["edges"]
-            or len(result["node"]["prompts"]["edges"]) == 0
-        ):
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
             cls.raise_exception("No prompts found")
         prompt = result["node"]["prompts"]["edges"][0]["node"]
         version_edges = prompt["versionHistory"]["edges"]
@@ -226,13 +204,8 @@ class GetAllPromptsQuery(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if (
-            not result["node"]["prompts"]["edges"]
-            or len(result["node"]["prompts"]["edges"]) == 0
-        ):
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
             cls.raise_exception("No prompts found")
         prompt_edges = result["node"]["prompts"]["edges"]
         has_next_page = result["node"]["prompts"]["pageInfo"]["hasNextPage"]
@@ -265,9 +238,7 @@ class CreatePromptMutation(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "createPrompt" not in result:
             cls.raise_exception("No prompt created")
         return [cls.QueryResponse(**result["createPrompt"]["prompt"])], False, None
@@ -297,9 +268,7 @@ class CreatePromptVersionMutation(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "createPromptVersion" not in result:
             cls.raise_exception("No prompt version created")
         return (
@@ -337,9 +306,7 @@ class UpdatePromptMutation(BaseQuery):
         pass
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "editPrompt" not in result:
             cls.raise_exception("No prompt updated")
         return [cls.QueryResponse(**result["editPrompt"]["prompt"])], False, None
@@ -366,9 +333,7 @@ class DeletePromptMutation(BaseQuery):
         success: bool
 
     @classmethod
-    def _parse_graphql_result(
-        cls, result: dict
-    ) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "deletePrompt" not in result:
             cls.raise_exception("No prompt deleted")
         return (
