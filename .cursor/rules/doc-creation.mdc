@@ -1,6 +1,6 @@
 ---
 description: 
-globs: */docs/*.md
+globs: docs_site/**/*.md
 alwaysApply: false
 ---
 When editing or creating documentation files within the `docs_site/docs/` directory, please adhere to the following formatting guidelines:

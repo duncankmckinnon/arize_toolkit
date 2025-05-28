@@ -19,7 +19,7 @@ from arize_toolkit.queries.custom_metric_queries import (
     GetCustomMetricQuery,
     UpdateCustomMetricMutation,
 )
-from arize_toolkit.queries.language_models import (
+from arize_toolkit.queries.language_model_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,
