@@ -26,11 +26,6 @@ Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the la
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
-It is a open source project developed and maintained by an Arize Engineer.
-
-## Disclaimer
-
-Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
 It is a open source project developed and maintained by an Arize Engineer. Feel free to add issues or reach out for help in the Arize community Slack channel.
 
 ## Overview
@@ -107,14 +102,4 @@ client = Client(..., sleep_time=0)
 
 # Update the sleep time in line
 lots_of_models = client.set_sleep_time(10).get_all_models()
-```
-
-### Switching Spaces and Organizations
-
-The `Client` class can be configured to switch to a different space or a space in a different organization. This is useful if you are working with multiple spaces or if you need to switch to a different space on the fly without having to create a new client.
-
-#### `set_space`
-
-```python
-space_url: str = client.set_space(space: str, organization: Optional[str] = None)
 ```
