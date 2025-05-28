@@ -1,19 +1,23 @@
 # Arize Toolkit
 
+<div align="center">
+  <img src="images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
+</div>
+
 Welcome to the documentation for Arize Toolkit, a Python client for interacting with the Arize AI API.
 
-## Tools
+## Quick Links
 
 - [Model Tools](model_tools.md) - Documentation for model tools
 - [Monitor Tools](monitor_tools.md) - Documentation for monitor tools
 - [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
-- [Space, Organization, & Navigation Tools](space_tools.md) - Documentation for space, organization, & navigation tools
+- [Space Tools](space_tools.md) - Documentation for space, organization, & navigation tools
 
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
-It is a open source project developed and maintained by an Arize Engineer.
+It is a open source project developed and maintained by an Arize Engineer. Feel free to add issues or reach out for help in the Arize community Slack channel.
 
 ## Overview
 

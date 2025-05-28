@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="docs_site/docs/images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
+</div>
+
+<div align="center">
+
 [![Tests](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml)
 [![Documentation](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml)
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
@@ -11,18 +17,13 @@
 [![pytest](https://img.shields.io/badge/pytest-latest-blue)](https://docs.pytest.org)
 [![coverage](https://img.shields.io/badge/coverage-latest-blue)](https://coverage.readthedocs.io)
 
-# Arize Toolkit
+</div>
 
 Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
 
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
-It is a open source project developed and maintained by an Arize Engineer.
-
-## Disclaimer
-
-Although this package is used for development work with and within the Arize platform, it is not an Arize supported product.
 It is a open source project developed and maintained by an Arize Engineer. Feel free to add issues or reach out for help in the Arize community Slack channel.
 
 ## Overview
@@ -99,14 +100,4 @@ client = Client(..., sleep_time=0)
 
 # Update the sleep time in line
 lots_of_models = client.set_sleep_time(10).get_all_models()
-```
-
-### Switching Spaces and Organizations
-
-The `Client` class can be configured to switch to a different space or a space in a different organization. This is useful if you are working with multiple spaces or if you need to switch to a different space on the fly without having to create a new client.
-
-#### `set_space`
-
-```python
-space_url: str = client.set_space(space: str, organization: Optional[str] = None)
 ```
