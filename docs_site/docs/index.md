@@ -1,3 +1,5 @@
+# Arize Toolkit
+
 <div align="center">
   <img src="images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
 </div>
@@ -15,7 +17,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
-It is a open source project developed and maintained by an Arize Engineer.
+It is a open source project developed and maintained by an Arize Engineer. Feel free to add issues or reach out for help in the Arize community Slack channel.
 
 ## Overview
 
