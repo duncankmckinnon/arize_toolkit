@@ -1,6 +1,18 @@
-from typing import List
+from typing import List, Optional
 
-from arize_toolkit.models import DataQualityMonitor, DimensionCategory, DriftMonitor, DynamicAutoThreshold, ModelEnvironment, Monitor, MonitorCategory, MonitorDetailedType, PerformanceMonitor
+from arize_toolkit.models import (
+    DataQualityMonitor,
+    DimensionCategory,
+    DriftMonitor,
+    DynamicAutoThreshold,
+    ModelEnvironment,
+    Monitor,
+    MonitorCategory,
+    MonitorContact,
+    MonitorContactInput,
+    MonitorDetailedType,
+    PerformanceMonitor,
+)
 
 
 class MonitorManager:
@@ -24,6 +36,29 @@ class MonitorManager:
             raise ValueError("Monitor type not supported")
 
     @classmethod
+    def create_monitor_contacts(cls, monitor_contacts: Optional[List[MonitorContact]] = None) -> MonitorContactInput:
+        if monitor_contacts is None:
+            return None
+        else:
+            contacts = []
+            for monitor_contact in monitor_contacts:
+                if monitor_contact.notificationChannelType == "email":
+                    contacts.append(
+                        MonitorContactInput(
+                            notificationChannelType="email",
+                            emailAddress=monitor_contact.emailAddress,
+                        )
+                    )
+                elif monitor_contact.notificationChannelType == "integration":
+                    contacts.append(
+                        MonitorContactInput(
+                            notificationChannelType="integration",
+                            integrationKeyId=monitor_contact.integration.id,
+                        )
+                    )
+            return contacts
+
+    @classmethod
     def performance_monitor(cls, space_id: str, model_name: str, monitor: Monitor) -> PerformanceMonitor:
         return PerformanceMonitor(
             spaceId=space_id,
@@ -42,7 +77,7 @@ class MonitorManager:
             threshold2=monitor.threshold2,
             thresholdMode=monitor.thresholdMode,
             dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
-            contacts=monitor.contacts,
+            contacts=cls.create_monitor_contacts(monitor.contacts),
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
             downtimeFrequencyDays=monitor.downtimeFrequencyDays,
@@ -59,7 +94,7 @@ class MonitorManager:
             modelName=model_name,
             name=monitor.name,
             notes=monitor.notes,
-            contacts=monitor.contacts,
+            contacts=cls.create_monitor_contacts(monitor.contacts),
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
             downtimeFrequencyDays=monitor.downtimeFrequencyDays,
@@ -96,7 +131,7 @@ class MonitorManager:
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
             dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
-            contacts=monitor.contacts,
+            contacts=cls.create_monitor_contacts(monitor.contacts),
             downtimeStart=monitor.downtimeStart,
             downtimeDurationHrs=monitor.downtimeDurationHrs,
             downtimeFrequencyDays=monitor.downtimeFrequencyDays,
