@@ -1537,7 +1537,8 @@ class Client:
         threshold2: Optional[float] = None,
         operator2: Optional[str] = None,
         std_dev_multiplier2: Optional[float] = None,
-        email_addresses: Optional[List[str]] = None,
+        email_addresses: Optional[Union[str, List[str]]] = None,
+        integration_key_ids: Optional[Union[str, List[str]]] = None,
     ) -> str:
         """Creates a new performance metric monitor for a model.
 
@@ -1565,7 +1566,8 @@ class Client:
             threshold2 (Optional[float]): Second threshold value (only used if threshold_mode is "double")
             operator2 (Optional[str]): Comparison operator for the second threshold (e.g. "greaterThan", "lessThan" only used if threshold_mode is "double")
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (only used if threshold_mode is "double")
-            email_addresses (Optional[List[str]]): Email addresses to notify when the monitor is triggered
+            email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
+            integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
 
         Returns:
             str: The path to the newly created performance metric monitor
@@ -1576,6 +1578,28 @@ class Client:
         if performance_metric is None and custom_metric_id is None:
             raise ValueError(
                 "Either performance_metric or custom_metric_id must be provided"
+            )
+        contacts = []
+        if email_addresses:
+            if isinstance(email_addresses, str):
+                email_addresses = [email_addresses]
+            contacts.extend(
+                [
+                    {"notificationChannelType": "email", "emailAddress": email_address}
+                    for email_address in email_addresses
+                ]
+            )
+        if integration_key_ids:
+            if isinstance(integration_key_ids, str):
+                integration_key_ids = [integration_key_ids]
+            contacts.extend(
+                [
+                    {
+                        "notificationChannelType": "integration",
+                        "integrationKeyId": integration_key_id,
+                    }
+                    for integration_key_id in integration_key_ids
+                ]
             )
         results = CreatePerformanceMonitorMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1588,16 +1612,13 @@ class Client:
                 "customMetricId": custom_metric_id,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": (
+                    {"stdDevMultiplier": std_dev_multiplier} if not threshold else None
+                ),
+                "contacts": contacts,
+                "downtimeStart": (
+                    parse_datetime(downtime_start) if downtime_start else None
+                ),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,
@@ -1639,7 +1660,8 @@ class Client:
         threshold2: Optional[float] = None,
         operator2: Optional[str] = None,
         std_dev_multiplier2: Optional[float] = 2.0,
-        email_addresses: Optional[List[str]] = None,
+        email_addresses: Optional[Union[str, List[str]]] = None,
+        integration_key_ids: Optional[Union[str, List[str]]] = None,
     ) -> str:
         """Creates a new drift monitor for a model.
 
@@ -1673,6 +1695,28 @@ class Client:
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
         """
+        contacts = []
+        if email_addresses:
+            if isinstance(email_addresses, str):
+                email_addresses = [email_addresses]
+            contacts.extend(
+                [
+                    {"notificationChannelType": "email", "emailAddress": email_address}
+                    for email_address in email_addresses
+                ]
+            )
+        if integration_key_ids:
+            if isinstance(integration_key_ids, str):
+                integration_key_ids = [integration_key_ids]
+            contacts.extend(
+                [
+                    {
+                        "notificationChannelType": "integration",
+                        "integrationKeyId": integration_key_id,
+                    }
+                    for integration_key_id in integration_key_ids
+                ]
+            )
         results = CreateDriftMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1685,16 +1729,13 @@ class Client:
                 "driftMetric": drift_metric,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": (
+                    {"stdDevMultiplier": std_dev_multiplier} if not threshold else None
+                ),
+                "contacts": contacts,
+                "downtimeStart": (
+                    parse_datetime(downtime_start) if downtime_start else None
+                ),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,
@@ -1734,7 +1775,8 @@ class Client:
         operator2: Optional[str] = None,
         threshold2: Optional[float] = None,
         std_dev_multiplier2: Optional[float] = 2.0,
-        email_addresses: Optional[List[str]] = None,
+        email_addresses: Optional[Union[str, List[str]]] = None,
+        integration_key_ids: Optional[Union[str, List[str]]] = None,
     ) -> str:
         """Creates a new data quality monitor for a model.
 
@@ -1761,7 +1803,8 @@ class Client:
             operator2 (Optional[str]): Comparison operator for the second threshold (e.g. "greaterThan", "lessThan" only used if threshold_mode is "double")
             threshold2 (Optional[float]): Alert threshold value for the second threshold (only used if threshold_mode is "double")
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
-            email_addresses (Optional[List[str]]): Email addresses to notify when the monitor is triggered
+            email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
+            integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
 
         Returns:
             str: The path to the newly created data quality monitor
@@ -1769,6 +1812,28 @@ class Client:
         Raises:
             ArizeAPIException: If monitor creation fails or there is an API error
         """
+        contacts = []
+        if email_addresses:
+            if isinstance(email_addresses, str):
+                email_addresses = [email_addresses]
+            contacts.extend(
+                [
+                    {"notificationChannelType": "email", "emailAddress": email_address}
+                    for email_address in email_addresses
+                ]
+            )
+        if integration_key_ids:
+            if isinstance(integration_key_ids, str):
+                integration_key_ids = [integration_key_ids]
+            contacts.extend(
+                [
+                    {
+                        "notificationChannelType": "integration",
+                        "integrationKeyId": integration_key_id,
+                    }
+                    for integration_key_id in integration_key_ids
+                ]
+            )
         results = CreateDataQualityMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1781,16 +1846,13 @@ class Client:
                 "notes": notes,
                 "operator": operator,
                 "threshold": threshold,
-                "dynamicAutoThreshold": {"stdDevMultiplier": std_dev_multiplier}
-                if not threshold
-                else None,
-                "contacts": [
-                    {"notificationChannelType": "email", "emailAddress": email_address}
-                    for email_address in email_addresses or []
-                ],
-                "downtimeStart": parse_datetime(downtime_start)
-                if downtime_start
-                else None,
+                "dynamicAutoThreshold": (
+                    {"stdDevMultiplier": std_dev_multiplier} if not threshold else None
+                ),
+                "contacts": contacts,
+                "downtimeStart": (
+                    parse_datetime(downtime_start) if downtime_start else None
+                ),
                 "downtimeDurationHrs": downtime_duration_hrs,
                 "downtimeFrequencyDays": downtime_frequency_days,
                 "scheduledRuntimeEnabled": scheduled_runtime_enabled,

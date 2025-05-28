@@ -76,10 +76,26 @@ class CustomMetricInput(GraphQLModel):
 #### Monitor GraphQL Models ####
 
 
+class IntegrationKey(GraphQLModel):
+    id: Optional[str] = Field(default=None)
+    name: str
+    providerName: Literal["slack", "pagerduty", "opsgenie"]
+    createdAt: Optional[datetime] = Field(default=None)
+    channelName: Optional[str] = Field(default=None)
+    alertSeverity: Optional[str] = Field(default=None)
+
+
 class MonitorContact(GraphQLModel):
     id: Optional[str] = Field(default=None)
-    notificationChannelType: Literal["email", "slack"]
+    notificationChannelType: Literal["email", "integration"]
     emailAddress: Optional[str] = Field(default=None)
+    integration: Optional[IntegrationKey] = Field(default=None)
+
+
+class MonitorContactInput(GraphQLModel):
+    notificationChannelType: Literal["email", "integration"]
+    emailAddress: Optional[str] = Field(default=None)
+    integrationKeyId: Optional[str] = Field(default=None)
 
 
 class MetricWindow(GraphQLModel):
@@ -142,7 +158,7 @@ class MonitorDetailedType(GraphQLModel):
     modelName: str
     name: str
     notes: Optional[str] = Field(default=None)
-    contacts: Optional[List[MonitorContact]] = Field(default=None)
+    contacts: Optional[List[MonitorContactInput]] = Field(default=None)
     downtimeStart: Optional[datetime] = Field(default=None)
     downtimeDurationHrs: Optional[int] = Field(default=None)
     downtimeFrequencyDays: Optional[int] = Field(default=None)
@@ -241,8 +257,10 @@ class LLMMessageInput(GraphQLModel):
 class ToolChoiceTool(GraphQLModel):
     tool: ToolInput
 
+
 class ToolChoiceChoice(GraphQLModel):
     choice: Literal["auto", "none", "required"]
+
 
 class ToolChoiceInput(GraphQLModel):
     choice: Optional[Literal["auto", "none", "required"]] = Field(default=None)

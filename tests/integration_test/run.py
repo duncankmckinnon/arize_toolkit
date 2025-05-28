@@ -16,6 +16,7 @@ from arize_toolkit.models import DriftMonitor, DataQualityMonitor, PerformanceMo
 # Load environment variables from .env file
 load_dotenv()
 
+
 def load_env_vars():
     arize_developer_key = os.getenv("ARIZE_DEVELOPER_KEY")
     if not arize_developer_key:
@@ -128,6 +129,16 @@ def run_integration_tests():
                 print(f"Monitor Creator: {monitor_creator.to_dict(exclude_none=True)}")
                 old_id = client.delete_monitor_by_id(monitor_id=monitor["id"])
                 print(f"Deleted monitor with ID: {old_id}")
+                email_addresses = [
+                    email.emailAddress
+                    for email in monitor_creator.contacts
+                    if email.notificationChannelType == "email"
+                ]
+                integration_key_ids = [
+                    integration_key.integrationKeyId
+                    for integration_key in monitor_creator.contacts
+                    if integration_key.notificationChannelType == "integration"
+                ]
                 if isinstance(monitor_creator, PerformanceMonitor):
                     performance_monitor = client.create_performance_monitor(
                         name=monitor_creator.name,
@@ -140,9 +151,13 @@ def run_integration_tests():
                         scheduled_runtime_days_of_week=monitor_creator.scheduledRuntimeDaysOfWeek,
                         threshold=monitor_creator.threshold,
                         threshold_mode=monitor_creator.thresholdMode,
-                        std_dev_multiplier=monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                        if monitor_creator.dynamicAutoThreshold
-                        else None,
+                        email_addresses=email_addresses,
+                        integration_key_ids=integration_key_ids,
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Performance Monitor: {performance_monitor}")
                 elif isinstance(monitor_creator, DataQualityMonitor):
@@ -156,9 +171,13 @@ def run_integration_tests():
                         model_environment_name=monitor_creator.modelEnvironmentName,
                         threshold=monitor_creator.threshold,
                         threshold_mode=monitor_creator.thresholdMode,
-                        std_dev_multiplier=monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                        if monitor_creator.dynamicAutoThreshold
-                        else None,
+                        email_addresses=email_addresses,
+                        integration_key_ids=integration_key_ids,
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Data Quality Monitor: {data_quality_monitor}")
                 elif isinstance(monitor_creator, DriftMonitor):
@@ -171,9 +190,13 @@ def run_integration_tests():
                         notes=monitor_creator.notes,
                         threshold=monitor_creator.threshold,
                         threshold_mode=monitor_creator.thresholdMode,
-                        std_dev_multiplier=monitor_creator.dynamicAutoThreshold.stdDevMultiplier
-                        if monitor_creator.dynamicAutoThreshold
-                        else None,
+                        email_addresses=email_addresses,
+                        integration_key_ids=integration_key_ids,
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Drift Monitor: {drift_monitor}")
         # Add more client queries as needed
