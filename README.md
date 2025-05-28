@@ -1,3 +1,11 @@
+# Arize Toolkit
+
+<div align="center">
+  <img src="docs_site/docs/images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
+</div>
+
+<div align="center">
+
 [![Tests](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/test.yml)
 [![Documentation](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml)
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
@@ -11,7 +19,7 @@
 [![pytest](https://img.shields.io/badge/pytest-latest-blue)](https://docs.pytest.org)
 [![coverage](https://img.shields.io/badge/coverage-latest-blue)](https://coverage.readthedocs.io)
 
-# Arize Toolkit
+</div>
 
 Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
 
