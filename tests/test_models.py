@@ -416,7 +416,6 @@ class TestFileImportModels:
             predictionLabel="prediction",
             actualLabel="actual",
             predictionScores="pred_scores",
-            actualScores="actual_scores",
             predictionId="id",
             timestamp="ts",
             featuresList=["feature1", "feature2"],
@@ -433,10 +432,9 @@ class TestFileImportModels:
         assert schema.predictionLabel == "prediction"
         assert schema.actualLabel == "actual"
         assert schema.predictionScores == "pred_scores"
-        assert schema.actualScores == "actual_scores"
         assert schema.predictionId == "id"
         assert schema.timestamp == "ts"
-        assert len(schema.featuresList) == 2
+        assert schema.featuresList == ["feature1", "feature2"]
         assert len(schema.embeddingFeatures) == 1
 
     def test_file_import_job_input(self):

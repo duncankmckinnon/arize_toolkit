@@ -423,8 +423,6 @@ class ClassificationSchemaInput(BaseModelSchema):
 
     actualLabel: Optional[str] = Field(default=None, description="Column name for actual label")
 
-    actualScores: Optional[str] = Field(default=None, description="Column name for actual scores")
-
 
 class RegressionSchemaInput(BaseModelSchema):
     """Input model for regression file import schema."""

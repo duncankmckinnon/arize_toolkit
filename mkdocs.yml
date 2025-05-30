@@ -27,6 +27,7 @@ nav:
     - Custom Metrics Tools: custom_metrics_tools.md
     - Language Model Tools: language_model_tools.md
     - Space Tools: space_tools.md
+    - Data Import Tools: data_import_tools.md
 
   - For Developers:
     - Development: developers/development.md

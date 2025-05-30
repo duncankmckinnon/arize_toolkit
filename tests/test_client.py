@@ -1176,3 +1176,182 @@ class TestLanguageModel:
             assert result == f"{expected_url}?version={version_id}"
         else:
             assert result == expected_url
+
+    def test_delete_monitor_not_found(self, client, mock_graphql_client):
+        """Test deleting a monitor that doesn't exist"""
+        mock_graphql_client.return_value.execute.side_effect = Exception("Monitor not found")
+
+        with pytest.raises(Exception, match="Monitor not found"):
+            client.delete_monitor("test_monitor", "test_model")
+
+
+class TestDataImportJobs:
+    """Test data import job functionality"""
+
+    def test_get_file_import_job(self, client, mock_graphql_client):
+        """Test getting a file import job"""
+        mock_response = {
+            "node": {
+                "importJobs": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "job123",
+                                "jobId": "job123",
+                                "jobStatus": "active",
+                                "totalFilesPendingCount": 5,
+                                "totalFilesSuccessCount": 10,
+                                "totalFilesFailedCount": 0,
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "modelName": "test_model",
+                                "modelId": "model123",
+                                "modelVersion": "v1",
+                                "modelType": "classification",
+                                "modelEnvironmentName": "production",
+                                "modelSchema": {"predictionLabel": "pred"},
+                                "batchId": None,
+                                "blobStore": "s3",
+                                "bucketName": "test-bucket",
+                                "prefix": "data/",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_file_import_job("job123")
+
+        assert result["jobId"] == "job123"
+        assert result["jobStatus"] == "active"
+        assert result["totalFilesSuccessCount"] == 10
+
+    def test_get_table_import_job(self, client, mock_graphql_client):
+        """Test getting a table import job"""
+        mock_response = {
+            "node": {
+                "tableJobs": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "job456",
+                                "jobId": "job456",
+                                "jobStatus": "active",
+                                "totalQueriesSuccessCount": 20,
+                                "totalQueriesFailedCount": 1,
+                                "totalQueriesPendingCount": 3,
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "modelName": "test_model",
+                                "modelId": "model123",
+                                "modelVersion": "v1",
+                                "modelType": "classification",
+                                "modelEnvironmentName": "production",
+                                "modelSchema": {"predictionLabel": "pred"},
+                                "batchId": None,
+                                "table": "predictions_table",
+                                "tableStore": "BigQuery",
+                                "projectId": "my-project",
+                                "dataset": "my-dataset",
+                                "tableIngestionParameters": None,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_table_import_job("job456")
+
+        assert result["jobId"] == "job456"
+        assert result["jobStatus"] == "active"
+        assert result["totalQueriesSuccessCount"] == 20
+        assert result["tableStore"] == "BigQuery"
+
+    def test_create_table_import_job_bigquery(self, client, mock_graphql_client):
+        """Test creating a BigQuery table import job"""
+        mock_response = {
+            "createTableImportJob": {
+                "tableImportJob": {
+                    "id": "job789",
+                    "jobId": "job789",
+                    "jobStatus": "active",
+                    "totalQueriesSuccessCount": 0,
+                    "totalQueriesFailedCount": 0,
+                    "totalQueriesPendingCount": 1,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.create_table_import_job(
+            table_store="BigQuery",
+            model_name="test_model",
+            model_type="classification",
+            model_schema={
+                "predictionLabel": "prediction",
+                "predictionId": "id",
+                "timestamp": "ts",
+            },
+            bigquery_table_config={
+                "projectId": "my-project",
+                "dataset": "my-dataset",
+                "tableName": "predictions",
+            },
+        )
+
+        assert result["jobId"] == "job789"
+        assert result["jobStatus"] == "active"
+
+    def test_create_table_import_job_snowflake_schema_alias(self, client, mock_graphql_client):
+        """Test creating a Snowflake table import job with schema alias"""
+        mock_response = {
+            "createTableImportJob": {
+                "tableImportJob": {
+                    "id": "job999",
+                    "jobId": "job999",
+                    "jobStatus": "active",
+                    "totalQueriesSuccessCount": 0,
+                    "totalQueriesFailedCount": 0,
+                    "totalQueriesPendingCount": 1,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test that "schema" gets converted to "snowflakeSchema"
+        result = client.create_table_import_job(
+            table_store="Snowflake",
+            model_name="test_model",
+            model_type="regression",
+            model_schema={
+                "predictionScore": "prediction",
+                "predictionId": "id",
+                "timestamp": "ts",
+            },
+            snowflake_table_config={
+                "accountID": "myaccount",
+                "schema": "ML_PREDICTIONS",  # Using "schema" instead of "snowflakeSchema"
+                "database": "SALES_DATA",
+                "tableName": "predictions",
+            },
+        )
+
+        assert result["jobId"] == "job999"
+        assert result["jobStatus"] == "active"
+
+    def test_create_table_import_job_missing_config(self, client, mock_graphql_client):
+        """Test creating a table import job with missing configuration"""
+        with pytest.raises(ValueError, match="bigquery_table_config is required"):
+            client.create_table_import_job(
+                table_store="BigQuery",
+                model_name="test_model",
+                model_type="classification",
+                model_schema={
+                    "predictionLabel": "prediction",
+                    "predictionId": "id",
+                    "timestamp": "ts",
+                },
+                # Missing bigquery_table_config
+            )
