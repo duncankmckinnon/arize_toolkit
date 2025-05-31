@@ -101,6 +101,7 @@ class GetAllFileImportJobsQuery(BaseQuery):
 
         pass
 
+    @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         """Parse the GraphQL result into a FileImportJobCheck response."""
         if "node" not in result:

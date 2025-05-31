@@ -908,8 +908,8 @@ class Client:
 
         result = UpdatePromptMutation.run_graphql_mutation(
             self._graphql_client,
-            space_id=self.space_id,
-            prompt_id=prompt_id,
+            spaceId=self.space_id,
+            promptId=prompt_id,
             name=updated_name,
             description=description,
             tags=tags,
@@ -943,7 +943,7 @@ class Client:
 
         prompt_id = self.get_prompt(prompt_name)["id"]
         name = updated_name if updated_name else prompt_name
-        return self.update_prompt_by_id(prompt_id, name=name, description=description, tags=tags)
+        return self.update_prompt_by_id(prompt_id, updated_name=name, description=description, tags=tags)
 
     def delete_prompt_by_id(self, prompt_id: str) -> bool:
         """Deletes a prompt.
@@ -960,8 +960,8 @@ class Client:
         """
         result = DeletePromptMutation.run_graphql_mutation(
             self._graphql_client,
-            prompt_id=prompt_id,
-            space_id=self.space_id,
+            promptId=prompt_id,
+            spaceId=self.space_id,
         )
         return result.success
 
@@ -1291,8 +1291,8 @@ class Client:
             "modelId": model_id,
             "name": name or custom_metric["name"],
             "metric": metric or custom_metric["metric"],
+            "modelEnvironmentName": environment or "production",
             "description": description or custom_metric["description"],
-            "modelEnvironmentName": environment or custom_metric["modelEnvironmentName"],
         }
         results = UpdateCustomMetricMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1348,8 +1348,8 @@ class Client:
             "customMetricId": custom_metric.id,
             "modelId": model.id,
             "name": name or custom_metric_name,
-            "customMetric": metric or custom_metric.metric,
-            "modelEnvironmentName": environment or custom_metric.modelEnvironmentName,
+            "metric": metric or custom_metric.metric,
+            "modelEnvironmentName": environment or "production",
             "description": description or custom_metric.description,
         }
         results = UpdateCustomMetricMutation.run_graphql_mutation(
@@ -1929,15 +1929,11 @@ class Client:
             monitor_name=current_monitor_name,
             space_id=self.space_id,
         )
-        monitor_type = MonitorManager.extract_monitor_type(
-            space_id=new_space_id or self.space_id,
-            model_name=new_model_name or current_model_name,
-            monitor=current_monitor,
-        )
+
         if new_monitor_name:
             kwargs["name"] = new_monitor_name
         if kwargs:
-            monitor_fields = monitor_type.to_dict()
+            monitor_fields = current_monitor.to_dict()
             for key, value in kwargs.items():
                 if value is not None and key in monitor_fields:
                     monitor_fields[key] = value
@@ -1945,6 +1941,12 @@ class Client:
                 space_id=new_space_id or self.space_id,
                 model_name=new_model_name or current_model_name,
                 monitor=monitor_fields,
+            )
+        else:
+            monitor_type = MonitorManager.extract_monitor_type(
+                space_id=new_space_id or self.space_id,
+                model_name=new_model_name or current_model_name,
+                monitor=current_monitor,
             )
         monitor_query = {
             "performance": CreatePerformanceMonitorMutation,
@@ -2010,7 +2012,7 @@ class Client:
         Raises:
             ArizeAPIException: If job retrieval fails or there is an API error
         """
-        results = GetAllFileImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, space_id=self.space_id)
+        results = GetAllFileImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, spaceId=self.space_id)
         return [result.to_dict() for result in results]
 
     def create_file_import_job(
@@ -2200,7 +2202,7 @@ class Client:
         Raises:
             ArizeAPIException: If job retrieval fails or there is an API error
         """
-        results = GetAllTableImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, space_id=self.space_id)
+        results = GetAllTableImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, spaceId=self.space_id)
         return [result.to_dict() for result in results]
 
     def create_table_import_job(
