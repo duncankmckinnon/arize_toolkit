@@ -37,6 +37,8 @@ Here's a quick overview of the main features in the current release:
 - Create, copy, and manage custom metrics
 - Create, copy, and manage monitors and alerting
 - Work with LLM features like prompts and annotations
+- Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
+- Create, update, and delete data import jobs with full lifecycle management
 
 ## Installation
 

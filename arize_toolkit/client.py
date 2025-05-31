@@ -23,10 +23,14 @@ from arize_toolkit.queries.custom_metric_queries import (
 from arize_toolkit.queries.data_import_queries import (
     CreateFileImportJobMutation,
     CreateTableImportJobMutation,
+    DeleteFileImportJobMutation,
+    DeleteTableImportJobMutation,
     GetAllFileImportJobsQuery,
     GetAllTableImportJobsQuery,
     GetFileImportJobQuery,
     GetTableImportJobQuery,
+    UpdateFileImportJobMutation,
+    UpdateTableImportJobMutation,
 )
 from arize_toolkit.queries.language_model_queries import (
     CreateAnnotationMutation,
@@ -2355,3 +2359,128 @@ class Client:
             **table_config_params,
         )
         return table_import_job.to_dict()
+
+    def update_file_import_job(
+        self,
+        job_id: str,
+        job_status: Optional[str] = None,
+        model_schema: Optional[Union[BaseModelSchema, Dict[str, Any]]] = None,
+    ) -> bool:
+        """Updates a file import job by its jobId.
+
+        Args:
+            job_id (str): jobId of the job to update (e.g. "1234")
+            job_status (Optional[str]): status of the job to update (e.g. "active", "inactive", "deleted")
+            model_schema (Optional[Union[BaseModelSchema, Dict[str, Any]]]): schema of the job to update
+
+        Returns:
+            a file import job check object:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalFilesFailedCount: int
+            - totalFilesSuccessCount: int
+            - totalFilesPendingCount: int
+
+        Raises:
+            ArizeAPIException: If the job update fails or there is an API error
+        """
+
+        job_search = GetFileImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"File import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            raise ArizeAPIException(f"File import job with ID {job_id} is deleted")
+
+        final_schema = job_search.modelSchema.to_dict()
+        if model_schema:
+            schema_dict = model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema
+            final_schema.update(schema_dict)
+
+        params = {"jobId": job_id, "modelSchema": final_schema}
+        if job_status:
+            params["jobStatus"] = job_status
+
+        results = UpdateFileImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **params,
+        )
+        return results.to_dict()
+
+    def update_table_import_job(
+        self,
+        job_id: str,
+        job_status: Optional[str] = None,
+        model_schema: Optional[Union[BaseModelSchema, Dict[str, Any]]] = None,
+        refresh_interval: Optional[int] = None,
+        query_window_size: Optional[int] = None,
+    ) -> bool:
+        """Updates a table import job by its jobId."""
+        job_search = GetTableImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"Table import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            raise ArizeAPIException(f"Table import job with ID {job_id} is deleted")
+
+        final_schema = job_search.modelSchema.to_dict()
+        if model_schema:
+            schema_dict = model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema
+            final_schema.update(schema_dict)
+
+        params = {"jobId": job_id, "modelSchema": final_schema}
+        if job_status:
+            params["jobStatus"] = job_status
+        if refresh_interval:
+            params["refreshInterval"] = refresh_interval
+        if query_window_size:
+            params["queryWindowSize"] = query_window_size
+
+        results = UpdateTableImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **params,
+        )
+        return results.to_dict()
+
+    def delete_file_import_job(self, job_id: str) -> bool:
+        """Deletes a file import job by its jobId. can be found in UI next to the job or in the jobId field after creating or retrieving the job
+
+        Args:
+            job_id (str): jobId of the job to delete (e.g. "1234")
+
+        Returns:
+            bool: True if the job was deleted successfully, False otherwise
+
+        Raises:
+            ArizeAPIException: If the job deletion fails or there is an API error
+        """
+        job_search = GetFileImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"File import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            return True
+        results = DeleteFileImportJobMutation.run_graphql_mutation(self._graphql_client, id=job_search.id)
+        if results.jobStatus == "deleted" or results.jobStatus is None:
+            return True
+        return False
+
+    def delete_table_import_job(self, job_id: str) -> bool:
+        """Deletes a table import job by its jobId. The can be found in UI next to the job or in the jobId field after creating or retrieving the job
+
+        Args:
+            job_id (str): jobId of the job to delete (e.g. "1234")
+
+        Returns:
+            bool: True if the job was deleted successfully, False otherwise
+
+        Raises:
+            ArizeAPIException: If the job deletion fails or there is an API error
+        """
+        job_search = GetTableImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"Table import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            return True
+        results = DeleteTableImportJobMutation.run_graphql_mutation(self._graphql_client, id=job_search.id)
+        if results.jobStatus == "deleted" or results.jobStatus is None:
+            return True
+        return False

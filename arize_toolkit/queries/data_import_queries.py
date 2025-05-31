@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import FileImportJob, FileImportJobCheck, FileImportJobInput, TableImportJob, TableImportJobCheck, TableImportJobInput
+from arize_toolkit.models import FileImportJob, FileImportJobCheck, FileImportJobInput, FullSchema, TableImportJob, TableImportJobCheck, TableImportJobInput
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -322,4 +322,216 @@ class CreateTableImportJobMutation(BaseQuery):
 
         job_data = import_job["tableImportJob"]
 
+        return [cls.QueryResponse(**job_data)], False, None
+
+
+class UpdateFileImportJobMutation(BaseQuery):
+    """Mutation for updating a file import job."""
+
+    graphql_query = (
+        """
+    mutation UpdateFileImportJob(
+        $jobId: ID!,
+        $jobStatus: JobStatus,
+        $modelSchema: FileImportSchemaInputType!
+    ){
+        updateFileImportJob(
+            input: {
+                jobId: $jobId
+                jobStatus: $jobStatus,
+                schema: $modelSchema
+            }
+        ){
+            fileImportJob{ """
+        + FileImportJobCheck.to_graphql_fields()
+        + """}
+        }
+    }
+    """
+    )
+    query_description = "Update a file import job"
+
+    class Variables(BaseVariables):
+        """Input variables for updating a file import job."""
+
+        jobId: str
+        jobStatus: Optional[str] = None
+        modelSchema: FullSchema
+
+    class QueryException(ArizeAPIException):
+        """Exception raised when file import job update fails."""
+
+        message: str = "Error updating file import job"
+
+    class QueryResponse(FileImportJobCheck):
+        """Response from updating a file import job."""
+
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        """Parse the GraphQL result into a response."""
+        if "updateFileImportJob" not in result:
+            cls.raise_exception("No update file import job response")
+
+        update_response = result["updateFileImportJob"]
+        if "fileImportJob" not in update_response:
+            cls.raise_exception("No file import job data returned")
+
+        job_data = update_response["fileImportJob"]
+        return [cls.QueryResponse(**job_data)], False, None
+
+
+class UpdateTableImportJobMutation(BaseQuery):
+    """Mutation for updating a table import job."""
+
+    graphql_query = (
+        """
+    mutation UpdateTableImportJob(
+        $jobId: ID!,
+        $jobStatus: JobStatus,
+        $modelVersion: String,
+        $modelSchema: TableImportSchemaInputType!,
+        $refreshInterval: Int,
+        $queryWindowSize: Int
+    ){
+        updateTableImportJob(
+            input: {
+                jobId: $jobId
+                jobStatus: $jobStatus,
+                modelVersion: $modelVersion,
+                schema: $modelSchema,
+                tableIngestionParameters: {
+                    refreshIntervalMinutes: $refreshInterval,
+                    queryWindowSizeHours: $queryWindowSize
+                }
+            }
+        ){
+            tableImportJob{"""
+        + TableImportJobCheck.to_graphql_fields()
+        + """}
+        }
+    }
+    """
+    )
+    query_description = "Update a table import job"
+
+    class Variables(BaseVariables):
+        """Input variables for updating a table import job."""
+
+        jobId: str
+        jobStatus: Optional[str] = None
+        modelVersion: Optional[str] = None
+        modelSchema: FullSchema
+        refreshInterval: Optional[int] = None
+        queryWindowSize: Optional[int] = None
+
+    class QueryException(ArizeAPIException):
+        """Exception raised when table import job update fails."""
+
+        message: str = "Error updating table import job"
+
+    class QueryResponse(TableImportJobCheck):
+        """Response from updating a table import job."""
+
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        """Parse the GraphQL result into a response."""
+        if "updateTableImportJob" not in result:
+            cls.raise_exception("No update table import job response")
+
+        update_response = result["updateTableImportJob"]
+        if "tableImportJob" not in update_response:
+            cls.raise_exception("No table import job data returned")
+
+        job_data = update_response["tableImportJob"]
+        return [cls.QueryResponse(**job_data)], False, None
+
+
+class DeleteFileImportJobMutation(BaseQuery):
+    """Mutation for deleting a file import job."""
+
+    graphql_query = """
+    mutation DeleteFileImportJob($id: ID!) {
+        deleteFileImportJob(input: { jobId: $id }) {
+            fileImportJob {
+                jobStatus
+            }
+        }
+    }
+    """
+    query_description = "Delete a file import job"
+
+    class Variables(BaseVariables):
+        """Input variables for deleting a file import job."""
+
+        id: str
+
+    class QueryException(ArizeAPIException):
+        """Exception raised when file import job deletion fails."""
+
+        message: str = "Error deleting file import job"
+
+    class QueryResponse(BaseResponse):
+        """Response from deleting a file import job."""
+
+        jobStatus: Optional[str] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        """Parse the GraphQL result into a response."""
+        if "deleteFileImportJob" not in result:
+            cls.raise_exception("No delete file import job response")
+
+        delete_response = result["deleteFileImportJob"]
+        if "fileImportJob" not in delete_response:
+            cls.raise_exception("No file import job data returned")
+
+        job_data = delete_response["fileImportJob"]
+        return [cls.QueryResponse(**job_data)], False, None
+
+
+class DeleteTableImportJobMutation(BaseQuery):
+    """Mutation for deleting a table import job."""
+
+    graphql_query = """
+    mutation DeleteTableImportJob($id: ID!){
+        deleteTableImportJob(input: { jobId: $id }){
+            tableImportJob{
+                jobStatus
+                jobId
+            }
+        }
+    }
+    """
+    query_description = "Delete a table import job"
+
+    class Variables(BaseVariables):
+        """Input variables for deleting a table import job."""
+
+        id: str
+
+    class QueryException(ArizeAPIException):
+        """Exception raised when table import job deletion fails."""
+
+        message: str = "Error deleting table import job"
+
+    class QueryResponse(BaseResponse):
+        """Response from deleting a table import job."""
+
+        jobStatus: Optional[str] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        """Parse the GraphQL result into a response."""
+        if "deleteTableImportJob" not in result:
+            cls.raise_exception("No delete table import job response")
+
+        delete_response = result["deleteTableImportJob"]
+        if "tableImportJob" not in delete_response:
+            cls.raise_exception("No table import job data returned")
+
+        job_data = delete_response["tableImportJob"]
         return [cls.QueryResponse(**job_data)], False, None

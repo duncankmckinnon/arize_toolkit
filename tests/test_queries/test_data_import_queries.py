@@ -13,7 +13,16 @@ from arize_toolkit.models import (
     SnowflakeTableConfig,
     TableImportJobInput,
 )
-from arize_toolkit.queries.data_import_queries import CreateFileImportJobMutation, CreateTableImportJobMutation, GetAllTableImportJobsQuery, GetTableImportJobQuery
+from arize_toolkit.queries.data_import_queries import (
+    CreateFileImportJobMutation,
+    CreateTableImportJobMutation,
+    DeleteFileImportJobMutation,
+    DeleteTableImportJobMutation,
+    GetAllTableImportJobsQuery,
+    GetTableImportJobQuery,
+    UpdateFileImportJobMutation,
+    UpdateTableImportJobMutation,
+)
 from arize_toolkit.types import BlobStore, TableStore
 
 
@@ -650,3 +659,548 @@ class TestGetAllTableImportJobsQuery:
         assert len(result) == 2
         assert result[0].id == "job123"
         assert result[1].id == "job123"
+
+
+class TestDeleteFileImportJobMutation:
+    def test_query_structure(self):
+        """Test that the query structure is correct and includes all necessary fields."""
+        query = DeleteFileImportJobMutation.graphql_query
+        assert "mutation DeleteFileImportJob" in query
+        assert "deleteFileImportJob(input: { jobId: $id })" in query
+        assert "fileImportJob" in query
+        assert "jobStatus" in query
+
+    def test_delete_file_import_job_success(self, gql_client):
+        """Test successful deletion of a file import job."""
+        mock_response = {"deleteFileImportJob": {"fileImportJob": {"jobStatus": "deleted"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus == "deleted"
+
+        # Verify the mutation was called with correct parameters
+        gql_client.execute.assert_called_once()
+        args, kwargs = gql_client.execute.call_args
+        assert kwargs["variable_values"]["input"]["id"] == "job123"
+
+    def test_delete_file_import_job_failure_no_response(self, gql_client):
+        """Test error handling when delete mutation returns no response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            DeleteFileImportJobMutation.QueryException,
+            match="Error deleting file import job - No delete file import job response",
+        ):
+            DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    def test_delete_file_import_job_failure_no_job_data(self, gql_client):
+        """Test error handling when delete mutation returns no job data."""
+        mock_response = {"deleteFileImportJob": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            DeleteFileImportJobMutation.QueryException,
+            match="Error deleting file import job - No file import job data returned",
+        ):
+            DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    def test_delete_file_import_job_with_inactive_status(self, gql_client):
+        """Test deletion returning inactive status."""
+        mock_response = {"deleteFileImportJob": {"fileImportJob": {"jobStatus": "inactive"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus == "inactive"
+
+    def test_delete_file_import_job_with_null_status(self, gql_client):
+        """Test deletion returning null status."""
+        mock_response = {"deleteFileImportJob": {"fileImportJob": {"jobStatus": None}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus is None
+
+    def test_delete_file_import_job_graphql_error(self, gql_client):
+        """Test error handling when GraphQL returns errors."""
+        gql_client.execute.side_effect = Exception("GraphQL error occurred")
+
+        with pytest.raises(
+            DeleteFileImportJobMutation.QueryException,
+            match="Error deleting file import job - GraphQL error occurred",
+        ):
+            DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    @pytest.mark.parametrize(
+        "job_id,expected_error",
+        [
+            (1234, "Input should be a valid string"),
+            (None, "Input should be a valid string"),
+        ],
+    )
+    def test_delete_file_import_job_input_validation(self, job_id, expected_error):
+        """Test validation of delete file import job input."""
+        with pytest.raises(Exception) as e:
+            DeleteFileImportJobMutation.Variables(id=job_id)
+        assert expected_error.lower() in str(e.value).lower()
+
+
+class TestDeleteTableImportJobMutation:
+    def test_query_structure(self):
+        """Test that the query structure is correct and includes all necessary fields."""
+        query = DeleteTableImportJobMutation.graphql_query
+        assert "mutation DeleteTableImportJob" in query
+        assert "deleteTableImportJob(input: { jobId: $id })" in query
+        assert "tableImportJob" in query
+        assert "jobStatus" in query
+
+    def test_delete_table_import_job_success(self, gql_client):
+        """Test successful deletion of a table import job."""
+        mock_response = {"deleteTableImportJob": {"tableImportJob": {"jobStatus": "deleted"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteTableImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus == "deleted"
+
+        # Verify the mutation was called with correct parameters
+        gql_client.execute.assert_called_once()
+        args, kwargs = gql_client.execute.call_args
+        assert kwargs["variable_values"]["input"]["id"] == "job123"
+
+    def test_delete_table_import_job_failure_no_response(self, gql_client):
+        """Test error handling when delete mutation returns no response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            DeleteTableImportJobMutation.QueryException,
+            match="Error deleting table import job - No delete table import job response",
+        ):
+            DeleteTableImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    def test_delete_table_import_job_failure_no_job_data(self, gql_client):
+        """Test error handling when delete mutation returns no job data."""
+        mock_response = {"deleteTableImportJob": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            DeleteTableImportJobMutation.QueryException,
+            match="Error deleting table import job - No table import job data returned",
+        ):
+            DeleteTableImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    def test_delete_table_import_job_with_inactive_status(self, gql_client):
+        """Test deletion returning inactive status."""
+        mock_response = {"deleteTableImportJob": {"tableImportJob": {"jobStatus": "inactive"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteTableImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus == "inactive"
+
+    def test_delete_table_import_job_with_null_status(self, gql_client):
+        """Test deletion returning null status."""
+        mock_response = {"deleteTableImportJob": {"tableImportJob": {"jobStatus": None}}}
+        gql_client.execute.return_value = mock_response
+
+        result = DeleteTableImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+        assert result.jobStatus is None
+
+    def test_delete_file_import_job_graphql_error(self, gql_client):
+        """Test error handling when GraphQL returns errors."""
+        gql_client.execute.side_effect = Exception("GraphQL error occurred")
+
+        with pytest.raises(
+            DeleteFileImportJobMutation.QueryException,
+            match="Error deleting file import job - GraphQL error occurred",
+        ):
+            DeleteFileImportJobMutation.run_graphql_mutation(gql_client, id="job123")
+
+    @pytest.mark.parametrize(
+        "job_id,expected_error",
+        [
+            (1234, "Input should be a valid string"),
+            (None, "Input should be a valid string"),
+        ],
+    )
+    def test_delete_file_import_job_input_validation(self, job_id, expected_error):
+        """Test validation of delete file import job input."""
+        with pytest.raises(Exception) as e:
+            DeleteFileImportJobMutation.Variables(id=job_id)
+        assert expected_error.lower() in str(e.value).lower()
+
+
+class TestUpdateFileImportJobMutation:
+    def test_query_structure(self):
+        """Test that the query structure is correct and includes all necessary fields."""
+        query = UpdateFileImportJobMutation.graphql_query
+        assert "mutation UpdateFileImportJob" in query
+        assert "updateFileImportJob(" in query
+        assert "fileImportJob" in query
+        assert "$modelSchema: FileImportSchemaInputType!" in query
+        assert "id" in query
+        assert "jobId" in query
+        assert "jobStatus" in query
+        assert "totalFilesFailedCount" in query
+        assert "totalFilesSuccessCount" in query
+        assert "totalFilesPendingCount" in query
+
+    def test_update_file_import_job_all_params(self, gql_client, mock_classification_schema):
+        """Test successful update with all parameters."""
+        mock_response = {
+            "updateFileImportJob": {
+                "fileImportJob": {
+                    "id": "job123",
+                    "jobId": "job123",
+                    "jobStatus": "active",
+                    "totalFilesFailedCount": 2,
+                    "totalFilesSuccessCount": 8,
+                    "totalFilesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateFileImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job123",
+            jobStatus="active",
+            modelSchema=mock_classification_schema,
+        )
+
+        assert result.id == "job123"
+        assert result.jobStatus == "active"
+        assert result.totalFilesFailedCount == 2
+        assert result.totalFilesSuccessCount == 8
+        assert result.totalFilesPendingCount == 0
+
+        # Verify the mutation was called with correct parameters
+        gql_client.execute.assert_called_once()
+        args, kwargs = gql_client.execute.call_args
+        input_data = kwargs["variable_values"]["input"]
+        assert input_data["jobId"] == "job123"
+        assert input_data["jobStatus"] == "active"
+        assert "modelSchema" in input_data
+
+    def test_update_file_import_job_minimal_params(self, gql_client, mock_regression_schema):
+        """Test successful update with only required parameters."""
+        mock_response = {
+            "updateFileImportJob": {
+                "fileImportJob": {
+                    "id": "job456",
+                    "jobId": "job456",
+                    "jobStatus": "inactive",
+                    "totalFilesFailedCount": 0,
+                    "totalFilesSuccessCount": 100,
+                    "totalFilesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateFileImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job456",
+            modelSchema=mock_regression_schema,
+        )
+
+        assert result.id == "job456"
+        assert result.jobStatus == "inactive"
+        assert result.totalFilesSuccessCount == 100
+
+    def test_update_file_import_job_status_change(self, gql_client, mock_multiclass_schema):
+        """Test updating job status from active to inactive."""
+        mock_response = {
+            "updateFileImportJob": {
+                "fileImportJob": {
+                    "id": "job789",
+                    "jobId": "job789",
+                    "jobStatus": "inactive",
+                    "totalFilesFailedCount": 0,
+                    "totalFilesSuccessCount": 50,
+                    "totalFilesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateFileImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job789",
+            jobStatus="inactive",
+            modelSchema=mock_multiclass_schema,
+        )
+
+        assert result.jobStatus == "inactive"
+
+    def test_update_file_import_job_failure_no_response(self, gql_client, mock_classification_schema):
+        """Test error handling when update mutation returns no response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateFileImportJobMutation.QueryException,
+            match="Error updating file import job - No update file import job response",
+        ):
+            UpdateFileImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    def test_update_file_import_job_failure_no_job_data(self, gql_client, mock_classification_schema):
+        """Test error handling when update mutation returns no job data."""
+        mock_response = {"updateFileImportJob": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateFileImportJobMutation.QueryException,
+            match="Error updating file import job - No file import job data returned",
+        ):
+            UpdateFileImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    def test_update_file_import_job_graphql_error(self, gql_client, mock_classification_schema):
+        """Test error handling when GraphQL returns errors."""
+        gql_client.execute.side_effect = Exception("GraphQL error occurred")
+
+        with pytest.raises(
+            UpdateFileImportJobMutation.QueryException,
+            match="Error updating file import job - GraphQL error occurred",
+        ):
+            UpdateFileImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    @pytest.mark.parametrize(
+        "input_data,expected_error",
+        [
+            ({"modelSchema": {}}, "jobId"),
+            ({"jobId": None, "modelSchema": {}}, "Input should be a valid string"),
+            ({"jobId": 123, "modelSchema": {}}, "Input should be a valid string"),
+            ({"jobId": "job123"}, "modelSchema"),
+        ],
+    )
+    def test_update_file_import_job_input_validation(self, input_data, expected_error):
+        """Test validation of update file import job input."""
+        with pytest.raises(Exception) as e:
+            UpdateFileImportJobMutation.Variables(**input_data)
+        assert expected_error.lower() in str(e.value).lower()
+
+
+class TestUpdateTableImportJobMutation:
+    def test_query_structure(self):
+        """Test that the query structure is correct and includes all necessary fields."""
+        query = UpdateTableImportJobMutation.graphql_query
+        assert "mutation UpdateTableImportJob" in query
+        assert "updateTableImportJob(" in query
+        assert "tableImportJob" in query
+        assert "$modelSchema: TableImportSchemaInputType!" in query
+        assert "tableIngestionParameters" in query
+        assert "refreshIntervalMinutes" in query
+        assert "queryWindowSizeHours" in query
+        assert "id" in query
+        assert "jobId" in query
+        assert "jobStatus" in query
+        assert "totalQueriesFailedCount" in query
+        assert "totalQueriesSuccessCount" in query
+        assert "totalQueriesPendingCount" in query
+
+    def test_update_table_import_job_all_params(self, gql_client, mock_classification_schema):
+        """Test successful update with all parameters including ingestion params."""
+        mock_response = {
+            "updateTableImportJob": {
+                "tableImportJob": {
+                    "id": "job123",
+                    "jobId": "job123",
+                    "jobStatus": "active",
+                    "totalQueriesFailedCount": 1,
+                    "totalQueriesSuccessCount": 9,
+                    "totalQueriesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateTableImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job123",
+            jobStatus="active",
+            modelVersion="v2",
+            modelSchema=mock_classification_schema,
+            refreshInterval=60,
+            queryWindowSize=24,
+        )
+
+        assert result.id == "job123"
+        assert result.jobStatus == "active"
+        assert result.totalQueriesFailedCount == 1
+        assert result.totalQueriesSuccessCount == 9
+        assert result.totalQueriesPendingCount == 0
+
+        # Verify the mutation was called with correct parameters
+        gql_client.execute.assert_called_once()
+        args, kwargs = gql_client.execute.call_args
+        input_data = kwargs["variable_values"]["input"]
+        assert input_data["jobId"] == "job123"
+        assert input_data["jobStatus"] == "active"
+        assert input_data["modelVersion"] == "v2"
+        assert input_data["refreshInterval"] == 60
+        assert input_data["queryWindowSize"] == 24
+        assert "modelSchema" in input_data
+
+    def test_update_table_import_job_minimal_params(self, gql_client, mock_regression_schema):
+        """Test successful update with only required parameters."""
+        mock_response = {
+            "updateTableImportJob": {
+                "tableImportJob": {
+                    "id": "job456",
+                    "jobId": "job456",
+                    "jobStatus": "active",
+                    "totalQueriesFailedCount": 0,
+                    "totalQueriesSuccessCount": 200,
+                    "totalQueriesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateTableImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job456",
+            modelSchema=mock_regression_schema,
+        )
+
+        assert result.id == "job456"
+        assert result.jobStatus == "active"
+        assert result.totalQueriesSuccessCount == 200
+
+    def test_update_table_import_job_with_ingestion_params(self, gql_client, mock_rank_schema):
+        """Test updating table import job with ingestion parameters only."""
+        mock_response = {
+            "updateTableImportJob": {
+                "tableImportJob": {
+                    "id": "job789",
+                    "jobId": "job789",
+                    "jobStatus": "active",
+                    "totalQueriesFailedCount": 0,
+                    "totalQueriesSuccessCount": 150,
+                    "totalQueriesPendingCount": 10,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateTableImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job789",
+            modelSchema=mock_rank_schema,
+            refreshInterval=30,
+            queryWindowSize=48,
+        )
+
+        assert result.id == "job789"
+        assert result.totalQueriesPendingCount == 10
+
+    def test_update_table_import_job_status_change(self, gql_client, mock_classification_schema):
+        """Test updating job status from active to inactive."""
+        mock_response = {
+            "updateTableImportJob": {
+                "tableImportJob": {
+                    "id": "job999",
+                    "jobId": "job999",
+                    "jobStatus": "inactive",
+                    "totalQueriesFailedCount": 0,
+                    "totalQueriesSuccessCount": 1000,
+                    "totalQueriesPendingCount": 0,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateTableImportJobMutation.run_graphql_mutation(
+            gql_client,
+            jobId="job999",
+            jobStatus="inactive",
+            modelSchema=mock_classification_schema,
+        )
+
+        assert result.jobStatus == "inactive"
+        assert result.totalQueriesSuccessCount == 1000
+
+    def test_update_table_import_job_failure_no_response(self, gql_client, mock_classification_schema):
+        """Test error handling when update mutation returns no response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateTableImportJobMutation.QueryException,
+            match="Error updating table import job - No update table import job response",
+        ):
+            UpdateTableImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    def test_update_table_import_job_failure_no_job_data(self, gql_client, mock_classification_schema):
+        """Test error handling when update mutation returns no job data."""
+        mock_response = {"updateTableImportJob": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateTableImportJobMutation.QueryException,
+            match="Error updating table import job - No table import job data returned",
+        ):
+            UpdateTableImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    def test_update_table_import_job_graphql_error(self, gql_client, mock_classification_schema):
+        """Test error handling when GraphQL returns errors."""
+        gql_client.execute.side_effect = Exception("GraphQL error occurred")
+
+        with pytest.raises(
+            UpdateTableImportJobMutation.QueryException,
+            match="Error updating table import job - GraphQL error occurred",
+        ):
+            UpdateTableImportJobMutation.run_graphql_mutation(
+                gql_client,
+                jobId="job123",
+                modelSchema=mock_classification_schema,
+            )
+
+    @pytest.mark.parametrize(
+        "input_data,expected_error",
+        [
+            ({"modelSchema": {}}, "jobId"),
+            ({"jobId": None, "modelSchema": {}}, "Input should be a valid string"),
+            ({"jobId": 123, "modelSchema": {}}, "Input should be a valid string"),
+            ({"jobId": "job123"}, "modelSchema"),
+            (
+                {"jobId": "job123", "modelSchema": {}, "refreshInterval": "sixty"},
+                "Input should be a valid integer",
+            ),
+            (
+                {"jobId": "job123", "modelSchema": {}, "queryWindowSize": "24hrs"},
+                "Input should be a valid integer",
+            ),
+        ],
+    )
+    def test_update_table_import_job_input_validation(self, input_data, expected_error):
+        """Test validation of update table import job input."""
+        with pytest.raises(Exception) as e:
+            UpdateTableImportJobMutation.Variables(**input_data)
+        assert expected_error.lower() in str(e.value).lower()
