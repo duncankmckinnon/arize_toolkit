@@ -1,0 +1,463 @@
+---
+description: 
+globs: client.py
+alwaysApply: false
+---
+## Cursor Rules for Adding New Client Functions
+
+When adding new functions to the Arize Toolkit client, follow these established patterns to ensure consistency:
+
+### 1. Method Naming Convention
+
+Follow the standard CRUD naming pattern:
+- `create_X` - Create a new resource
+- `get_X` - Get a single resource by name
+- `get_X_by_id` - Get a single resource by ID
+- `get_all_X` - Get all resources (with optional filtering)
+- `update_X` - Update an existing resource
+- `delete_X` - Delete a resource by name
+- `delete_X_by_id` - Delete a resource by ID
+- `copy_X` - Copy a resource
+
+For URL generation:
+- `X_url()` - Generate the URL to the resource in Arize UI (from entity id)
+
+### 2. Parameter Patterns
+
+```python
+def create_resource(
+    self,
+    # Required parameters first, in order of importance
+    name: str,
+    resource_type: str,
+    # Optional parameters with defaults
+    description: Optional[str] = None,
+    environment: Literal["production", "validation", "training", "tracing"] = "production",
+    tags: Optional[List[str]] = None,
+) -> str:
+```
+
+Rules:
+- Required parameters come first
+- Optional parameters have defaults and use `Optional[T]`
+- Use `Literal` for enumerated string values
+- Use `Union[datetime, str]` for flexible datetime inputs
+- Always include type hints
+
+### 3. ID Resolution Pattern
+
+
+When a function accepts a resource name, often provide both name and ID variants.
+If the id is required in the query but a name is accepted as input to the function, you can retrieve the id by running an existing query to get the object by name, and then extracting the id for use in subsequent requests.
+
+```python
+def delete_resource_by_id(self, resource_id: str) -> bool:
+    """
+    Delete by ID - direct operation
+    
+    Args:
+        resource_id: (str) - the id of the resource to delete
+
+    Returns:
+        bool - whether the resource was deleted
+
+    Raises:
+        ValueError: If required parameters are missing or invalid
+        ArizeAPIException: If resource creation fails or there is an API error
+    """
+    result = DeleteResourceMutation.run_graphql_mutation(
+        self._graphql_client,
+        resourceId=resource_id,
+    )
+    return result.success == True
+
+def delete_resource(self, resource_name: str, parent_name: str) -> bool:
+    """
+    Delete Resource by Name - direct operation
+    
+    Args:
+        resource_name: (str) - the name of the resource to delete
+        parent_name: (str) - the parent the resource belongs to
+
+    Returns:
+        bool - whether the resource was deleted
+
+    Raises:
+        ValueError: If required parameters are missing or invalid
+        ArizeAPIException: If resource creation fails or there is an API error
+    """
+    parent = GetParentQuery.run_graphql_query(
+        self._graphql_client,
+        parent_name=parent_name,
+        space_id=self.space_id,
+    )
+    resource = GetResourceQuery.run_graphql_query(
+        self._graphql_client,
+        resource_name=resource_name,
+        parent_id=parent.id,
+    )
+    return self.delete_resource_by_id(resource.id)
+```
+
+### 4. Return Value Patterns
+
+- Single resource retrieval: `dict`
+- Multiple resources: `List[dict]`
+- Creation operations: `str` (URL to the created resource)
+- Update operations: `dict` (updated resource) or `bool` (success)
+- Delete operations: `bool` (success)
+- URL generation: `str`
+
+### 5. GraphQL Integration Pattern
+
+Each client function should have a corresponding GraphQL query/mutation:
+
+```python
+# In queries/resource_queries.py
+class CreateResourceMutation(BaseMutation):
+    # ... implementation
+
+class GetResourceQuery(BaseQuery):
+    # ... implementation
+
+# In client.py
+def create_resource(self, **kwargs) -> str:
+    """Creates a new resource using the GraphQL API.
+    
+    Args:
+        **kwargs: Arguments to pass to the GraphQL mutation
+    
+    Returns:
+        str: URL to the newly created resource
+    
+    Raises:
+        ArizeAPIException: If resource creation fails
+    """
+    result = CreateResourceMutation.run_graphql_mutation(
+        self._graphql_client,
+        **kwargs,
+    )
+    return self.resource_url(result.resource_id)
+```
+
+### 6. Error Handling Pattern
+
+```python
+def get_resource(self, resource_name: str) -> dict:
+    """Retrieves a resource by name with proper error handling.
+    
+    Args:
+        resource_name (str): Name of the resource to retrieve
+    
+    Returns:
+        dict: A dictionary containing resource information:
+        - id (str): Unique identifier
+        - name (str): Resource name
+        - type (str): Resource type
+        - createdAt (datetime): Creation timestamp
+        - Additional fields depending on resource type
+    
+    Raises:
+        ValueError: If resource_name is empty or None
+        ArizeAPIException: If resource not found or API error occurs
+    
+    Example:
+        >>> try:
+        ...     resource = client.get_resource("my-resource")
+        ...     print(f"Resource ID: {resource['id']}")
+        ... except ArizeAPIException as e:
+        ...     print(f"Error: {e}")
+    """
+    # Validate required parameters
+    if not resource_name:
+        raise ValueError("resource_name is required")
+    
+    # Handle not found cases
+    try:
+        result = GetResourceQuery.run_graphql_query(
+            self._graphql_client,
+            resource_name=resource_name,
+            space_id=self.space_id,
+        )
+    except ArizeAPIException as e:
+        if "not found" in str(e).lower():
+            raise ArizeAPIException(f"Resource '{resource_name}' not found in space")
+        raise
+    
+    return result.to_dict()
+```
+
+### 7. Documentation Pattern
+
+Every function must have a comprehensive docstring:
+
+```python
+def create_resource(self, ...) -> str:
+    """Creates a new resource in the current space.
+
+    Args:
+        name (str): Name of the resource
+        resource_type (str): Type of resource (e.g., "type1", "type2")
+        description (Optional[str]): Human-readable description
+        tags (Optional[List[str]]): List of tags to apply
+
+    Returns:
+        str: URL to the newly created resource
+
+    Raises:
+        ValueError: If required parameters are missing or invalid
+        ArizeAPIException: If resource creation fails or there is an API error
+
+    Example:
+        >>> client.create_resource(
+        ...     name="my-resource",
+        ...     resource_type="type1",
+        ...     description="A test resource",
+        ...     tags=["test", "example"]
+        ... )
+        'https://app.arize.com/.../resources/12345'
+    """
+```
+
+### 8. Pagination Pattern
+
+For operations that return multiple items:
+
+```python
+def get_all_resources(self, filter_param: Optional[str] = None) -> List[dict]:
+    """Retrieves all resources, handling pagination automatically.
+    
+    Args:
+        filter_param (Optional[str]): Optional filter to apply to resources
+    
+    Returns:
+        List[dict]: A list of resource dictionaries, each containing:
+        - id (str): Unique identifier
+        - name (str): Resource name
+        - type (str): Resource type
+        - createdAt (datetime): Creation timestamp
+    
+    Raises:
+        ArizeAPIException: If retrieval fails or there is an API error
+    
+    Example:
+        >>> resources = client.get_all_resources(filter_param="active")
+        >>> print(f"Found {len(resources)} active resources")
+    """
+    results = GetAllResourcesQuery.iterate_over_pages(
+        self._graphql_client,
+        space_id=self.space_id,
+        filter_param=filter_param,
+        sleep_time=self.sleep_time,  # Respect rate limiting
+    )
+    return [result.to_dict() for result in results]
+```
+
+### 9. Complex Object Handling
+
+For operations with complex nested structures:
+
+```python
+def create_resource_with_config(
+    self,
+    name: str,
+    config: Union[ResourceConfig, Dict[str, Any]],
+) -> str:
+    """Creates a resource with complex configuration options.
+    
+    Accepts both typed objects and dictionaries for flexibility.
+    
+    Args:
+        name (str): Name of the resource to create
+        config (Union[ResourceConfig, Dict[str, Any]]): Configuration object or dict
+            If dict, must contain required fields:
+            - setting1 (str): Primary setting
+            - setting2 (int): Numeric configuration
+            - nested (dict): Nested configuration options
+    
+    Returns:
+        str: URL to the newly created resource
+    
+    Raises:
+        ValueError: If config is missing required fields
+        ArizeAPIException: If resource creation fails
+    
+    Example:
+        >>> config = ResourceConfig(setting1="value", setting2=42)
+        >>> url = client.create_resource_with_config("my-resource", config)
+        >>> # Or use a dictionary:
+        >>> url = client.create_resource_with_config(
+        ...     "my-resource",
+        ...     {"setting1": "value", "setting2": 42, "nested": {...}}
+        ... )
+    """
+    config_dict = (
+        config.to_dict() 
+        if isinstance(config, ResourceConfig) 
+        else config
+    )
+    # ... rest of implementation
+```
+
+### 10. URL Generation Pattern
+
+Always provide URL helper methods:
+
+```python
+def resource_url(self, resource_id: str) -> str:
+    """Generate the URL for a resource in the Arize UI.
+    
+    Args:
+        resource_id (str): The unique identifier of the resource
+    
+    Returns:
+        str: Full URL to the resource in the Arize UI
+    
+    Example:
+        >>> url = client.resource_url("res_123")
+        >>> print(url)  # https://app.arize.com/organizations/.../resources/res_123
+    """
+    return f"{self.space_url}/resources/{resource_id}"
+
+def resource_detail_url(self, resource_id: str, detail_id: str) -> str:
+    """Generate the URL for a specific detail view of a resource.
+    
+    Args:
+        resource_id (str): The unique identifier of the resource
+        detail_id (str): The unique identifier of the detail
+    
+    Returns:
+        str: Full URL to the resource detail in the Arize UI
+    
+    Example:
+        >>> url = client.resource_detail_url("res_123", "detail_456")
+        >>> print(url)  # https://app.arize.com/.../resources/res_123/details/detail_456
+    """
+    return f"{self.resource_url(resource_id)}/details/{detail_id}"
+```
+
+### 11. Testing Requirements
+
+When adding a new client function:
+1. Add unit tests in `tests/test_client.py`
+2. Mock the GraphQL responses appropriately
+3. Test both success and error cases
+4. Test parameter validation
+5. Follow the existing test patterns in the test file
+
+### Example: Adding a New Resource Type
+
+Here's a complete example of adding support for a new "DataSource" resource:
+
+```python
+# 1. In queries/data_source_queries.py
+class CreateDataSourceMutation(BaseMutation):
+    # ... implementation
+
+class GetDataSourceQuery(BaseQuery):
+    # ... implementation
+
+# 2. In client.py
+def create_data_source(
+    self,
+    name: str,
+    source_type: Literal["database", "api", "file"],
+    connection_string: str,
+    description: Optional[str] = None,
+    refresh_interval: Optional[int] = 3600,
+) -> str:
+    """Creates a new data source for automated data ingestion.
+    
+    Args:
+        name (str): Name of the data source
+        source_type (Literal["database", "api", "file"]): Type of data source
+        connection_string (str): Connection details for the source
+        description (Optional[str]): Description of the data source
+        refresh_interval (Optional[int]): Refresh interval in seconds (default: 3600)
+    
+    Returns:
+        str: URL to the newly created data source
+    
+    Raises:
+        ValueError: If required parameters are invalid
+        ArizeAPIException: If creation fails
+    """
+    result = CreateDataSourceMutation.run_graphql_mutation(
+        self._graphql_client,
+        space_id=self.space_id,
+        name=name,
+        sourceType=source_type,
+        connectionString=connection_string,
+        description=description,
+        refreshInterval=refresh_interval,
+    )
+    return self.data_source_url(result.data_source_id)
+
+def get_data_source(self, name: str) -> dict:
+    """Retrieves a data source by name.
+    
+    Args:
+        name (str): Name of the data source to retrieve
+    
+    Returns:
+        dict: A dictionary containing data source information:
+        - id (str): Unique identifier
+        - name (str): Data source name
+        - sourceType (str): Type of data source
+        - connectionString (str): Connection details
+        - refreshInterval (int): Refresh interval in seconds
+        - createdAt (datetime): Creation timestamp
+    
+    Raises:
+        ArizeAPIException: If data source not found or API error
+    
+    Example:
+        >>> ds = client.get_data_source("production-db")
+        >>> print(f"Source type: {ds['sourceType']}")
+    """
+    result = GetDataSourceQuery.run_graphql_query(
+        self._graphql_client,
+        name=name,
+        space_id=self.space_id,
+    )
+    return result.to_dict()
+
+def data_source_url(self, data_source_id: str) -> str:
+    """Generate the URL for a data source.
+    
+    Args:
+        data_source_id (str): The unique identifier of the data source
+    
+    Returns:
+        str: Full URL to the data source in the Arize UI
+    """
+    return f"{self.space_url}/data-sources/{data_source_id}"
+
+# 3. In tests/test_client.py
+def test_create_data_source(client, mock_graphql_client):
+    mock_response = {
+        "createDataSource": {
+            "dataSource": {"id": "ds123"}
+        }
+    }
+    mock_graphql_client.return_value.execute.return_value = mock_response
+    
+    url = client.create_data_source(
+        name="production-db",
+        source_type="database",
+        connection_string="postgresql://...",
+        description="Production database",
+    )
+    
+    assert url == client.data_source_url("ds123")
+```
+
+### Key Principles
+
+1. **Consistency**: Follow existing patterns in the codebase from [client.py](mdc:arize_toolkit/client.py)
+2. **Type Safety**: Always use type hints
+3. **Error Handling**: Provide clear error messages
+4. **Documentation**: Write comprehensive docstrings - provide examples where it will help add context for users
+5. **Testability**: Design functions to be easily testable
+6. **Flexibility**: Support both object and dictionary inputs where appropriate as a convenience (e.g. modelSchema) so users don't have to import specific [models.py](mdc:arize_toolkit/models.py) types to run requests
+7. **URL Support**: Where there is a known pattern for linking to the entity in app.arize.com, include a function to create the url

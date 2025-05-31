@@ -55,7 +55,7 @@ def _(value, depth=0, exclude_none=False):
 
 class Dictable(BaseModel):
     def to_dict(self, exclude_none: bool = False) -> dict:
-        model_dict = self.model_dump(exclude_none=exclude_none)
+        model_dict = self.model_dump(exclude_none=exclude_none, by_alias=True)
         return _convert_to_dict(model_dict, depth=0, exclude_none=exclude_none)
 
 
@@ -74,13 +74,16 @@ class GraphQLModel(Dictable):
     def to_graphql_fields(cls) -> str:
         visited = set()
 
-        def _get_field_string(model_class: Type[BaseModel]) -> str:
+        def _get_field_string(model_class: Type[BaseModel], depth: int = 0) -> str:
             if model_class in visited:
                 return ""
             visited.add(model_class)
 
             fields = []
             for field_name, field_info in model_class.model_fields.items():
+                # Use the alias if it exists and has priority, otherwise use the field name
+                graphql_name = field_info.alias if field_info.alias and field_info.alias_priority == 1 else field_name
+
                 field_type = field_info.annotation
                 base_type = field_type
 
@@ -88,16 +91,55 @@ class GraphQLModel(Dictable):
                 if get_origin(field_type) is Union and type(None) in get_args(field_type):
                     base_type = next(t for t in get_args(field_type) if t is not type(None))
 
-                # Unwrap List
+                # Handle Union types (non-Optional)
+                if get_origin(base_type) is Union:
+                    # For Union types, we need to collect all possible model fields
+                    has_model_type = False
+                    for union_type in get_args(base_type):
+                        # Handle both direct model types and List[Model] types
+                        if get_origin(union_type) is list:
+                            list_type = get_args(union_type)[0]
+                            if inspect.isclass(list_type) and issubclass(list_type, BaseModel):
+                                has_model_type = True
+                                nested_fields = _get_field_string(list_type, depth + 1)
+                                if nested_fields:  # Only add if there are actual fields
+                                    fields.append(f"{graphql_name} {{ {nested_fields} }}")
+                                    continue
+                        elif inspect.isclass(union_type) and issubclass(union_type, BaseModel):
+                            has_model_type = True
+                            nested_fields = _get_field_string(union_type, depth + 1)
+                            if nested_fields:  # Only add if there are actual fields
+                                fields.append(f"{graphql_name} {{ {nested_fields} }}")
+                                continue
+
+                    # If we haven't added any nested fields and there are no model types,
+                    # treat as a regular field
+                    if not has_model_type:
+                        fields.append(graphql_name)
+                    continue
+
+                # Handle List types
                 if get_origin(base_type) is list:
-                    base_type = get_args(base_type)[0]
+                    list_type = get_args(base_type)[0]
+                    # If it's a List of models, expand the model fields
+                    if inspect.isclass(list_type) and issubclass(list_type, BaseModel):
+                        nested_fields = _get_field_string(list_type, depth + 1)
+                        if nested_fields:  # Only add if there are actual fields
+                            fields.append(f"{graphql_name} {{ {nested_fields} }}")
+                            continue
+                    # Otherwise treat as a regular field
+                    fields.append(graphql_name)
+                    continue
 
                 # Check if it's a Pydantic model
                 if inspect.isclass(base_type) and issubclass(base_type, BaseModel) and base_type != model_class:
-                    nested_fields = _get_field_string(base_type)
-                    fields.append(f"{field_name} {{ {nested_fields} }}")
+                    nested_fields = _get_field_string(base_type, depth + 1)
+                    if nested_fields:  # Only add if there are actual fields
+                        fields.append(f"{graphql_name} {{ {nested_fields} }}")
+                    else:
+                        fields.append(graphql_name)
                 else:
-                    fields.append(field_name)
+                    fields.append(graphql_name)
 
             return " ".join(fields)
 

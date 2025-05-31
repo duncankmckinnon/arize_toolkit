@@ -1,6 +1,6 @@
 ---
 description: 
-globs: */docs/*.md
+globs: docs_site/**/*.md
 alwaysApply: false
 ---
 When editing or creating documentation files within the `docs_site/docs/` directory, please adhere to the following formatting guidelines:
@@ -73,8 +73,14 @@ Each function or method should be documented as follows:
 *   **Consistency**: Maintain consistent terminology and phrasing when describing similar concepts across different documentation files.
 *   **Clarity**: Prioritize clear and concise language.
 
+## Additional Checks
+
+1. Make sure the new documentation pages are added to the [index.md](mdc:docs_site/docs/index.md) as a linked page.
+2. Make sure the new documentation pages are added in the [mkdocs.yml](mdc:mkdocs.yml) under 'Tools' with the title of the page.
+
 Use the same formatting for all tool documentation.  Use as an example:
 [model_tools.md](mdc:docs_site/docs/model_tools.md)
 [monitor_tools.md](mdc:docs_site/docs/monitor_tools.md)
 [custom_metrics_tools.md](mdc:docs_site/docs/custom_metrics_tools.md)
 [language_model_tools.md](mdc:docs_site/docs/language_model_tools.md)
+[space_tools.md](mdc:docs_site/docs/space_tools.md)

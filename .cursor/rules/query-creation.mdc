@@ -1,0 +1,212 @@
+---
+description: 
+globs: arize_toolkit/queries/*.py
+alwaysApply: false
+---
+## Finding the appropriate location
+
+The user should provide a specific file in arize_toolkit/queries in which to generate the new query. If a file is not provided, use the name of the query to decide where it belongs. Always add the new query at the end of the existing query file.
+
+## Class Structure
+
+When creating a new GraphQL query class, follow this structure:
+
+```python
+class NewQuery(BaseQuery):
+    # Required class variables
+    graphql_query: str = """
+    query newQuery($param1: Type!, $param2: Type) {
+        # Your GraphQL query here
+    }
+    """
+    query_description: str = "Description of what this query does"
+
+    # Required nested classes
+    class Variables(BaseVariables):
+        """Validation for the query variables"""
+        param1: str  # Required parameters use no default
+        param2: Optional[str] = None  # Optional parameters use default
+
+    class QueryException(ArizeAPIException):
+        """Exception for the query"""
+        message: str = "Error message for this specific query"
+
+    class QueryResponse(BaseResponse):
+        """Response for the query"""
+        # Define response fields here
+        field1: str
+        field2: int
+        # Or inherit from an existing model:
+        # pass  # if using an existing model class
+
+    # Optional: Override _parse_graphql_result if needed
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        # Parse the GraphQL result into your response type
+        # Return: (list of responses, has_next_page, end_cursor)
+        return [cls.QueryResponse(**parsed_data)], False, None
+```
+
+## Key Components
+
+1. **Class Variables**:
+   - `graphql_query`: The GraphQL query string
+   - `query_description`: Human-readable description of the query's purpose
+
+2. **Variables Class**:
+   - Inherits from `BaseVariables`
+   - Define all query parameters with type hints
+   - Use Optional[] for optional parameters
+   - Add docstrings for complex parameters
+
+3. **QueryException Class**:
+   - Inherits from `ArizeAPIException`
+   - Define a specific error message
+   - Used for query-specific error handling
+
+4. **QueryResponse Class**:
+   - Inherits from `BaseResponse`
+   - Define response fields with type hints
+   - Or inherit from an existing model class
+
+5. **Result Parsing**:
+   - Override `_parse_graphql_result` if default parsing isn't sufficient
+   - Return tuple of (responses, has_next_page, end_cursor)
+   - Handle error cases with `cls.raise_exception()`
+
+## Usage Examples
+
+1. **Simple Query**:
+```python
+class GetItemQuery(BaseQuery):
+    graphql_query = """
+    query getItem($id: ID!) {
+        node(id: $id) {
+            ... on Item {
+                id
+                name
+            }
+        }
+    }
+    """
+    query_description = "Get an item by ID"
+
+    class Variables(BaseVariables):
+        id: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting item"
+
+    class QueryResponse(BaseResponse):
+        id: str
+        name: str
+```
+
+2. **Mutation with Custom Input**:
+
+In some cases - like mutations, the `Variables` class will need to inherit from an existing model type (e.g. CustomInputType).
+The model types are defined in `arize_toolkit/models.py`. If it seems like the query is referencing a model type that isn't native
+to graphql:
+- make sure it is defined in the `arize_toolkit/models.py` - if not, attempt to create the model by selecting the create_model rule.
+- make sure the model is imported into the query class so it can be used.
+- check that the inputs and outputs are being handled appropriately to avoid errors.
+
+```python
+from arize_toolkit.models import CustomItem
+
+class CreateCustomItemMutation(BaseQuery):
+    graphql_query = """
+    mutation CreateCustomItem($input: CustomItemInput!) {
+        createCustomItem(input: $input) {
+            customItem {
+                id
+            }
+        }
+    }
+    """
+    query_description = "Create a new item"
+
+    class Variables(CustomItem):
+        pass
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating item"
+
+    class QueryResponse(BaseResponse):
+        item_id: str
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "createCustomItem" not in result:
+            cls.raise_exception("No item created")
+        return [cls.QueryResponse(item_id=result["createCustomItem"]["customItem"]["id"])], False, None
+```
+
+3. **Query with exisiting model type**
+
+In the case where the query returns a type that isn't native to graphql, the object should be defined as a separate model type in `arize_toolkit/models.py`. If a `GraphQLModel` doesn't exist for the type, try to create the model or models needed in the query by referencing the 'create_model' rules and the output fields specified in the query. Use the format below when dealing with queries that return a model type.
+
+```python
+from arize_toolkit.models import CustomItem
+
+class GetCustomItemQuery(BaseQuery):
+    graphql_query = """
+    query GetCustomItem($spaceId: ID!, $itemName: String) {
+        node(id: $spaceId){
+            ... on Space{
+                customItems(search: $itemName, first: 1){
+                    edges{
+                        node{""" +  CustomItem.to_graphql_fields() + """}
+                    }
+                }
+            }
+        }
+    }
+    """
+    query_description = "Get a custom item"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        itemName: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating item"
+
+    class QueryResponse(CustomItem):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result['node']['customItems']['edges']:
+            cls.raise_exception("No customItems found with given name")
+        node = result['node']['customItems']['edges'][0]['node']
+        return [cls.QueryResponse(**node)], False, None
+```
+
+## Best Practices
+
+1. **Query Structure**:
+   - Use descriptive names for queries and mutations
+   - Include all necessary fields in the query
+   - Use fragments for reusable field sets
+   - Add proper type annotations for all parameters
+
+2. **Error Handling**:
+   - Provide specific error messages
+   - Use `raise_exception` for error cases
+   - Handle edge cases in `_parse_graphql_result`
+
+3. **Response Types**:
+   - Use existing model classes when possible
+   - Define clear response structures
+   - Include all necessary fields in response types
+
+4. **Documentation**:
+   - Add clear query descriptions
+   - Document complex parameters
+   - Include usage examples in docstrings
+
+5. **Testing**:
+   - Test both success and error cases
+   - Verify response parsing
+   - Test pagination if applicable
