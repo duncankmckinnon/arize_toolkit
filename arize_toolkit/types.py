@@ -539,3 +539,15 @@ class ExternalLLMProviderModel(InputValidationEnum):
         "meta-llama-3-3-70b-instruct",
         "Meta Llama 3.3 70B Instruct",
     )  # Meta's Llama 3.3 70B Instruct
+
+
+class BlobStore(InputValidationEnum):
+    S3 = "S3", "s3"
+    GCS = "GCS", "gcs"
+    Azure = "Azure", "azure", "AZURE"
+
+
+class TableStore(InputValidationEnum):
+    BigQuery = "BigQuery", "bigquery", "BIGQUERY"
+    Snowflake = "Snowflake", "snowflake", "SNOWFLAKE"
+    Databricks = "Databricks", "databricks", "DATABRICKS"

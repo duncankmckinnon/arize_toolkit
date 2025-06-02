@@ -13,6 +13,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 - [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
 - [Space Tools](space_tools.md) - Documentation for space, organization, & navigation tools
+- [Data Import Tools](data_import_tools.md) - Documentation for importing data from files and databases
 
 ## Disclaimer
 
@@ -30,6 +31,8 @@ Here's a quick overview of the main features in the current release:
 - Create, copy, and manage custom metrics
 - Create, copy, and manage monitors and alerting
 - Work with LLM features like prompts and annotations
+- Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
+- Create, update, and delete data import jobs with full lifecycle management
 
 ## Installation
 

@@ -2,7 +2,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from time import sleep
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from gql import Client as GraphQLClient
 from gql.transport.requests import RequestsHTTPTransport
@@ -10,6 +10,7 @@ from pandas import DataFrame
 
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
+from arize_toolkit.models import BaseModelSchema
 from arize_toolkit.queries.custom_metric_queries import (
     CreateCustomMetricMutation,
     DeleteCustomMetricMutation,
@@ -19,7 +20,19 @@ from arize_toolkit.queries.custom_metric_queries import (
     GetCustomMetricQuery,
     UpdateCustomMetricMutation,
 )
-from arize_toolkit.queries.language_models import (
+from arize_toolkit.queries.data_import_queries import (
+    CreateFileImportJobMutation,
+    CreateTableImportJobMutation,
+    DeleteFileImportJobMutation,
+    DeleteTableImportJobMutation,
+    GetAllFileImportJobsQuery,
+    GetAllTableImportJobsQuery,
+    GetFileImportJobQuery,
+    GetTableImportJobQuery,
+    UpdateFileImportJobMutation,
+    UpdateTableImportJobMutation,
+)
+from arize_toolkit.queries.language_model_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,
@@ -149,6 +162,12 @@ class Client:
 
     def prompt_version_url(self, prompt_id: str, prompt_version_id: str) -> str:
         return f"{self.prompt_url(prompt_id)}?version={prompt_version_id}"
+
+    def file_import_jobs_url(self) -> str:
+        return f"{self.space_url}/imports?selectedSubTab=cloudFileImport"
+
+    def table_import_jobs_url(self) -> str:
+        return f"{self.space_url}/imports?selectedSubTab=dataWarehouse"
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
@@ -889,8 +908,8 @@ class Client:
 
         result = UpdatePromptMutation.run_graphql_mutation(
             self._graphql_client,
-            space_id=self.space_id,
-            prompt_id=prompt_id,
+            spaceId=self.space_id,
+            promptId=prompt_id,
             name=updated_name,
             description=description,
             tags=tags,
@@ -924,7 +943,7 @@ class Client:
 
         prompt_id = self.get_prompt(prompt_name)["id"]
         name = updated_name if updated_name else prompt_name
-        return self.update_prompt_by_id(prompt_id, name=name, description=description, tags=tags)
+        return self.update_prompt_by_id(prompt_id, updated_name=name, description=description, tags=tags)
 
     def delete_prompt_by_id(self, prompt_id: str) -> bool:
         """Deletes a prompt.
@@ -941,8 +960,8 @@ class Client:
         """
         result = DeletePromptMutation.run_graphql_mutation(
             self._graphql_client,
-            prompt_id=prompt_id,
-            space_id=self.space_id,
+            promptId=prompt_id,
+            spaceId=self.space_id,
         )
         return result.success
 
@@ -1272,8 +1291,8 @@ class Client:
             "modelId": model_id,
             "name": name or custom_metric["name"],
             "metric": metric or custom_metric["metric"],
+            "modelEnvironmentName": environment or "production",
             "description": description or custom_metric["description"],
-            "modelEnvironmentName": environment or custom_metric["modelEnvironmentName"],
         }
         results = UpdateCustomMetricMutation.run_graphql_mutation(
             self._graphql_client,
@@ -1329,8 +1348,8 @@ class Client:
             "customMetricId": custom_metric.id,
             "modelId": model.id,
             "name": name or custom_metric_name,
-            "customMetric": metric or custom_metric.metric,
-            "modelEnvironmentName": environment or custom_metric.modelEnvironmentName,
+            "metric": metric or custom_metric.metric,
+            "modelEnvironmentName": environment or "production",
             "description": description or custom_metric.description,
         }
         results = UpdateCustomMetricMutation.run_graphql_mutation(
@@ -1910,15 +1929,11 @@ class Client:
             monitor_name=current_monitor_name,
             space_id=self.space_id,
         )
-        monitor_type = MonitorManager.extract_monitor_type(
-            space_id=new_space_id or self.space_id,
-            model_name=new_model_name or current_model_name,
-            monitor=current_monitor,
-        )
+
         if new_monitor_name:
             kwargs["name"] = new_monitor_name
         if kwargs:
-            monitor_fields = monitor_type.to_dict()
+            monitor_fields = current_monitor.to_dict()
             for key, value in kwargs.items():
                 if value is not None and key in monitor_fields:
                     monitor_fields[key] = value
@@ -1926,6 +1941,12 @@ class Client:
                 space_id=new_space_id or self.space_id,
                 model_name=new_model_name or current_model_name,
                 monitor=monitor_fields,
+            )
+        else:
+            monitor_type = MonitorManager.extract_monitor_type(
+                space_id=new_space_id or self.space_id,
+                model_name=new_model_name or current_model_name,
+                monitor=current_monitor,
             )
         monitor_query = {
             "performance": CreatePerformanceMonitorMutation,
@@ -1937,3 +1958,531 @@ class Client:
             **monitor_type.to_dict(),
         )
         return self.monitor_url(new_monitor.monitor_id)
+
+    ## Data Import ##
+
+    def get_file_import_job(self, job_id: str) -> Dict[str, Any]:
+        """Gets a file import job by its ID.
+
+        Args:
+            job_id (str): ID of the job to get
+
+        Returns:
+            The file import job
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalFilesPendingCount: int
+            - totalFilesSuccessCount: int
+            - totalFilesFailedCount: int
+            - createdAt: datetime
+            - modelName: str
+            - modelId: str
+            - modelVersion: str
+            - modelType: str
+            - modelEnvironmentName: str
+            - modelSchema: dict
+
+        Raises:
+            ArizeAPIException: If job retrieval fails or there is an API error
+
+        """
+        results = GetFileImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        return results.to_dict()
+
+    def get_all_file_import_jobs(self) -> List[Dict[str, Any]]:
+        """Gets all file import jobs.
+
+        Returns:
+            List[Dict[str, Any]]: List of file import jobs in the format:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalFilesPendingCount: int
+            - totalFilesSuccessCount: int
+            - totalFilesFailedCount: int
+            - createdAt: datetime
+            - modelName: str
+            - modelId: str
+            - modelVersion: str
+            - modelType: str
+            - modelEnvironmentName: str
+            - modelSchema: dict
+
+        Raises:
+            ArizeAPIException: If job retrieval fails or there is an API error
+        """
+        results = GetAllFileImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, spaceId=self.space_id)
+        return [result.to_dict() for result in results]
+
+    def create_file_import_job(
+        self,
+        blob_store: Literal["s3", "gcs", "azure"],
+        bucket_name: str,
+        prefix: str,
+        model_name: str,
+        model_type: str,
+        model_schema: Union[BaseModelSchema, Dict[str, Any]],
+        model_version: Optional[str] = None,
+        model_environment_name: Optional[Literal["production", "validation", "training", "tracing"]] = "production",
+        dry_run: Optional[bool] = False,
+        batch_id: Optional[str] = None,
+        azure_tenant_id: Optional[str] = None,
+        azure_storage_account_name: Optional[str] = None,
+    ) -> str:
+        """
+        Creates a new file import job
+
+        Args:
+            blob_store: Literal["s3", "gcs", "azure"] - The blob store to use for the import job
+            bucket_name: str - The name of the bucket or storage location where the data is stored (e.g. for "s3://bucket_name/prefix", "bucket_name" is the bucket name)
+            prefix: str - The prefix to use for the import job (e.g. for "s3://bucket_name/prefix", "prefix" is the prefix)
+            model_name: str - The name of the model to import data to
+            model_type: str - The type of the model representation in Arize ("classification", "regression", "ranking", "object_detection", "multi-class", "generative")
+            model_schema: Union[BaseModelSchema, Dict[str, Any]] - The schema to use for the import job *see below for more details*
+            model_version: Optional[str] - The version of the model to import data to
+            model_environment_name: Optional[Literal["production", "validation", "training", "tracing"]] - The environment of the model to use for the import job (default is "production")
+            dry_run: Optional[bool] - Whether to run the import job as a dry run (default is False)
+            batch_id: Optional[str] - The batch ID to use for the import job
+            azure_tenant_id: Optional[str] - The tenant ID to use for the import job (only required for Azure)
+            azure_storage_account_name: Optional[str] - The storage account name to use for the import job (only required for Azure)
+
+        Returns:
+            a file import job check object:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalFilesPendingCount: int
+            - totalFilesSuccessCount: int
+            - totalFilesFailedCount: int
+            - createdAt: datetime
+
+        Raises:
+            ArizeAPIException: If the import job creation fails or there is an API error
+
+
+        *Model Schema*
+        --------------
+        The ModelSchema object is based on the model type and is used to validate the data being imported.
+        Each model type has a different set of required and optional fields, corresponding to the columns in the data being imported.
+        For convenience, you can either import the model schema class from the arize_toolkit.models module or pass in a dictionary of the model schema.
+        If you pass in a dictionary, it must be in the format of the model schema class.
+
+        Here is a breakdown of the model schema fields shared across all models and fields for specific model types:
+
+        All model types *require* the following fields:
+        - predictionId: str
+        - timestamp: str
+
+        The following fields are *available* for all model types:
+        - features: Optional[str] - prefix for feature column names (e.g. "feature_")
+        - featuresList: Optional[List[str]] - list of feature column names (e.g. ["feature_1", "feature_2"])
+        - tags: Optional[str] - prefix for tag column names (e.g. "tag_")
+        - tagsList: Optional[List[str]] - list of tag column names (e.g. ["tag_1", "tag_2"])
+        - batchId: Optional[str] - batch ID of the schema for validation data
+        - shapValues: Optional[str] - column prefix for SHAP value columns (e.g. "shap_")
+        - version: Optional[str] - version of the model - for when the model version is stored in the data
+        - exclude: Optional[List[str]] - list of column names to exclude (e.g. ["don_t_use_1", "don_t_use_2"])
+        - embeddingFeatures: Optional[List[EmbeddingFeatureInput]] - list of embedding feature configurations
+            - featureName: str - name of the feature (not necessarily the column name)
+            - vectorCol: str - column name for the vector
+            - rawDataCol: str - column name for column that contains the raw data (for text embeddings)
+            - linkToDataCol: Optional[str] - column name for a column that contains links to images or videos (for image embeddings)
+
+        The following column mappings are used for the specific model types:
+        - classification: ClassificationSchemaInput
+            - predictionLabel: str
+            - predictionScores: Optional[str]
+            - actualLabel: Optional[str]
+        - regression: RegressionSchemaInput
+            - predictionScore: str
+            - actualScore: Optional[str]
+        - ranking: RankSchemaInput
+            - rank: str
+            - predictionGroupId: str
+            - predictionScores: Optional[str]
+            - relevanceScore: Optional[str]
+            - relevanceLabel: Optional[str]
+        - object_detection: ObjectDetectionSchemaInput
+            - predictionObjectDetection: ObjectDetectionInput
+                - boundingBoxesCoordinatesColumnName: str
+                - boundingBoxesCategoriesColumnName: str
+                - boundingBoxesScoresColumnName: Optional[str]
+            - actualObjectDetection: Optional[ObjectDetectionInput]
+                - boundingBoxesCoordinatesColumnName: str
+                - boundingBoxesCategoriesColumnName: str
+                - boundingBoxesScoresColumnName: Optional[str]
+        - multi-class: MultiClassSchemaInput
+            - predictionScores: str
+            - actualScores: Optional[str]
+            - thresholdScores: Optional[str]
+        """
+        file_import_job = CreateFileImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **{
+                "spaceId": self.space_id,
+                "modelName": model_name,
+                "modelType": model_type,
+                "modelSchema": (model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema),
+                "modelVersion": model_version,
+                "modelEnvironmentName": model_environment_name,
+                "dryRun": dry_run,
+                "batchId": batch_id,
+                "azureStorageIdentifier": (
+                    {
+                        "tenantId": azure_tenant_id,
+                        "storageAccountName": azure_storage_account_name,
+                    }
+                    if azure_tenant_id and azure_storage_account_name
+                    else None
+                ),
+                "bucketName": bucket_name,
+                "prefix": prefix,
+                "blobStore": blob_store,
+            },
+        )
+        return file_import_job.to_dict()
+
+    def get_table_import_job(self, job_id: str) -> Dict[str, Any]:
+        """Gets a table import job by its ID.
+
+        Args:
+            job_id (str): ID of the job to get
+
+        Returns:
+            The table import job
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalQueriesSuccessCount: int
+            - totalQueriesFailedCount: int
+            - totalQueriesPendingCount: int
+            - createdAt: datetime
+            - modelName: str
+            - modelId: str
+            - modelVersion: str
+            - modelType: str
+            - modelEnvironmentName: str
+            - modelSchema: dict
+            - table: str
+            - tableStore: str
+            - projectId: str
+            - dataset: str
+
+        Raises:
+            ArizeAPIException: If job retrieval fails or there is an API error
+
+        """
+        results = GetTableImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        return results.to_dict()
+
+    def get_all_table_import_jobs(self) -> List[Dict[str, Any]]:
+        """Gets all table import jobs.
+
+        Returns:
+            List[Dict[str, Any]]: List of table import jobs in the format:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalQueriesSuccessCount: int
+            - totalQueriesFailedCount: int
+            - totalQueriesPendingCount: int
+            - createdAt: datetime
+            - modelName: str
+            - modelId: str
+            - modelVersion: str
+            - modelType: str
+            - modelEnvironmentName: str
+            - modelSchema: dict
+            - table: str
+            - tableStore: str
+            - projectId: str
+            - dataset: str
+
+        Raises:
+            ArizeAPIException: If job retrieval fails or there is an API error
+        """
+        results = GetAllTableImportJobsQuery.iterate_over_pages(self._graphql_client, sleep_time=self.sleep_time, spaceId=self.space_id)
+        return [result.to_dict() for result in results]
+
+    def create_table_import_job(
+        self,
+        table_store: Literal["BigQuery", "Snowflake", "Databricks"],
+        model_name: str,
+        model_type: str,
+        model_schema: Union[BaseModelSchema, Dict[str, Any]],
+        bigquery_table_config: Optional[Dict[str, str]] = None,
+        snowflake_table_config: Optional[Dict[str, str]] = None,
+        databricks_table_config: Optional[Dict[str, str]] = None,
+        model_version: Optional[str] = None,
+        model_environment_name: Optional[Literal["production", "validation", "training", "tracing"]] = "production",
+        dry_run: Optional[bool] = False,
+        batch_id: Optional[str] = None,
+    ) -> str:
+        """
+        Creates a new table import job for importing data from BigQuery, Snowflake, or Databricks
+
+        Args:
+            table_store: Literal["BigQuery", "Snowflake", "Databricks"] - The table store to use for the import job
+            model_name: str - The name of the model to import data to
+            model_type: str - The type of the model representation in Arize ("classification", "regression", "ranking", "object_detection", "multi-class", "generative")
+            model_schema: Union[BaseModelSchema, Dict[str, Any]] - The schema to use for the import job *see below for more details*
+            bigquery_table_config: Optional[Dict[str, str]] - Configuration for BigQuery tables (required if table_store is "BigQuery")
+                - projectId: str - The project ID
+                - dataset: str - The dataset name
+                - tableName: str - The table name
+            snowflake_table_config: Optional[Dict[str, str]] - Configuration for Snowflake tables (required if table_store is "Snowflake")
+                - accountID: str - The account ID
+                - schema: str - The schema name
+                - database: str - The database name
+                - tableName: str - The table name
+            databricks_table_config: Optional[Dict[str, str]] - Configuration for Databricks tables (required if table_store is "Databricks")
+                - hostName: str - The host name
+                - endpoint: str - The endpoint
+                - port: str - The port
+                - catalog: str - The catalog name
+                - databricksSchema: str - The schema name
+                - tableName: str - The table name
+                - token: Optional[str] - The access token
+                - azureResourceId: Optional[str] - The Azure resource ID (for Azure Databricks)
+                - azureTenantId: Optional[str] - The Azure tenant ID (for Azure Databricks)
+            model_version: Optional[str] - The version of the model to import data to
+            model_environment_name: Optional[Literal["production", "validation", "training", "tracing"]] - The environment of the model to use for the import job (default is "production")
+            dry_run: Optional[bool] - Whether to run the import job as a dry run (default is False)
+            batch_id: Optional[str] - The batch ID to use for the import job (for validation data)
+
+        Returns:
+            a table import job check object:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalQueriesSuccessCount: int
+            - totalQueriesFailedCount: int
+            - totalQueriesPendingCount: int
+
+        Raises:
+            ArizeAPIException: If the import job creation fails or there is an API error
+
+
+        *Model Schema*
+        --------------
+        The ModelSchema object is based on the model type and is used to validate the data being imported.
+        Each model type has a different set of required and optional fields, corresponding to the columns in the data being imported.
+        For convenience, you can either import the model schema class from the arize_toolkit.models module or pass in a dictionary of the model schema.
+        If you pass in a dictionary, it must be in the format of the model schema class.
+
+        Here is a breakdown of the model schema fields shared across all models and fields for specific model types:
+
+        All model types *require* the following fields:
+        - predictionId: str
+        - timestamp: str
+
+        The following fields are *available* for all model types:
+        - features: Optional[str] - prefix for feature column names (e.g. "feature_")
+        - featuresList: Optional[List[str]] - list of feature column names (e.g. ["feature_1", "feature_2"])
+        - tags: Optional[str] - prefix for tag column names (e.g. "tag_")
+        - tagsList: Optional[List[str]] - list of tag column names (e.g. ["tag_1", "tag_2"])
+        - batchId: Optional[str] - batch ID of the schema for validation data
+        - shapValues: Optional[str] - column prefix for SHAP value columns (e.g. "shap_")
+        - version: Optional[str] - version of the model - for when the model version is stored in the data
+        - exclude: Optional[List[str]] - list of column names to exclude (e.g. ["don_t_use_1", "don_t_use_2"])
+        - embeddingFeatures: Optional[List[EmbeddingFeatureInput]] - list of embedding feature configurations
+            - featureName: str - name of the feature (not necessarily the column name)
+            - vectorCol: str - column name for the vector
+            - rawDataCol: str - column name for column that contains the raw data (for text embeddings)
+            - linkToDataCol: Optional[str] - column name for a column that contains links to images or videos (for image embeddings)
+
+        The following column mappings are used for the specific model types:
+        - classification: ClassificationSchemaInput
+            - predictionLabel: str
+            - predictionScores: Optional[str]
+            - actualLabel: Optional[str]
+        - regression: RegressionSchemaInput
+            - predictionScore: str
+            - actualScore: Optional[str]
+        - ranking: RankSchemaInput
+            - rank: str
+            - predictionGroupId: str
+            - predictionScores: Optional[str]
+            - relevanceScore: Optional[str]
+            - relevanceLabel: Optional[str]
+        - object_detection: ObjectDetectionSchemaInput
+            - predictionObjectDetection: ObjectDetectionInput
+                - boundingBoxesCoordinatesColumnName: str
+                - boundingBoxesCategoriesColumnName: str
+                - boundingBoxesScoresColumnName: Optional[str]
+            - actualObjectDetection: Optional[ObjectDetectionInput]
+                - boundingBoxesCoordinatesColumnName: str
+                - boundingBoxesCategoriesColumnName: str
+                - boundingBoxesScoresColumnName: Optional[str]
+        - multi-class: MultiClassSchemaInput
+            - predictionScores: str
+            - actualScores: Optional[str]
+            - thresholdScores: Optional[str]
+        """
+        # Import the model classes here to avoid circular imports
+        from arize_toolkit.models import BigQueryTableConfig, DatabricksTableConfig, SnowflakeTableConfig
+
+        # Build the table configuration based on the table store
+        table_config_params = {
+            "spaceId": self.space_id,
+            "modelName": model_name,
+            "modelType": model_type,
+            "modelSchema": (model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema),
+            "modelVersion": model_version,
+            "modelEnvironmentName": model_environment_name,
+            "dryRun": dry_run,
+            "batchId": batch_id,
+            "tableStore": table_store,
+        }
+
+        # Add the appropriate table configuration
+        if table_store == "BigQuery":
+            if not bigquery_table_config:
+                raise ValueError("bigquery_table_config is required for BigQuery table store")
+            table_config_params["bigQueryTableConfig"] = BigQueryTableConfig(**bigquery_table_config)
+        elif table_store == "Snowflake":
+            if not snowflake_table_config:
+                raise ValueError("snowflake_table_config is required for Snowflake table store")
+            # Handle the schema alias for Snowflake
+            if "schema" in snowflake_table_config:
+                snowflake_table_config = snowflake_table_config.copy()
+                snowflake_table_config["snowflakeSchema"] = snowflake_table_config.pop("schema")
+            table_config_params["snowflakeTableConfig"] = SnowflakeTableConfig(**snowflake_table_config)
+        elif table_store == "Databricks":
+            if not databricks_table_config:
+                raise ValueError("databricks_table_config is required for Databricks table store")
+            table_config_params["databricksTableConfig"] = DatabricksTableConfig(**databricks_table_config)
+        else:
+            raise ValueError(f"Unsupported table store: {table_store}")
+
+        table_import_job = CreateTableImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **table_config_params,
+        )
+        return table_import_job.to_dict()
+
+    def update_file_import_job(
+        self,
+        job_id: str,
+        job_status: Optional[str] = None,
+        model_schema: Optional[Union[BaseModelSchema, Dict[str, Any]]] = None,
+    ) -> bool:
+        """Updates a file import job by its jobId.
+
+        Args:
+            job_id (str): jobId of the job to update (e.g. "1234")
+            job_status (Optional[str]): status of the job to update (e.g. "active", "inactive", "deleted")
+            model_schema (Optional[Union[BaseModelSchema, Dict[str, Any]]]): schema of the job to update
+
+        Returns:
+            a file import job check object:
+            - id: str
+            - jobId: str
+            - jobStatus: str
+            - totalFilesFailedCount: int
+            - totalFilesSuccessCount: int
+            - totalFilesPendingCount: int
+
+        Raises:
+            ArizeAPIException: If the job update fails or there is an API error
+        """
+
+        job_search = GetFileImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"File import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            raise ArizeAPIException(f"File import job with ID {job_id} is deleted")
+
+        final_schema = job_search.modelSchema.to_dict()
+        if model_schema:
+            schema_dict = model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema
+            final_schema.update(schema_dict)
+
+        params = {"jobId": job_id, "modelSchema": final_schema}
+        if job_status:
+            params["jobStatus"] = job_status
+
+        results = UpdateFileImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **params,
+        )
+        return results.to_dict()
+
+    def update_table_import_job(
+        self,
+        job_id: str,
+        job_status: Optional[str] = None,
+        model_schema: Optional[Union[BaseModelSchema, Dict[str, Any]]] = None,
+        refresh_interval: Optional[int] = None,
+        query_window_size: Optional[int] = None,
+    ) -> bool:
+        """Updates a table import job by its jobId."""
+        job_search = GetTableImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"Table import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            raise ArizeAPIException(f"Table import job with ID {job_id} is deleted")
+
+        final_schema = job_search.modelSchema.to_dict()
+        if model_schema:
+            schema_dict = model_schema.to_dict() if isinstance(model_schema, BaseModelSchema) else model_schema
+            final_schema.update(schema_dict)
+
+        params = {"jobId": job_id, "modelSchema": final_schema}
+        if job_status:
+            params["jobStatus"] = job_status
+        if refresh_interval:
+            params["refreshInterval"] = refresh_interval
+        if query_window_size:
+            params["queryWindowSize"] = query_window_size
+
+        results = UpdateTableImportJobMutation.run_graphql_mutation(
+            self._graphql_client,
+            **params,
+        )
+        return results.to_dict()
+
+    def delete_file_import_job(self, job_id: str) -> bool:
+        """Deletes a file import job by its jobId. can be found in UI next to the job or in the jobId field after creating or retrieving the job
+
+        Args:
+            job_id (str): jobId of the job to delete (e.g. "1234")
+
+        Returns:
+            bool: True if the job was deleted successfully, False otherwise
+
+        Raises:
+            ArizeAPIException: If the job deletion fails or there is an API error
+        """
+        job_search = GetFileImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"File import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            return True
+        results = DeleteFileImportJobMutation.run_graphql_mutation(self._graphql_client, id=job_search.id)
+        if results.jobStatus == "deleted" or results.jobStatus is None:
+            return True
+        return False
+
+    def delete_table_import_job(self, job_id: str) -> bool:
+        """Deletes a table import job by its jobId. The can be found in UI next to the job or in the jobId field after creating or retrieving the job
+
+        Args:
+            job_id (str): jobId of the job to delete (e.g. "1234")
+
+        Returns:
+            bool: True if the job was deleted successfully, False otherwise
+
+        Raises:
+            ArizeAPIException: If the job deletion fails or there is an API error
+        """
+        job_search = GetTableImportJobQuery.run_graphql_query(self._graphql_client, jobId=job_id, spaceId=self.space_id)
+        if not job_search:
+            raise ArizeAPIException(f"Table import job with ID {job_id} not found")
+        elif job_search.jobStatus == "deleted" or job_search.jobStatus is None:
+            return True
+        results = DeleteTableImportJobMutation.run_graphql_mutation(self._graphql_client, id=job_search.id)
+        if results.jobStatus == "deleted" or results.jobStatus is None:
+            return True
+        return False
