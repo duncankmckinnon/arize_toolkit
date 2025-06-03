@@ -3,8 +3,10 @@ from typing import List, Optional
 from arize_toolkit.models import (
     DataQualityMonitor,
     DimensionCategory,
+    DimensionFilterInput,
     DriftMonitor,
     DynamicAutoThreshold,
+    MetricFilterItem,
     ModelEnvironment,
     Monitor,
     MonitorCategory,
@@ -59,6 +61,37 @@ class MonitorManager:
             return contacts
 
     @classmethod
+    def create_dimension_filters(cls, filters: Optional[List[MetricFilterItem]]) -> List[DimensionFilterInput]:
+        if filters is None:
+            return None
+        else:
+            dimension_filters = []
+            for filter in filters:
+                params = {
+                    "dimensionType": filter.filterType,
+                    "operator": filter.operator,
+                }
+
+                if filter.dimension:
+                    params["name"] = filter.dimension.name
+
+                if filter.dimensionValues:
+                    params["values"] = [value.value for value in filter.dimensionValues]
+
+                if filter.binaryValues:
+                    params["values"] = filter.binaryValues
+
+                if filter.numericValues:
+                    params["values"] = filter.numericValues
+
+                if filter.categoricalValues:
+                    params["values"] = filter.categoricalValues
+
+                dimension_filters.append(DimensionFilterInput(**params))
+
+            return dimension_filters
+
+    @classmethod
     def performance_monitor(cls, space_id: str, model_name: str, monitor: Monitor) -> PerformanceMonitor:
         return PerformanceMonitor(
             spaceId=space_id,
@@ -85,6 +118,7 @@ class MonitorManager:
             scheduledRuntimeCadenceSeconds=monitor.scheduledRuntimeCadenceSeconds,
             scheduledRuntimeDaysOfWeek=monitor.scheduledRuntimeDaysOfWeek,
             modelEnvironmentName=ModelEnvironment.production,
+            filters=(cls.create_dimension_filters(monitor.primaryMetricWindow.filters) if monitor.primaryMetricWindow else None),
         )
 
     @classmethod
@@ -112,6 +146,7 @@ class MonitorManager:
             operator2=monitor.operator2,
             stdDevMultiplier2=monitor.stdDevMultiplier2,
             dynamicAutoThreshold=(DynamicAutoThreshold(stdDevMultiplier=monitor.stdDevMultiplier) if monitor.stdDevMultiplier else None),
+            filters=(cls.create_dimension_filters(monitor.primaryMetricWindow.filters) if monitor.primaryMetricWindow else None),
         )
 
     @classmethod
@@ -138,4 +173,5 @@ class MonitorManager:
             scheduledRuntimeEnabled=monitor.scheduledRuntimeEnabled,
             scheduledRuntimeCadenceSeconds=monitor.scheduledRuntimeCadenceSeconds,
             scheduledRuntimeDaysOfWeek=monitor.scheduledRuntimeDaysOfWeek,
+            filters=(cls.create_dimension_filters(monitor.primaryMetricWindow.filters) if monitor.primaryMetricWindow else None),
         )

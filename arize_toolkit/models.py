@@ -11,6 +11,7 @@ from arize_toolkit.types import (
     DimensionDataType,
     DriftMetric,
     ExternalLLMProviderModel,
+    FilterRowType,
     LLMIntegrationProvider,
     ModelEnvironment,
     ModelType,
@@ -101,12 +102,43 @@ class MonitorContactInput(GraphQLModel):
     integrationKeyId: Optional[str] = Field(default=None)
 
 
+class DimensionValue(GraphQLModel):
+    id: Optional[str] = Field(default=None)
+    value: str
+
+
+class MetricFilterItem(GraphQLModel):
+    id: Optional[str] = Field(default=None)
+    filterType: Optional[FilterRowType] = Field(default=None)
+    operator: Optional[ComparisonOperator] = Field(default=None)
+    dimension: Optional[Dimension] = Field(default=None)
+    dimensionValues: Optional[List[DimensionValue]] = Field(default=None)
+    binaryValues: Optional[List[str]] = Field(default=None)
+    numericValues: Optional[List[str]] = Field(default=None)
+    categoricalValues: Optional[List[str]] = Field(default=None)
+
+
 class MetricWindow(GraphQLModel):
     id: Optional[str] = Field(default=None)
     type: Optional[Literal["moving", "fixed"]] = Field(default="moving")
     windowLengthMs: Optional[float] = Field(default=86400000)
     dimensionCategory: Optional[DimensionCategory] = Field(default=None)
     dimension: Optional[Dimension] = Field(default=None)
+    filters: Optional[List[MetricFilterItem]] = Field(default_factory=list)
+
+
+class DimensionFilterInput(GraphQLModel):
+    dimensionType: FilterRowType
+    operator: ComparisonOperator = Field(default=ComparisonOperator.equals)
+    name: Optional[str] = Field(default=None)
+    values: List[str] = Field(default=[])
+
+    @model_validator(mode="after")
+    def verify_values(self):
+        if self.dimensionType == FilterRowType.featureLabel or self.dimensionType == FilterRowType.tagLabel:
+            if self.name is None:
+                raise ValueError("Name is required for feature label or tag label filter type")
+        return self
 
 
 class DynamicAutoThreshold(GraphQLModel):
@@ -152,6 +184,7 @@ class Monitor(GraphQLModel):
     positiveClassValue: Optional[str] = Field(default=None)
     metricAtRankingKValue: Optional[int] = Field(default=None)
     primaryMetricWindow: Optional[MetricWindow] = Field(default=None)
+    comparisonMetricWindow: Optional[MetricWindow] = Field(default=None)
 
 
 class MonitorDetailedType(GraphQLModel):
@@ -175,6 +208,7 @@ class MonitorDetailedType(GraphQLModel):
     operator2: Optional[ComparisonOperator] = Field(default=None)
     dynamicAutoThreshold: Optional[DynamicAutoThreshold] = Field(default=None)
     stdDevMultiplier2: Optional[float] = Field(default=None)
+    filters: Optional[List[DimensionFilterInput]] = Field(default=None)
 
 
 class PerformanceMonitor(MonitorDetailedType):

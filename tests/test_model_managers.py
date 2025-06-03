@@ -3,8 +3,8 @@ from datetime import datetime
 import pytest
 
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.models import Dimension, MetricWindow, ModelEnvironment, Monitor, MonitorContact
-from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DimensionDataType, DriftMetric, MonitorCategory, PerformanceMetric
+from arize_toolkit.models import Dimension, DimensionFilterInput, DimensionValue, MetricFilterItem, MetricWindow, ModelEnvironment, Monitor, MonitorContact
+from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DimensionDataType, DriftMetric, FilterRowType, MonitorCategory, PerformanceMetric
 
 
 class TestMonitorManager:
@@ -36,6 +36,29 @@ class TestMonitorManager:
                     dataType=DimensionDataType.STRING,
                     category=DimensionCategory.featureLabel,
                 ),
+                filters=[
+                    MetricFilterItem(
+                        filterType=FilterRowType.featureLabel,
+                        dimension=Dimension(
+                            name="test_dimension",
+                            dataType=DimensionDataType.STRING,
+                            category=DimensionCategory.featureLabel,
+                        ),
+                        operator=ComparisonOperator.equals,
+                        numericValues=["1", "2", "3"],
+                    ),
+                    MetricFilterItem(
+                        filterType=FilterRowType.predictionValue,
+                        operator=ComparisonOperator.equals,
+                        dimensionValues=[
+                            DimensionValue(
+                                value="test_value",
+                                dataType=DimensionDataType.STRING,
+                                category=DimensionCategory.featureLabel,
+                            )
+                        ],
+                    ),
+                ],
             ),
             # Adding all required fields with None values
             "evaluatedAt": None,
@@ -168,6 +191,24 @@ class TestMonitorManager:
         assert result.operator2 == ComparisonOperator.lessThan
         assert result.dynamicAutoThreshold.stdDevMultiplier == 1.5
         assert result.stdDevMultiplier2 == 2.5
+
+        assert (
+            result.filters[0].to_dict()
+            == DimensionFilterInput(
+                dimensionType=FilterRowType.featureLabel,
+                operator=ComparisonOperator.equals,
+                name="test_dimension",
+                values=["1", "2", "3"],
+            ).to_dict()
+        )
+        assert (
+            result.filters[1].to_dict()
+            == DimensionFilterInput(
+                dimensionType=FilterRowType.predictionValue,
+                operator=ComparisonOperator.equals,
+                values=["test_value"],
+            ).to_dict()
+        )
 
     def test_process_multiple_monitors(self, monitor_test_data):
         """Test processing multiple monitors of different types"""

@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.models import BaseModelSchema
+from arize_toolkit.models import BaseModelSchema, DimensionFilterInput
 from arize_toolkit.queries.custom_metric_queries import (
     CreateCustomMetricMutation,
     DeleteCustomMetricMutation,
@@ -1551,6 +1551,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = None,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new performance metric monitor for a model.
 
@@ -1580,7 +1581,11 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (only used if threshold_mode is "double")
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
-
+            filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
+                - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
+                - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
+                - name (str): Name of the dimension to filter on (required for feature label and tag label filters)
+                - values (List[str]): Values to filter on
         Returns:
             str: The path to the newly created performance metric monitor
 
@@ -1607,6 +1612,8 @@ class Client:
                     for integration_key_id in integration_key_ids
                 ]
             )
+        if filters:
+            filters = [filter.to_dict() if isinstance(filter, DimensionFilterInput) else filter for filter in filters]
         results = CreatePerformanceMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1635,6 +1642,7 @@ class Client:
                 "modelEnvironmentName": model_environment_name,
                 "predictionClassValue": prediction_class_value,
                 "positiveClassValue": positive_class_value,
+                "filters": filters if filters else None,
             },
         )
         return self.monitor_url(results.monitor_id)
@@ -1664,6 +1672,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new drift monitor for a model.
 
@@ -1690,6 +1699,12 @@ class Client:
             operator2 (Optional[str]): Comparison operator for the second threshold (e.g. "greaterThan", "lessThan" only used if threshold_mode is "double")
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[List[str]]): Email addresses to notify when the monitor is triggered
+            integration_key_ids (Optional[List[str]]): IDs of integration keys to notify when the monitor is triggered
+            filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
+                - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
+                - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
+                - name (str): Name of the dimension to filter on (required for feature label and tag label filters)
+                - values (List[str]): Values to filter on
 
         Returns:
             str: The path to the newly created drift monitor
@@ -1715,6 +1730,8 @@ class Client:
                     for integration_key_id in integration_key_ids
                 ]
             )
+        if filters:
+            filters = [filter.to_dict() if isinstance(filter, DimensionFilterInput) else filter for filter in filters]
         results = CreateDriftMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1741,6 +1758,7 @@ class Client:
                 "threshold2": threshold2,
                 "operator2": operator2,
                 "stdDevMultiplier2": std_dev_multiplier2 if not threshold2 else None,
+                "filters": filters if filters else None,
             },
         )
         return self.monitor_url(results.monitor_id)
@@ -1771,6 +1789,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new data quality monitor for a model.
 
@@ -1799,6 +1818,11 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
+            filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
+                - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
+                - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
+                - name (str): Name of the dimension to filter on (required for feature label and tag label filters)
+                - values (List[str]): Values to filter on
 
         Returns:
             str: The path to the newly created data quality monitor
@@ -1824,6 +1848,8 @@ class Client:
                     for integration_key_id in integration_key_ids
                 ]
             )
+        if filters:
+            filters = [filter.to_dict() if isinstance(filter, DimensionFilterInput) else filter for filter in filters]
         results = CreateDataQualityMonitorMutation.run_graphql_mutation(
             self._graphql_client,
             **{
@@ -1851,6 +1877,7 @@ class Client:
                 "threshold2": threshold2,
                 "stdDevMultiplier2": std_dev_multiplier2 if not threshold2 else None,
                 "modelEnvironmentName": model_environment_name,
+                "filters": filters if filters else None,
             },
         )
         return self.monitor_url(results.monitor_id)
