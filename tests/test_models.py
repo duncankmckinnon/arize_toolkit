@@ -8,8 +8,12 @@ from arize_toolkit.models import (
     CreatePromptMutationInput,
     CreatePromptVersionMutationInput,
     Dimension,
+    DimensionFilterInput,
+    DimensionValue,
     FunctionDetailsInput,
     LLMMessageInput,
+    MetricFilterItem,
+    MetricWindow,
     Prompt,
     PromptVersion,
     ToolInput,
@@ -1278,3 +1282,278 @@ class TestMonitorDetailedModels:
         assert monitor.latestComputedValue == 0.92
         assert monitor.performanceMetric == PerformanceMetric.accuracy
         assert monitor.positiveClassValue == "1"
+
+
+class TestDimensionValue:
+    """Test DimensionValue model"""
+
+    def test_init(self):
+        """Test DimensionValue initialization"""
+        # Test with all fields
+        dim_value = DimensionValue(id="dim_val_123", value="category_1")
+        assert dim_value.id == "dim_val_123"
+        assert dim_value.value == "category_1"
+
+    def test_required_fields(self):
+        """Test DimensionValue with only required fields"""
+        dim_value = DimensionValue(value="test_value")
+        assert dim_value.value == "test_value"
+        assert dim_value.id is None
+
+    def test_missing_required_field(self):
+        """Test DimensionValue without required value field"""
+        with pytest.raises(ValueError):
+            DimensionValue()
+
+
+class TestMetricFilterItem:
+    """Test MetricFilterItem model"""
+
+    def test_init(self):
+        """Test MetricFilterItem initialization with all fields"""
+        from arize_toolkit.types import ComparisonOperator, FilterRowType
+
+        dimension = Dimension(id="dim123", name="test_dim")
+        dim_values = [
+            DimensionValue(id="val1", value="value1"),
+            DimensionValue(id="val2", value="value2"),
+        ]
+
+        filter_item = MetricFilterItem(
+            id="filter123",
+            filterType=FilterRowType.featureLabel,
+            operator=ComparisonOperator.equals,
+            dimension=dimension,
+            dimensionValues=dim_values,
+            binaryValues=["true", "false"],
+            numericValues=["1.0", "2.0", "3.0"],
+            categoricalValues=["cat1", "cat2", "cat3"],
+        )
+
+        assert filter_item.id == "filter123"
+        assert filter_item.filterType == FilterRowType.featureLabel
+        assert filter_item.operator == ComparisonOperator.equals
+        assert filter_item.dimension.name == "test_dim"
+        assert len(filter_item.dimensionValues) == 2
+        assert filter_item.binaryValues == ["true", "false"]
+        assert filter_item.numericValues == ["1.0", "2.0", "3.0"]
+        assert filter_item.categoricalValues == ["cat1", "cat2", "cat3"]
+
+    def test_all_optional_fields(self):
+        """Test MetricFilterItem with all fields as None"""
+        filter_item = MetricFilterItem()
+
+        assert filter_item.id is None
+        assert filter_item.filterType is None
+        assert filter_item.operator is None
+        assert filter_item.dimension is None
+        assert filter_item.dimensionValues is None
+        assert filter_item.binaryValues is None
+        assert filter_item.numericValues is None
+        assert filter_item.categoricalValues is None
+
+    def test_partial_fields(self):
+        """Test MetricFilterItem with partial fields"""
+        from arize_toolkit.types import ComparisonOperator, FilterRowType
+
+        filter_item = MetricFilterItem(
+            filterType=FilterRowType.predictionValue,
+            operator=ComparisonOperator.greaterThan,
+            numericValues=["100", "200"],
+        )
+
+        assert filter_item.filterType == FilterRowType.predictionValue
+        assert filter_item.operator == ComparisonOperator.greaterThan
+        assert filter_item.numericValues == ["100", "200"]
+        assert filter_item.id is None
+        assert filter_item.dimension is None
+
+
+class TestMetricWindow:
+    """Test MetricWindow model"""
+
+    def test_init(self):
+        """Test MetricWindow initialization with all fields"""
+        from arize_toolkit.types import DimensionCategory, FilterRowType
+
+        dimension = Dimension(id="dim456", name="window_dim")
+        filter_items = [
+            MetricFilterItem(
+                id="f1",
+                filterType=FilterRowType.predictionScore,
+                numericValues=["10", "20"],
+            ),
+            MetricFilterItem(
+                id="f2",
+                filterType=FilterRowType.featureLabel,
+                categoricalValues=["cat1", "cat2"],
+            ),
+        ]
+
+        window = MetricWindow(
+            id="window123",
+            type="fixed",
+            windowLengthMs=172800000,  # 2 days in ms
+            dimensionCategory=DimensionCategory.featureLabel,
+            dimension=dimension,
+            filters=filter_items,
+        )
+
+        assert window.id == "window123"
+        assert window.type == "fixed"
+        assert window.windowLengthMs == 172800000
+        assert window.dimensionCategory == DimensionCategory.featureLabel
+        assert window.dimension.name == "window_dim"
+        assert len(window.filters) == 2
+        assert window.filters[0].id == "f1"
+
+    def test_default_values(self):
+        """Test MetricWindow default values"""
+        window = MetricWindow()
+
+        assert window.id is None
+        assert window.type == "moving"  # Default value
+        assert window.windowLengthMs == 86400000  # Default value (1 day in ms)
+        assert window.dimensionCategory is None
+        assert window.dimension is None
+        assert window.filters == []  # Default empty list
+
+    def test_partial_initialization(self):
+        """Test MetricWindow with partial fields"""
+        from arize_toolkit.types import DimensionCategory
+
+        window = MetricWindow(
+            id="window456",
+            type="fixed",
+            dimensionCategory=DimensionCategory.prediction,
+        )
+
+        assert window.id == "window456"
+        assert window.type == "fixed"
+        assert window.windowLengthMs == 86400000  # Default value
+        assert window.dimensionCategory == DimensionCategory.prediction
+        assert window.dimension is None
+        assert window.filters == []
+
+    def test_filters_list_operations(self):
+        """Test that filters list can be modified"""
+        window = MetricWindow()
+        assert window.filters == []
+
+        # Add a filter
+        new_filter = MetricFilterItem(id="filter1")
+        window.filters.append(new_filter)
+        assert len(window.filters) == 1
+        assert window.filters[0].id == "filter1"
+
+
+class TestDimensionFilterInput:
+    """Test DimensionFilterInput model"""
+
+    def test_init(self):
+        """Test DimensionFilterInput initialization"""
+        from arize_toolkit.types import ComparisonOperator, FilterRowType
+
+        filter_input = DimensionFilterInput(
+            dimensionType=FilterRowType.predictionValue,
+            operator=ComparisonOperator.lessThan,
+            name="test_dimension",
+            values=["value1", "value2", "value3"],
+        )
+
+        assert filter_input.dimensionType == FilterRowType.predictionValue
+        assert filter_input.operator == ComparisonOperator.lessThan
+        assert filter_input.name == "test_dimension"
+        assert filter_input.values == ["value1", "value2", "value3"]
+
+    def test_default_values(self):
+        """Test DimensionFilterInput default values"""
+        from arize_toolkit.types import ComparisonOperator, FilterRowType
+
+        filter_input = DimensionFilterInput(dimensionType=FilterRowType.predictionValue)
+
+        assert filter_input.dimensionType == FilterRowType.predictionValue
+        assert filter_input.operator == ComparisonOperator.equals  # Default
+        assert filter_input.name is None
+        assert filter_input.values == []  # Default empty list
+
+    def test_validation_feature_label_requires_name(self):
+        """Test validation that featureLabel filter type requires name"""
+        from arize_toolkit.types import FilterRowType
+
+        # Should raise error without name
+        with pytest.raises(
+            ValueError,
+            match="Name is required for feature label or tag label filter type",
+        ):
+            DimensionFilterInput(
+                dimensionType=FilterRowType.featureLabel,
+                values=["value1"],
+            )
+
+    def test_validation_tag_label_requires_name(self):
+        """Test validation that tagLabel filter type requires name"""
+        from arize_toolkit.types import FilterRowType
+
+        # Should raise error without name
+        with pytest.raises(
+            ValueError,
+            match="Name is required for feature label or tag label filter type",
+        ):
+            DimensionFilterInput(
+                dimensionType=FilterRowType.tagLabel,
+                values=["tag1", "tag2"],
+            )
+
+    def test_valid_feature_label_with_name(self):
+        """Test valid featureLabel filter with name"""
+        from arize_toolkit.types import FilterRowType
+
+        filter_input = DimensionFilterInput(
+            dimensionType=FilterRowType.featureLabel,
+            name="feature_name",
+            values=["value1", "value2"],
+        )
+
+        assert filter_input.dimensionType == FilterRowType.featureLabel
+        assert filter_input.name == "feature_name"
+        assert filter_input.values == ["value1", "value2"]
+
+    def test_valid_tag_label_with_name(self):
+        """Test valid tagLabel filter with name"""
+        from arize_toolkit.types import ComparisonOperator, FilterRowType
+
+        filter_input = DimensionFilterInput(
+            dimensionType=FilterRowType.tagLabel,
+            name="tag_name",
+            operator=ComparisonOperator.notEquals,
+            values=["tag1"],
+        )
+
+        assert filter_input.dimensionType == FilterRowType.tagLabel
+        assert filter_input.name == "tag_name"
+        assert filter_input.operator == ComparisonOperator.notEquals
+        assert filter_input.values == ["tag1"]
+
+    def test_other_filter_types_without_name(self):
+        """Test that other filter types don't require name"""
+        from arize_toolkit.types import FilterRowType
+
+        # These should work without name
+        filter_types = [
+            FilterRowType.predictionValue,
+            FilterRowType.actuals,
+            FilterRowType.actualScore,
+            FilterRowType.predictionScore,
+            FilterRowType.modelVersion,
+            FilterRowType.batchId,
+        ]
+
+        for filter_type in filter_types:
+            filter_input = DimensionFilterInput(
+                dimensionType=filter_type,
+                values=["test_value"],
+            )
+            assert filter_input.dimensionType == filter_type
+            assert filter_input.name is None
+            assert filter_input.values == ["test_value"]

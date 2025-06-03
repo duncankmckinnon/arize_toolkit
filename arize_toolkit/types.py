@@ -154,6 +154,23 @@ class ModelType(InputValidationEnum):
     generative_llm = "generative_llm", "Generative LLM", "LLM", "tracing", "Tracing"
 
 
+class FilterRowType(InputValidationEnum):
+    featureLabel = "featureLabel", "Feature Label"
+    tagLabel = "tagLabel", "Tag Label"
+    predictionValue = "predictionValue", "Prediction Value"
+    actuals = "actuals", "Actuals"
+    modelVersion = "modelVersion", "Model Version"
+    batchId = "batchId", "Batch ID"
+    spanProperty = "spanProperty", "Span Property"
+    llmEval = "llmEval", "LLM Eval"
+    annotation = "annotation", "Annotation"
+    userAnnotation = "userAnnotation", "User Annotation"
+    actualScore = "actualScore", "Actual Score"
+    actualLabel = "actualLabel", "Actual Label"
+    predictionClass = "predictionClass", "Prediction Class"
+    predictionScore = "predictionScore", "Prediction Score"
+
+
 class DimensionCategory(InputValidationEnum):
     featureLabel = "featureLabel", "Feature Label"
     prediction = "prediction", "Prediction"
