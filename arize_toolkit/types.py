@@ -583,3 +583,16 @@ class WidgetCreationStatus(InputValidationEnum):
     created = "created", "Created"
     published = "published", "Published"
     unpublished = "unpublished", "Unpublished"
+
+
+class BarChartWidgetDataValueObjectType(InputValidationEnum):
+    number = ("number", "Number")
+    string = ("string", "String")
+    range = ("range", "Range")
+    total = ("total", "Total")
+
+
+class DashboardStatus(InputValidationEnum):
+    active = "active", "Active"
+    inactive = "inactive", "Inactive"
+    deleted = "deleted", "Deleted"

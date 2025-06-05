@@ -70,7 +70,7 @@ class NewModel(GraphQLModel):
 2. **Type Usage**:
    - Use `str` for IDs and text fields
    - Use `Optional[]` for nullable fields
-   - Use `Literal[]` for enum-like fields
+   - Create new type class of `InputValidationEnum` for complex enum types
    - Use `List[]` for array fields
    - Use `Dict` for JSON-like fields
    - Use nested models for complex structures

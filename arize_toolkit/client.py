@@ -29,6 +29,7 @@ from arize_toolkit.queries.dashboard_queries import (
     GetDashboardLineChartWidgetsQuery,
     GetDashboardModelsQuery,
     GetDashboardMonitorLineChartWidgetsQuery,
+    GetDashboardPerformanceSlicesQuery,
     GetDashboardQuery,
     GetDashboardStatisticWidgetsQuery,
     GetDashboardTextWidgetsQuery,
@@ -2578,7 +2579,7 @@ class Client:
                 - monitorLineChartWidgets: List[MonitorLineChartWidget]
                 - textWidgets: List[TextWidget]
                 - barChartWidgets: List[BarChartWidget]
-
+                - performanceSlices: List[DashboardPerformanceSlice]
 
         Raises:
             ArizeAPIException: If the dashboard retrieval fails or there is an API error
@@ -2627,6 +2628,10 @@ class Client:
         bar_chart_widgets = GetDashboardBarChartWidgetsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
         dashboard_basis["barChartWidgets"] = [widget.to_dict() for widget in bar_chart_widgets]
 
+        # Get the performance slices
+        performance_slices = GetDashboardPerformanceSlicesQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["performanceSlices"] = [slice.to_dict() for slice in performance_slices]
+
         # Get the models
         models = GetDashboardModelsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
         dashboard_basis["models"] = [model.to_dict() for model in models]
@@ -2661,6 +2666,7 @@ class Client:
                 - monitorLineChartWidgets: List[MonitorLineChartWidget]
                 - textWidgets: List[TextWidget]
                 - barChartWidgets: List[BarChartWidget]
+                - performanceSlices: List[DashboardPerformanceSlice]
 
 
         Raises:

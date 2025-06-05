@@ -2207,7 +2207,7 @@ class TestMonitorsExtended:
                                 "scheduledRuntimeCadenceSeconds": None,
                                 "scheduledRuntimeDaysOfWeek": None,
                                 "latestComputedValue": None,
-                                "performanceMetric": "accuracy",
+                                "performanceMetric": "f_1",
                                 "customMetric": None,
                                 "operator2": None,
                                 "stdDevMultiplier": None,
@@ -2219,6 +2219,7 @@ class TestMonitorsExtended:
                                 "positiveClassValue": None,
                                 "metricAtRankingKValue": None,
                                 "primaryMetricWindow": None,
+                                "timeSeriesMetricType": "evaluationMetric",
                             }
                         }
                     ]
@@ -2288,7 +2289,7 @@ class TestMonitorsExtended:
                                 "scheduledRuntimeCadenceSeconds": None,
                                 "scheduledRuntimeDaysOfWeek": None,
                                 "latestComputedValue": None,
-                                "performanceMetric": "accuracy",
+                                "performanceMetric": "f_1",
                                 "customMetric": None,
                                 "operator2": None,
                                 "stdDevMultiplier": None,
@@ -2300,6 +2301,7 @@ class TestMonitorsExtended:
                                 "positiveClassValue": None,
                                 "metricAtRankingKValue": None,
                                 "primaryMetricWindow": None,
+                                "timeSeriesMetricType": "evaluationMetric",
                             }
                         }
                     ]
@@ -2349,7 +2351,7 @@ class TestMonitorsExtended:
                                     "scheduledRuntimeCadenceSeconds": None,
                                     "scheduledRuntimeDaysOfWeek": None,
                                     "latestComputedValue": None,
-                                    "performanceMetric": "accuracy",
+                                    "performanceMetric": "f_1",
                                     "customMetric": None,
                                     "operator2": None,
                                     "stdDevMultiplier": None,
@@ -2361,6 +2363,7 @@ class TestMonitorsExtended:
                                     "positiveClassValue": None,
                                     "metricAtRankingKValue": None,
                                     "primaryMetricWindow": None,
+                                    "timeSeriesMetricType": "evaluationMetric",
                                 }
                             }
                         ]
@@ -2421,6 +2424,7 @@ class TestMonitorsExtended:
                                     "scheduledRuntimeEnabled": False,
                                     "scheduledRuntimeCadenceSeconds": None,
                                     "scheduledRuntimeDaysOfWeek": None,
+                                    "timeSeriesMetricType": "evaluationMetric",
                                 }
                             }
                         ]
@@ -2478,6 +2482,7 @@ class TestMonitorsExtended:
                                     "scheduledRuntimeCadenceSeconds": None,
                                     "scheduledRuntimeDaysOfWeek": None,
                                     "primaryMetricWindow": None,
+                                    "timeSeriesMetricType": "evaluationMetric",
                                 }
                             }
                         ]
@@ -2964,3 +2969,737 @@ class TestDataImportExtended:
 
         result = client.delete_table_import_job("table_job123")
         assert result is True
+
+
+class TestDashboards:
+    """Test dashboard-related client methods"""
+
+    def test_get_all_dashboards(self, client, mock_graphql_client):
+        """Test getting all dashboards in the space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response for get_all_dashboards with pagination
+        mock_responses = [
+            {
+                "node": {
+                    "dashboards": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor1"},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "dashboard_123",
+                                    "name": "Performance Dashboard",
+                                    "creator": {
+                                        "id": "user_123",
+                                        "name": "Test User",
+                                        "email": "test@example.com",
+                                    },
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "status": "active",
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "dashboards": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "dashboard_456",
+                                    "name": "Model Metrics Dashboard",
+                                    "creator": {
+                                        "id": "user_456",
+                                        "name": "Another User",
+                                        "email": "another@example.com",
+                                    },
+                                    "createdAt": "2024-01-02T00:00:00Z",
+                                    "status": "active",
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        results = client.get_all_dashboards()
+
+        assert len(results) == 2
+        assert results[0]["id"] == "dashboard_123"
+        assert results[0]["name"] == "Performance Dashboard"
+        assert results[0]["creator"]["name"] == "Test User"
+        assert results[0]["createdAt"] == "2024-01-01T00:00:00.000000Z"
+        assert results[0]["status"] == "active"
+
+        assert results[1]["id"] == "dashboard_456"
+        assert results[1]["name"] == "Model Metrics Dashboard"
+        assert results[1]["creator"]["email"] == "another@example.com"
+
+    def test_get_dashboard_by_id(self, client, mock_graphql_client):
+        """Test getting complete dashboard by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses for all the dashboard detail queries
+        mock_responses = [
+            # Dashboard basis - GetDashboardByIdQuery
+            {
+                "node": {
+                    "id": "dashboard_123",
+                    "name": "Test Dashboard",
+                    "creator": {
+                        "id": "user_123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "status": "active",
+                }
+            },
+            # Statistic widgets - GetDashboardStatisticWidgetsQuery
+            {
+                "node": {
+                    "statisticWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "stat_widget_123",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Accuracy Widget",
+                                    "gridPosition": [0, 0, 2, 2],
+                                    "creationStatus": "created",
+                                    "modelId": "model_123",
+                                    "modelVersionIds": ["v1"],
+                                    "dimensionCategory": "prediction",
+                                    "performanceMetric": "accuracy",
+                                    "modelEnvironmentName": "production",
+                                    "timeSeriesMetricType": None,
+                                    "aggregation": None,
+                                    "rankingAtK": None,
+                                    "filters": None,
+                                    "dimension": None,
+                                    "model": None,
+                                    "customMetric": None,
+                                    "predictionValueClass": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Line chart widgets - GetDashboardLineChartWidgetsQuery
+            {
+                "node": {
+                    "lineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "line_widget_123",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Performance Over Time",
+                                    "gridPosition": [0, 2, 4, 3],
+                                    "creationStatus": "created",
+                                    "yMin": 0.0,
+                                    "yMax": 1.0,
+                                    "yAxisLabel": "Accuracy",
+                                    "timeSeriesMetricType": None,
+                                    "config": None,
+                                    "plots": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Experiment chart widgets - GetDashboardExperimentChartWidgetsQuery
+            {
+                "node": {
+                    "experimentChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [],
+                    }
+                }
+            },
+            # Drift line chart widgets - GetDashboardDriftLineChartWidgetsQuery
+            {
+                "node": {
+                    "driftLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [],
+                    }
+                }
+            },
+            # Monitor line chart widgets - GetDashboardMonitorLineChartWidgetsQuery
+            {
+                "node": {
+                    "monitorLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [],
+                    }
+                }
+            },
+            # Text widgets - GetDashboardTextWidgetsQuery
+            {
+                "node": {
+                    "textWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "text_widget_123",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Description",
+                                    "gridPosition": [0, 5, 4, 1],
+                                    "creationStatus": "created",
+                                    "content": "This dashboard shows model performance metrics.",
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Bar chart widgets - GetDashboardBarChartWidgetsQuery
+            {
+                "node": {
+                    "barChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "bar_widget_123",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Feature Performance",
+                                    "gridPosition": [4, 0, 2, 3],
+                                    "creationStatus": "created",
+                                    "sortOrder": "vol_desc",
+                                    "yMin": None,
+                                    "yMax": None,
+                                    "yAxisLabel": "Accuracy",
+                                    "topN": 10.0,
+                                    "isNormalized": False,
+                                    "binOption": None,
+                                    "numBins": None,
+                                    "customBins": None,
+                                    "quantiles": None,
+                                    "performanceMetric": None,
+                                    "plots": None,
+                                    "config": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Performance slices - GetDashboardPerformanceSlicesQuery
+            {
+                "node": {
+                    "performanceSlices": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "slice_123",
+                                    "evalMetricMin": 0.0,
+                                    "evalMetricMax": 1.0,
+                                    "performanceMetric": "accuracy",
+                                    "metricValue": "0.95",
+                                    "metricValueType": "number",
+                                    "metricValueColorIndex": 2,
+                                    "metricValueKey": "feature_1",
+                                    "metricValueKeyType": "string",
+                                    "widget": None,
+                                    "barChartBarNode": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Models - GetDashboardModelsQuery
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model_123",
+                                    "name": "Test Model",
+                                    "modelType": "score_categorical",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        result = client.get_dashboard_by_id("dashboard_123")
+
+        assert result["id"] == "dashboard_123"
+        assert result["name"] == "Test Dashboard"
+        assert result["creator"]["name"] == "Test User"
+        assert result["status"] == "active"
+
+        # Check widgets
+        assert len(result["statisticWidgets"]) == 1
+        assert result["statisticWidgets"][0]["title"] == "Accuracy Widget"
+        assert result["statisticWidgets"][0]["performanceMetric"] == "accuracy"
+
+        assert len(result["lineChartWidgets"]) == 1
+        assert result["lineChartWidgets"][0]["title"] == "Performance Over Time"
+        assert result["lineChartWidgets"][0]["yAxisLabel"] == "Accuracy"
+
+        assert len(result["textWidgets"]) == 1
+        assert result["textWidgets"][0]["content"] == "This dashboard shows model performance metrics."
+
+        assert len(result["barChartWidgets"]) == 1
+        assert result["barChartWidgets"][0]["title"] == "Feature Performance"
+        assert result["barChartWidgets"][0]["topN"] == 10.0
+
+        # Check performance slices
+        assert len(result["performanceSlices"]) == 1
+        assert result["performanceSlices"][0]["performanceMetric"] == "accuracy"
+        assert result["performanceSlices"][0]["metricValue"] == "0.95"
+
+        # Check models
+        assert len(result["models"]) == 1
+        assert result["models"][0]["name"] == "Test Model"
+
+        # Check empty widget lists
+        assert len(result["experimentChartWidgets"]) == 0
+        assert len(result["driftLineChartWidgets"]) == 0
+        assert len(result["monitorLineChartWidgets"]) == 0
+
+    def test_get_dashboard(self, client, mock_graphql_client):
+        """Test getting dashboard by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses: first for name lookup, then dashboard details
+        mock_responses = [
+            # Dashboard name lookup - GetDashboardQuery
+            {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard_123", "name": "Test Dashboard"}}]}}},
+            # Dashboard basis - GetDashboardByIdQuery
+            {
+                "node": {
+                    "id": "dashboard_123",
+                    "name": "Test Dashboard",
+                    "creator": {
+                        "id": "user_123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "status": "active",
+                }
+            },
+            # Empty responses for all widget types
+            {
+                "node": {
+                    "statisticWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "lineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "experimentChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "driftLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "monitorLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {
+                "node": {
+                    "performanceSlices": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            # Models - Need at least one to avoid "No models found" error
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model_123",
+                                    "name": "Test Model",
+                                    "modelType": "score_categorical",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        result = client.get_dashboard("Test Dashboard")
+
+        assert result["id"] == "dashboard_123"
+        assert result["name"] == "Test Dashboard"
+        assert result["creator"]["name"] == "Test User"
+
+        # Verify it called the name lookup first
+        assert mock_graphql_client.return_value.execute.call_count == 11
+
+    def test_get_dashboard_not_found(self, client, mock_graphql_client):
+        """Test dashboard not found by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {"node": {"dashboards": {"edges": []}}}
+
+        with pytest.raises(ArizeAPIException) as exc_info:
+            client.get_dashboard("Non-existent Dashboard")
+        assert "No dashboard found" in str(exc_info.value)
+
+    def test_get_dashboard_url(self, client, mock_graphql_client):
+        """Test getting dashboard URL by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses for name lookup and dashboard details
+        mock_responses = [
+            # Dashboard name lookup - GetDashboardQuery
+            {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard_123", "name": "Test Dashboard"}}]}}},
+            # Dashboard basis - GetDashboardByIdQuery
+            {
+                "node": {
+                    "id": "dashboard_123",
+                    "name": "Test Dashboard",
+                    "creator": {
+                        "id": "user_123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "status": "active",
+                }
+            },
+            # Empty responses for all widget types (minimal for URL generation)
+            {
+                "node": {
+                    "statisticWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "lineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "experimentChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "driftLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "monitorLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {
+                "node": {
+                    "performanceSlices": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            # Models - Need at least one to avoid "No models found" error
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model_123",
+                                    "name": "Test Model",
+                                    "modelType": "score_categorical",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        url = client.get_dashboard_url("Test Dashboard")
+
+        expected_url = f"{client.space_url}/dashboards/dashboard_123"
+        assert url == expected_url
+
+    def test_dashboard_url_property(self, client):
+        """Test dashboard URL generation property method"""
+        dashboard_id = "dashboard_123"
+        expected_url = f"{client.space_url}/dashboards/{dashboard_id}"
+
+        url = client.dashboard_url(dashboard_id)
+        assert url == expected_url
+
+    def test_get_all_dashboards_empty(self, client, mock_graphql_client):
+        """Test getting all dashboards when none exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {
+            "node": {
+                "dashboards": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [],
+                }
+            }
+        }
+
+        results = client.get_all_dashboards()
+        assert len(results) == 0
+
+    def test_get_dashboard_by_id_with_complex_widgets(self, client, mock_graphql_client):
+        """Test getting dashboard with complex widget configurations"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses with more complex widget data
+        mock_responses = [
+            # Dashboard basis - GetDashboardByIdQuery
+            {
+                "node": {
+                    "id": "dashboard_456",
+                    "name": "Complex Dashboard",
+                    "creator": {
+                        "id": "user_456",
+                        "name": "Advanced User",
+                        "email": "advanced@example.com",
+                    },
+                    "createdAt": "2024-01-15T00:00:00Z",
+                    "status": "active",
+                }
+            },
+            # Statistic widgets with more fields - GetDashboardStatisticWidgetsQuery
+            {
+                "node": {
+                    "statisticWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "stat_widget_456",
+                                    "dashboardId": "dashboard_456",
+                                    "title": "F1 Score Widget",
+                                    "gridPosition": [0, 0, 2, 2],
+                                    "creationStatus": "created",
+                                    "modelId": "model_456",
+                                    "modelVersionIds": ["v1", "v2"],
+                                    "dimensionCategory": "prediction",
+                                    "performanceMetric": "f_1",
+                                    "modelEnvironmentName": "production",
+                                    "timeSeriesMetricType": "evaluationMetric",
+                                    "aggregation": "avg",
+                                    "rankingAtK": 5,
+                                    "filters": None,
+                                    "dimension": None,
+                                    "model": None,
+                                    "customMetric": None,
+                                    "predictionValueClass": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Line chart widgets with complex config - GetDashboardLineChartWidgetsQuery
+            {
+                "node": {
+                    "lineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "line_widget_456",
+                                    "dashboardId": "dashboard_456",
+                                    "title": "Multi-Model Performance",
+                                    "gridPosition": [2, 0, 4, 4],
+                                    "creationStatus": "created",
+                                    "yMin": 0.5,
+                                    "yMax": 1.0,
+                                    "yAxisLabel": "F1 Score",
+                                    "timeSeriesMetricType": "evaluationMetric",
+                                    "config": {
+                                        "curve": "smooth",
+                                        "axisBottom": {"legend": "Time"},
+                                        "axisLeft": {"legend": "F1 Score"},
+                                        "xScale": {
+                                            "scaleType": "time",
+                                            "format": "%Y-%m-%d",
+                                        },
+                                        "yScale": {
+                                            "scaleType": "linear",
+                                            "stacked": False,
+                                        },
+                                    },
+                                    "plots": [
+                                        {
+                                            "id": "plot_1",
+                                            "title": "Model A",
+                                            "position": 1,
+                                            "modelId": "model_456",
+                                            "modelVersionIds": None,
+                                            "modelEnvironmentName": "production",
+                                            "dimensionCategory": None,
+                                            "splitByEnabled": None,
+                                            "splitByDimension": None,
+                                            "splitByDimensionCategory": None,
+                                            "splitByOverallMetricEnabled": None,
+                                            "cohorts": None,
+                                            "colors": ["#FF0000"],
+                                            "dimension": None,
+                                            "predictionValueClass": None,
+                                            "rankingAtK": None,
+                                            "model": None,
+                                        }
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            # Other empty widget types
+            {
+                "node": {
+                    "experimentChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "driftLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "monitorLineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {
+                "node": {
+                    "performanceSlices": {
+                        "pageInfo": {"hasNextPage": False},
+                        "edges": [],
+                    }
+                }
+            },
+            # Models - Need at least one to avoid "No models found" error
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model_456",
+                                    "name": "Advanced Model",
+                                    "modelType": "score_categorical",
+                                    "createdAt": "2024-01-15T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        result = client.get_dashboard_by_id("dashboard_456")
+
+        assert result["id"] == "dashboard_456"
+        assert result["name"] == "Complex Dashboard"
+
+        # Check complex statistic widget
+        stat_widget = result["statisticWidgets"][0]
+        assert stat_widget["performanceMetric"] == "f_1"
+        assert stat_widget["timeSeriesMetricType"] == "evaluationMetric"
+        assert stat_widget["rankingAtK"] == 5
+        assert len(stat_widget["modelVersionIds"]) == 2
+
+        # Check complex line chart widget
+        line_widget = result["lineChartWidgets"][0]
+        assert line_widget["title"] == "Multi-Model Performance"
+        assert line_widget["yMin"] == 0.5
+        assert line_widget["config"]["curve"] == "smooth"
+        assert line_widget["config"]["xScale"]["format"] == "%Y-%m-%d"
+        assert len(line_widget["plots"]) == 1
+        assert line_widget["plots"][0]["title"] == "Model A"

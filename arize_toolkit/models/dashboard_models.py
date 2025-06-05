@@ -8,7 +8,17 @@ from arize_toolkit.models.base_models import Dimension, DimensionValue, Model, U
 # Import common models that are used by dashboard models
 from arize_toolkit.models.custom_metrics_models import CustomMetric
 from arize_toolkit.models.space_models import Space
-from arize_toolkit.types import DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric, TimeSeriesMetricCategory, WidgetCreationStatus
+from arize_toolkit.types import (
+    BarChartWidgetDataValueObjectType,
+    DashboardStatus,
+    DataQualityMetric,
+    DimensionCategory,
+    ModelEnvironment,
+    ModelType,
+    PerformanceMetric,
+    TimeSeriesMetricCategory,
+    WidgetCreationStatus,
+)
 from arize_toolkit.utils import GraphQLModel
 
 ## Dashboard GraphQL Models ##
@@ -19,7 +29,7 @@ class DashboardBasis(GraphQLModel):
     name: Optional[str] = Field(default=None, description="The name of the dashboard")
     creator: Optional[User] = Field(default=None, description="The user who created the dashboard")
     createdAt: Optional[datetime] = Field(default=None, description="The datetime the dashboard was created")
-    status: Optional[str] = Field(default=None, description="The status of the dashboard")
+    status: Optional[DashboardStatus] = Field(default=None, description="The status of the dashboard")
 
 
 class WidgetBasis(GraphQLModel):
@@ -225,6 +235,91 @@ class TextWidget(WidgetBasis):
     content: Optional[str] = Field(default=None, description="The content of the text widget")
 
 
+class BarChartWidgetDataKeysAndValuesObject(GraphQLModel):
+    """An object that represents a part of the data used to render a single bar in a bar chart"""
+
+    k: str = Field(description="A key to be used in rendering a bar chart")
+    v: Optional[str] = Field(
+        default=None,
+        description="A value to be used in rendering a bar chart. Allows nullable values to better handle No Data cases",
+    )
+    vType: BarChartWidgetDataValueObjectType = Field(description="The type of the value for 'v' above: 'number' or 'string'")
+    secondaryValue: Optional[str] = Field(
+        default=None,
+        description="A secondary value, e.g. accuracy %, to be used in rendering a bar chart",
+    )
+    secondaryValueType: Optional[BarChartWidgetDataValueObjectType] = Field(
+        default=None,
+        description="The type of the value for 'secondary value' above: 'number' or 'string'",
+    )
+    secondaryValueColorIndex: Optional[int] = Field(
+        default=None,
+        description="The color rank index of the secondary value used to color the bar",
+    )
+    plotKey: Optional[str] = Field(
+        default=None,
+        description="A user-supplied plot key (e.g. title of plot 'Prediction Class' etc.)",
+    )
+
+
+class BarChartWidgetData(GraphQLModel):
+    """A bar chart plot on a dashboard"""
+
+    keysAndValues: List[BarChartWidgetDataKeysAndValuesObject] = Field(description="A list of objects of the form {k: 'some_key', v: 'some_value'} that provide data for a single bar in a bar chart")
+    performanceImpactValue: Optional[float] = Field(
+        default=None,
+        description="The performance impact value of a single bar in a bar chart",
+    )
+    evalMetricMin: Optional[float] = Field(
+        default=None,
+        description="The evaluation metric min value to be used for the heatmap legend",
+    )
+    evalMetricMax: Optional[float] = Field(
+        default=None,
+        description="The evaluation metric max value to be used for the heatmap legend",
+    )
+
+
+class DashboardPerformanceSlice(GraphQLModel):
+    """A performance slice of a dashboard"""
+
+    id: str = Field(description="The ID of an object")
+    evalMetricMin: Optional[float] = Field(
+        default=None,
+        description="The evaluation metric min value to be used for the heatmap legend",
+    )
+    evalMetricMax: Optional[float] = Field(
+        default=None,
+        description="The evaluation metric max value to be used for the heatmap legend",
+    )
+    performanceMetric: Optional[PerformanceMetric] = Field(
+        default=None,
+        description="The performance metric used for the performance slice",
+    )
+    metricValue: Optional[str] = Field(
+        default=None,
+        description="A secondary value, e.g. accuracy %, to be used in rendering a bar chart",
+    )
+    metricValueType: Optional[BarChartWidgetDataValueObjectType] = Field(
+        default=None,
+        description="The type of the value for 'secondary value' above: 'number' or 'string'",
+    )
+    metricValueColorIndex: Optional[int] = Field(
+        default=None,
+        description="The color rank index of the secondary value used to color the bar",
+    )
+    metricValueKey: Optional[str] = Field(default=None, description="The x-axis value that this metric applies to")
+    metricValueKeyType: Optional[BarChartWidgetDataValueObjectType] = Field(
+        default=None,
+        description="The type of metricValueKey, e.g. if metricValueKey = '0.65 to 0.89823' then metricValueKeyType = 'range'",
+    )
+    widget: Optional[BarChartWidget] = Field(default=None, description="The dashboard widget that this slice pertains to")
+    barChartBarNode: Optional[BarChartWidgetData] = Field(
+        default=None,
+        description="The bar in a bar chart corresponding to this performance metric",
+    )
+
+
 class Dashboard(DashboardBasis):
     """Extended dashboard model with all connections"""
 
@@ -237,3 +332,4 @@ class Dashboard(DashboardBasis):
     driftLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The drift line chart widgets on the dashboard")
     monitorLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The monitor line chart widgets on the dashboard")
     textWidgets: Optional[List[TextWidget]] = Field(default=None, description="The text widgets on the dashboard")
+    performanceSlices: Optional[List[DashboardPerformanceSlice]] = Field(default=None, description="The performance slices on the dashboard")

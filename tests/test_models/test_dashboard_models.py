@@ -5,9 +5,13 @@ from arize_toolkit.models import (
     BarChartWidget,
     BarChartWidgetAxisConfig,
     BarChartWidgetConfig,
+    BarChartWidgetData,
+    BarChartWidgetDataKeysAndValuesObject,
+    BarChartWidgetDataValueObjectType,
     CustomMetric,
     Dashboard,
     DashboardBasis,
+    DashboardPerformanceSlice,
     Dimension,
     DimensionValue,
     ExperimentChartPlot,
@@ -27,7 +31,7 @@ from arize_toolkit.models import (
     WidgetBasis,
     WidgetModel,
 )
-from arize_toolkit.types import DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric, TimeSeriesMetricCategory, WidgetCreationStatus
+from arize_toolkit.types import DashboardStatus, DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric, TimeSeriesMetricCategory, WidgetCreationStatus
 
 
 class TestDashboardBasis:
@@ -39,11 +43,11 @@ class TestDashboardBasis:
             id="dash_123",
             name="Test Dashboard",
             createdAt=datetime.now(),
-            status="active",
+            status=DashboardStatus.active,
         )
         assert dashboard.id == "dash_123"
         assert dashboard.name == "Test Dashboard"
-        assert dashboard.status == "active"
+        assert dashboard.status == DashboardStatus.active
 
     def test_optional_fields(self):
         """Test DashboardBasis with optional fields"""
@@ -53,14 +57,19 @@ class TestDashboardBasis:
             name="Test Dashboard",
             creator=user,
             createdAt=datetime.now(),
-            status="inactive",
+            status=DashboardStatus.inactive,
         )
         assert dashboard.creator.id == "user_123"
-        assert dashboard.status == "inactive"
+        assert dashboard.status == DashboardStatus.inactive
 
     def test_status_values(self):
         """Test DashboardBasis status field accepts valid values"""
-        valid_statuses = ["active", "inactive", "deleted", None]
+        valid_statuses = [
+            DashboardStatus.active,
+            DashboardStatus.inactive,
+            DashboardStatus.deleted,
+            None,
+        ]
         for status in valid_statuses:
             dashboard = DashboardBasis(
                 id="dash_123",
@@ -182,7 +191,7 @@ class TestDashboard:
             id="dash_123",
             name="Extended Dashboard",
             createdAt=datetime.now(),
-            status="active",
+            status=DashboardStatus.active,
             space=space,
             models=[model],
         )
@@ -213,7 +222,7 @@ class TestDashboard:
             id="dash_123",
             name="Dashboard with Widgets",
             createdAt=datetime.now(),
-            status="active",
+            status=DashboardStatus.active,
             statisticWidgets=[stat_widget],
             lineChartWidgets=[line_widget],
         )
@@ -229,7 +238,7 @@ class TestDashboard:
             id="dash_123",
             name="Empty Dashboard",
             createdAt=datetime.now(),
-            status="active",
+            status=DashboardStatus.active,
         )
 
         assert dashboard.models is None
@@ -715,3 +724,200 @@ class TestTextWidget:
         """Test TextWidget with optional fields"""
         widget = TextWidget(id="text_widget_123")
         assert widget.content is None
+
+
+class TestBarChartWidgetData:
+    """Test BarChartWidgetData model"""
+
+    def test_init(self):
+        """Test BarChartWidgetData initialization"""
+        keys_and_values = [
+            BarChartWidgetDataKeysAndValuesObject(
+                k="prediction_class",
+                v="0.85",
+                vType=BarChartWidgetDataValueObjectType.number,
+            ),
+            BarChartWidgetDataKeysAndValuesObject(k="accuracy", v="85%", vType=BarChartWidgetDataValueObjectType.string),
+        ]
+
+        data = BarChartWidgetData(
+            keysAndValues=keys_and_values,
+            performanceImpactValue=0.92,
+            evalMetricMin=0.0,
+            evalMetricMax=1.0,
+        )
+
+        assert len(data.keysAndValues) == 2
+        assert data.keysAndValues[0].k == "prediction_class"
+        assert data.keysAndValues[1].v == "85%"
+        assert data.performanceImpactValue == 0.92
+        assert data.evalMetricMin == 0.0
+        assert data.evalMetricMax == 1.0
+
+    def test_required_fields_only(self):
+        """Test BarChartWidgetData with only required fields"""
+        keys_and_values = [BarChartWidgetDataKeysAndValuesObject(k="feature_name", vType=BarChartWidgetDataValueObjectType.string)]
+
+        data = BarChartWidgetData(keysAndValues=keys_and_values)
+
+        assert len(data.keysAndValues) == 1
+        assert data.keysAndValues[0].k == "feature_name"
+        assert data.performanceImpactValue is None
+        assert data.evalMetricMin is None
+        assert data.evalMetricMax is None
+
+    def test_optional_fields(self):
+        """Test BarChartWidgetData with partial optional fields"""
+        keys_and_values = [
+            BarChartWidgetDataKeysAndValuesObject(
+                k="range_bucket",
+                v="0.65 to 0.89823",
+                vType=BarChartWidgetDataValueObjectType.range,
+            )
+        ]
+
+        data = BarChartWidgetData(keysAndValues=keys_and_values, performanceImpactValue=0.75)
+
+        assert len(data.keysAndValues) == 1
+        assert data.keysAndValues[0].vType == BarChartWidgetDataValueObjectType.range
+        assert data.performanceImpactValue == 0.75
+        assert data.evalMetricMin is None
+        assert data.evalMetricMax is None
+
+
+class TestBarChartWidgetDataKeysAndValuesObject:
+    """Test BarChartWidgetDataKeysAndValuesObject model"""
+
+    def test_init(self):
+        """Test BarChartWidgetDataKeysAndValuesObject initialization"""
+        data_object = BarChartWidgetDataKeysAndValuesObject(
+            k="prediction_class",
+            v="0.85",
+            vType=BarChartWidgetDataValueObjectType.number,
+            secondaryValue="85%",
+            secondaryValueType=BarChartWidgetDataValueObjectType.string,
+            secondaryValueColorIndex=3,
+            plotKey="Accuracy by Class",
+        )
+
+        assert data_object.k == "prediction_class"
+        assert data_object.v == "0.85"
+        assert data_object.vType == BarChartWidgetDataValueObjectType.number
+        assert data_object.secondaryValue == "85%"
+        assert data_object.secondaryValueType == BarChartWidgetDataValueObjectType.string
+        assert data_object.secondaryValueColorIndex == 3
+        assert data_object.plotKey == "Accuracy by Class"
+
+    def test_required_fields_only(self):
+        """Test BarChartWidgetDataKeysAndValuesObject with only required fields"""
+        data_object = BarChartWidgetDataKeysAndValuesObject(k="feature_name", vType=BarChartWidgetDataValueObjectType.string)
+
+        assert data_object.k == "feature_name"
+        assert data_object.v is None
+        assert data_object.vType == BarChartWidgetDataValueObjectType.string
+        assert data_object.secondaryValue is None
+        assert data_object.secondaryValueType is None
+        assert data_object.secondaryValueColorIndex is None
+        assert data_object.plotKey is None
+
+    def test_optional_fields(self):
+        """Test BarChartWidgetDataKeysAndValuesObject with partial optional fields"""
+        data_object = BarChartWidgetDataKeysAndValuesObject(
+            k="range_value",
+            v="0.65 to 0.89823",
+            vType=BarChartWidgetDataValueObjectType.range,
+            plotKey="Score Distribution",
+        )
+
+        assert data_object.k == "range_value"
+        assert data_object.v == "0.65 to 0.89823"
+        assert data_object.vType == BarChartWidgetDataValueObjectType.range
+        assert data_object.plotKey == "Score Distribution"
+        assert data_object.secondaryValue is None
+        assert data_object.secondaryValueColorIndex is None
+
+
+class TestBarChartWidgetDataValueObjectType:
+    """Test BarChartWidgetDataValueObjectType enum"""
+
+    def test_enum_values(self):
+        """Test BarChartWidgetDataValueObjectType enum values"""
+        # Test all enum values exist
+        assert BarChartWidgetDataValueObjectType.number.name == "number"
+        assert BarChartWidgetDataValueObjectType.string.name == "string"
+        assert BarChartWidgetDataValueObjectType.range.name == "range"
+        assert BarChartWidgetDataValueObjectType.total.name == "total"
+
+    def test_enum_usage(self):
+        """Test using the enum in model creation"""
+        data_object = BarChartWidgetDataKeysAndValuesObject(k="test_key", vType=BarChartWidgetDataValueObjectType.number)
+        assert data_object.vType == BarChartWidgetDataValueObjectType.number
+
+        # Test with different enum value
+        data_object2 = BarChartWidgetDataKeysAndValuesObject(k="another_key", vType=BarChartWidgetDataValueObjectType.range)
+        assert data_object2.vType == BarChartWidgetDataValueObjectType.range
+
+
+class TestDashboardPerformanceSlice:
+    """Test DashboardPerformanceSlice model"""
+
+    def test_init(self):
+        """Test DashboardPerformanceSlice initialization"""
+        bar_widget = BarChartWidget(id="bar_widget_123", title="Performance Chart")
+
+        keys_and_values = [BarChartWidgetDataKeysAndValuesObject(k="accuracy", v="92.5", vType=BarChartWidgetDataValueObjectType.number)]
+        bar_data = BarChartWidgetData(keysAndValues=keys_and_values, performanceImpactValue=0.925)
+
+        performance_slice = DashboardPerformanceSlice(
+            id="slice_123",
+            evalMetricMin=0.0,
+            evalMetricMax=1.0,
+            performanceMetric=PerformanceMetric.accuracy,
+            metricValue="92.5%",
+            metricValueType=BarChartWidgetDataValueObjectType.string,
+            metricValueColorIndex=2,
+            metricValueKey="Bank of America",
+            metricValueKeyType=BarChartWidgetDataValueObjectType.string,
+            widget=bar_widget,
+            barChartBarNode=bar_data,
+        )
+
+        assert performance_slice.id == "slice_123"
+        assert performance_slice.evalMetricMin == 0.0
+        assert performance_slice.evalMetricMax == 1.0
+        assert performance_slice.performanceMetric == PerformanceMetric.accuracy
+        assert performance_slice.metricValue == "92.5%"
+        assert performance_slice.metricValueType == BarChartWidgetDataValueObjectType.string
+        assert performance_slice.metricValueColorIndex == 2
+        assert performance_slice.metricValueKey == "Bank of America"
+        assert performance_slice.metricValueKeyType == BarChartWidgetDataValueObjectType.string
+        assert performance_slice.widget.id == "bar_widget_123"
+        assert performance_slice.barChartBarNode.performanceImpactValue == 0.925
+
+    def test_required_id_only(self):
+        """Test DashboardPerformanceSlice with only required id field"""
+        performance_slice = DashboardPerformanceSlice(id="slice_456")
+
+        assert performance_slice.id == "slice_456"
+        assert performance_slice.evalMetricMin is None
+        assert performance_slice.evalMetricMax is None
+        assert performance_slice.performanceMetric is None
+        assert performance_slice.metricValue is None
+        assert performance_slice.widget is None
+        assert performance_slice.barChartBarNode is None
+
+    def test_optional_fields(self):
+        """Test DashboardPerformanceSlice with partial optional fields"""
+        performance_slice = DashboardPerformanceSlice(
+            id="slice_789",
+            evalMetricMin=0.2,
+            performanceMetric=PerformanceMetric.precision,
+            metricValueColorIndex=5,
+        )
+
+        assert performance_slice.id == "slice_789"
+        assert performance_slice.evalMetricMin == 0.2
+        assert performance_slice.evalMetricMax is None
+        assert performance_slice.performanceMetric == PerformanceMetric.precision
+        assert performance_slice.metricValueColorIndex == 5
+        assert performance_slice.metricValueKey is None

@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import BarChartWidget, Dashboard, DashboardBasis, ExperimentChartWidget, LineChartWidget, Model, StatisticWidget, TextWidget
+from arize_toolkit.models import BarChartWidget, Dashboard, DashboardBasis, DashboardPerformanceSlice, ExperimentChartWidget, LineChartWidget, Model, StatisticWidget, TextWidget
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -479,6 +479,10 @@ class LineChartWidgetQuery(BaseQuery):
         node(id: $dashboardId) {
             ... on Dashboard {
                 lineChartWidgets(first: 10, after: $endCursor) {
+                    pageInfo {
+                        endCursor
+                        hasNextPage
+                    }
                     edges {
                         node {"""
         + LineChartWidget.to_graphql_fields()
@@ -511,3 +515,48 @@ class LineChartWidgetQuery(BaseQuery):
         end_cursor = result["node"]["lineChartWidgets"]["pageInfo"]["endCursor"]
         widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
+
+
+class GetDashboardPerformanceSlicesQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getDashboardPerformanceSlices($dashboardId: ID!, $endCursor: String) {
+        node(id: $dashboardId) {
+            ... on Dashboard {
+                performanceSlices(first: 10, after: $endCursor) {
+                    pageInfo {
+                        endCursor
+                        hasNextPage
+                    }
+                    edges {
+                        node {"""
+        + DashboardPerformanceSlice.to_graphql_fields()
+        + """}
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a line chart widget by ID"
+
+    class Variables(BaseVariables):
+        dashboardId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting line chart widget"
+
+    class QueryResponse(DashboardPerformanceSlice):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["performanceSlices"]["edges"]:
+            return [], False, None
+
+        slice_edges = result["node"]["performanceSlices"]["edges"]
+        has_next_page = result["node"]["performanceSlices"]["pageInfo"]["hasNextPage"]
+        end_cursor = result["node"]["performanceSlices"]["pageInfo"]["endCursor"]
+        slices = [cls.QueryResponse(**slice["node"]) for slice in slice_edges]
+        return slices, has_next_page, end_cursor
