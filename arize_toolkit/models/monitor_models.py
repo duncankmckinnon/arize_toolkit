@@ -3,8 +3,8 @@ from typing import List, Literal, Optional
 
 from pydantic import Field
 
+from arize_toolkit.models.base_models import Dimension, DimensionFilterInput, DimensionValue, User
 from arize_toolkit.models.custom_metrics_models import CustomMetric
-from arize_toolkit.models.models import Dimension, DimensionFilterInput, DimensionValue, User
 from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DriftMetric, FilterRowType, ModelEnvironment, MonitorCategory, PerformanceMetric
 from arize_toolkit.utils import GraphQLModel
 

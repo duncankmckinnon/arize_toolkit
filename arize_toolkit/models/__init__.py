@@ -1,4 +1,5 @@
 # flake8: noqa: F401
+from arize_toolkit.models.base_models import Dimension, DimensionFilterInput, DimensionValue, Model, User
 from arize_toolkit.models.custom_metrics_models import CustomMetric, CustomMetricInput
 from arize_toolkit.models.dashboard_models import (
     BarChartPlot,
@@ -61,7 +62,6 @@ from arize_toolkit.models.llm_utils_models import (
     ToolConfigInput,
     ToolInput,
 )
-from arize_toolkit.models.models import Dimension, DimensionFilterInput, DimensionValue, Model, Space, User
 from arize_toolkit.models.monitor_models import (
     DataQualityMonitor,
     DriftMonitor,
@@ -75,3 +75,4 @@ from arize_toolkit.models.monitor_models import (
     MonitorDetailedType,
     PerformanceMonitor,
 )
+from arize_toolkit.models.space_models import Space

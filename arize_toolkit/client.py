@@ -32,7 +32,7 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
-from arize_toolkit.queries.language_model_queries import (
+from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,

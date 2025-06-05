@@ -3,9 +3,11 @@ from typing import Dict, List, Optional
 
 from pydantic import Field
 
+from arize_toolkit.models.base_models import Dimension, Model, User
+
 # Import common models that are used by dashboard models
 from arize_toolkit.models.custom_metrics_models import CustomMetric
-from arize_toolkit.models.models import Dimension, Model, Space, User
+from arize_toolkit.models.space_models import Space
 from arize_toolkit.types import DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric
 from arize_toolkit.utils import GraphQLModel
 

@@ -1,6 +1,6 @@
 ---
 description: 
-globs: arize_toolkit/models.py
+globs: arize_toolkit/models/*.py
 alwaysApply: false
 ---
 ## Creating New GraphQL Models

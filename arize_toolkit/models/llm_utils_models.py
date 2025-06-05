@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 
 from pydantic import Field, model_validator
 
-from arize_toolkit.models.models import User
+from arize_toolkit.models.base_models import User
 from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, ModelEnvironment, PromptVersionInputVariableFormatEnum
 from arize_toolkit.utils import FormattedPrompt, GraphQLModel
 

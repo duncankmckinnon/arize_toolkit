@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import pytest
 
 from arize_toolkit.exceptions import ArizeAPIException
-from arize_toolkit.queries.language_model_queries import (
+from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,

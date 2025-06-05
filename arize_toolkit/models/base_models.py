@@ -50,8 +50,3 @@ class Model(GraphQLModel):
     modelType: ModelType
     createdAt: datetime
     isDemoModel: bool
-
-
-class Space(GraphQLModel):
-    id: str
-    name: str
