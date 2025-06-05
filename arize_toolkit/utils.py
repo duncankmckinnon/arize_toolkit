@@ -40,7 +40,7 @@ def _(value, depth=0, exclude_none=False):
     if depth > MAX_RECURSION_DEPTH:
         return value  # Or perhaps return a placeholder like str(value)?
     # Use model_dump() which respects Pydantic settings
-    dumped_dict = value.model_dump(exclude_none=exclude_none)
+    dumped_dict = value.model_dump(exclude_none=exclude_none, by_alias=True)
     # Recursively convert the contents of the dumped dictionary
     return _convert_to_dict(dumped_dict, depth + 1, exclude_none)
 
@@ -51,6 +51,14 @@ def _(value, depth=0, exclude_none=False):
     if depth > MAX_RECURSION_DEPTH:
         return value
     return {k: _convert_to_dict(v, depth + 1, exclude_none) for k, v in value.items()}
+
+
+@_convert_to_dict.register(list)
+def _(value, depth=0, exclude_none=False):
+    """Handler for list objects (recursive)."""
+    if depth > MAX_RECURSION_DEPTH:
+        return value
+    return [_convert_to_dict(item, depth + 1, exclude_none) for item in value]
 
 
 class Dictable(BaseModel):
@@ -72,12 +80,15 @@ class GraphQLModel(Dictable):
 
     @classmethod
     def to_graphql_fields(cls) -> str:
-        visited = set()
+        def _get_field_string(model_class: Type[BaseModel], depth: int = 0, visited: set = None) -> str:
+            if visited is None:
+                visited = set()
 
-        def _get_field_string(model_class: Type[BaseModel], depth: int = 0) -> str:
-            if model_class in visited:
+            # Create a path key based on class and depth to track recursion
+            recursion_key = (model_class, depth)
+            if recursion_key in visited:
                 return ""
-            visited.add(model_class)
+            visited.add(recursion_key)
 
             fields = []
             for field_name, field_info in model_class.model_fields.items():
@@ -101,13 +112,13 @@ class GraphQLModel(Dictable):
                             list_type = get_args(union_type)[0]
                             if inspect.isclass(list_type) and issubclass(list_type, BaseModel):
                                 has_model_type = True
-                                nested_fields = _get_field_string(list_type, depth + 1)
+                                nested_fields = _get_field_string(list_type, depth + 1, visited.copy())
                                 if nested_fields:  # Only add if there are actual fields
                                     fields.append(f"{graphql_name} {{ {nested_fields} }}")
                                     continue
                         elif inspect.isclass(union_type) and issubclass(union_type, BaseModel):
                             has_model_type = True
-                            nested_fields = _get_field_string(union_type, depth + 1)
+                            nested_fields = _get_field_string(union_type, depth + 1, visited.copy())
                             if nested_fields:  # Only add if there are actual fields
                                 fields.append(f"{graphql_name} {{ {nested_fields} }}")
                                 continue
@@ -123,7 +134,7 @@ class GraphQLModel(Dictable):
                     list_type = get_args(base_type)[0]
                     # If it's a List of models, expand the model fields
                     if inspect.isclass(list_type) and issubclass(list_type, BaseModel):
-                        nested_fields = _get_field_string(list_type, depth + 1)
+                        nested_fields = _get_field_string(list_type, depth + 1, visited.copy())
                         if nested_fields:  # Only add if there are actual fields
                             fields.append(f"{graphql_name} {{ {nested_fields} }}")
                             continue
@@ -133,7 +144,7 @@ class GraphQLModel(Dictable):
 
                 # Check if it's a Pydantic model
                 if inspect.isclass(base_type) and issubclass(base_type, BaseModel) and base_type != model_class:
-                    nested_fields = _get_field_string(base_type, depth + 1)
+                    nested_fields = _get_field_string(base_type, depth + 1, visited.copy())
                     if nested_fields:  # Only add if there are actual fields
                         fields.append(f"{graphql_name} {{ {nested_fields} }}")
                     else:

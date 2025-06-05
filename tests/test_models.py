@@ -38,7 +38,7 @@ from arize_toolkit.models import (
     WidgetBasis,
     WidgetModel,
 )
-from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, PromptVersionInputVariableFormatEnum
+from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, PromptVersionInputVariableFormatEnum, TimeSeriesMetricCategory, WidgetCreationStatus
 from arize_toolkit.utils import FormattedPrompt
 
 
@@ -1643,14 +1643,15 @@ class TestWidgetBasis:
 
     def test_optional_fields(self):
         """Test WidgetBasis with optional fields"""
+
         widget = WidgetBasis(
             id="widget_123",
             dashboardId="dash_123",
             title="Test Widget",
             gridPosition=[0, 0, 2, 2],
-            creationStatus="active",
+            creationStatus=WidgetCreationStatus.created,
         )
-        assert widget.creationStatus == "active"
+        assert widget.creationStatus == WidgetCreationStatus.created
 
 
 class TestStatisticWidget:
@@ -1685,7 +1686,6 @@ class TestStatisticWidget:
             modelId="model_123",
             modelVersionIds=[],
         )
-        assert widget.modelVersionEnvironmentBatches is None
         assert widget.dimensionCategory is None
         assert widget.performanceMetric is None
 
@@ -1838,13 +1838,14 @@ class TestStatisticWidgetFilterItem:
     def test_init(self):
         """Test StatisticWidgetFilterItem initialization"""
         dimension = Dimension(id="dim_123", name="test_dimension")
+        dimension_value = DimensionValue(id="dv_123", value="test")
 
         filter_item = StatisticWidgetFilterItem(
             id="filter_123",
             filterType="feature",
             operator="equals",
             dimension=dimension,
-            dimensionValues=[{"value": "test"}],
+            dimensionValues=[dimension_value],
             binaryValues=["true", "false"],
             numericValues=["1.0", "2.0"],
             categoricalValues=["cat1", "cat2"],
@@ -1854,7 +1855,8 @@ class TestStatisticWidgetFilterItem:
         assert filter_item.filterType == "feature"
         assert filter_item.operator == "equals"
         assert filter_item.dimension.name == "test_dimension"
-        assert filter_item.dimensionValues == [{"value": "test"}]
+        assert len(filter_item.dimensionValues) == 1
+        assert filter_item.dimensionValues[0].value == "test"
         assert filter_item.binaryValues == ["true", "false"]
 
     def test_optional_fields(self):
@@ -2184,14 +2186,14 @@ class TestEnhancedStatisticWidget:
             modelVersionIds=["v1", "v2"],
             dimensionCategory=DimensionCategory.featureLabel,
             performanceMetric=PerformanceMetric.accuracy,
-            timeSeriesMetricType="performance",
+            timeSeriesMetricType=TimeSeriesMetricCategory.modelDataMetric,
             filters=[filter_item],
             dimension=dimension,
             model=widget_model,
             customMetric=custom_metric,
         )
 
-        assert widget.timeSeriesMetricType == "performance"
+        assert widget.timeSeriesMetricType == TimeSeriesMetricCategory.modelDataMetric
         assert len(widget.filters) == 1
         assert widget.filters[0].id == "filter_123"
         assert widget.dimension.name == "test_dim"

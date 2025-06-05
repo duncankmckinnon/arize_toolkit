@@ -177,7 +177,9 @@ class DimensionCategory(InputValidationEnum):
     actuals = "actuals", "Actuals"
     actualScore = "actualScore", "Actual Score"
     actualLabel = "actualLabel", "Actual Label"
+    actualClass = "actualClass", "Actual Class"
     predictionClass = "predictionClass", "Prediction Class"
+    predictionLabel = "predictionLabel", "Prediction Label"
     predictionScore = "predictionScore", "Prediction Score"
     tag = "tag", "Tag"
     spanProperty = "spanProperty", "Span Property"
@@ -568,3 +570,16 @@ class TableStore(InputValidationEnum):
     BigQuery = "BigQuery", "bigquery", "BIGQUERY"
     Snowflake = "Snowflake", "snowflake", "SNOWFLAKE"
     Databricks = "Databricks", "databricks", "DATABRICKS"
+
+
+class TimeSeriesMetricCategory(InputValidationEnum):
+    modelDataMetric = "modelDataMetric", "Model Data Metric"
+    evaluationMetric = "evaluationMetric", "Evaluation Metric"
+
+
+class WidgetCreationStatus(InputValidationEnum):
+    needsInit = "needsInit", "Needs Init"
+    pending = "pending", "Pending"
+    created = "created", "Created"
+    published = "published", "Published"
+    unpublished = "unpublished", "Unpublished"

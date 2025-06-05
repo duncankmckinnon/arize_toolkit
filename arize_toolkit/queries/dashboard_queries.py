@@ -1,10 +1,10 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import Dashboard, DashboardBasis, LineChartWidget, StatisticWidget, WidgetBasis
+from arize_toolkit.models import BarChartWidget, Dashboard, DashboardBasis, ExperimentChartWidget, LineChartWidget, Model, StatisticWidget, TextWidget
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
-class GetDashboardsQuery(BaseQuery):
+class GetAllDashboardsQuery(BaseQuery):
     graphql_query = (
         """
     query getDashboards($spaceId: ID!, $endCursor: String) {
@@ -55,7 +55,7 @@ class GetDashboardByIdQuery(BaseQuery):
     query getDashboardById($dashboardId: ID!) {
         node(id: $dashboardId) {
             ... on Dashboard {"""
-        + Dashboard.to_graphql_fields()
+        + DashboardBasis.to_graphql_fields()
         + """}
         }
     }
@@ -112,11 +112,54 @@ class GetDashboardQuery(BaseQuery):
         return [cls.QueryResponse(**dashboard_node)], False, None
 
 
+# Get Models used in a dashboard
+
+
+class GetDashboardModelsQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getDashboardModels($dashboardId: ID!) {
+        node(id: $dashboardId) {
+            ... on Dashboard {
+                models {
+                    edges {
+                        node {"""
+        + Model.to_graphql_fields()
+        + """}
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get models used in a dashboard"
+
+    class Variables(BaseVariables):
+        dashboardId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting dashboard models"
+
+    class QueryResponse(Model):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["models"]["edges"]:
+            cls.raise_exception("No models found in the dashboard")
+
+        model_edges = result["node"]["models"]["edges"]
+        models = [cls.QueryResponse(**model["node"]) for model in model_edges]
+        return models, False, None
+
+
 # Widget-specific queries for paginated retrieval
 
 
 class GetDashboardStatisticWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardStatisticWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -126,29 +169,16 @@ class GetDashboardStatisticWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                            modelId
-                            modelVersionIds
-                            dimensionCategory
-                            performanceMetric
-                            aggregation
-                            predictionValueClass
-                            rankingAtK
-                            modelEnvironmentName
-                            modelVersionEnvironmentBatches
-                        }
+                        node {"""
+        + StatisticWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated statistic widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -168,12 +198,13 @@ class GetDashboardStatisticWidgetsQuery(BaseQuery):
         widget_edges = result["node"]["statisticWidgets"]["edges"]
         has_next_page = result["node"]["statisticWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["statisticWidgets"]["pageInfo"]["endCursor"]
-        widgets = [StatisticWidget(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardLineChartWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardLineChartWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -183,23 +214,16 @@ class GetDashboardLineChartWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                            yMin
-                            yMax
-                            yAxisLabel
-                        }
+                        node {"""
+        + LineChartWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated line chart widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -219,12 +243,13 @@ class GetDashboardLineChartWidgetsQuery(BaseQuery):
         widget_edges = result["node"]["lineChartWidgets"]["edges"]
         has_next_page = result["node"]["lineChartWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["lineChartWidgets"]["pageInfo"]["endCursor"]
-        widgets = [LineChartWidget(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardBarChartWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardBarChartWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -234,20 +259,16 @@ class GetDashboardBarChartWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                        }
+                        node {"""
+        + BarChartWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated bar chart widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -256,7 +277,7 @@ class GetDashboardBarChartWidgetsQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting dashboard bar chart widgets"
 
-    class QueryResponse(WidgetBasis):
+    class QueryResponse(BarChartWidget):
         pass
 
     @classmethod
@@ -267,12 +288,13 @@ class GetDashboardBarChartWidgetsQuery(BaseQuery):
         widget_edges = result["node"]["barChartWidgets"]["edges"]
         has_next_page = result["node"]["barChartWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["barChartWidgets"]["pageInfo"]["endCursor"]
-        widgets = [WidgetBasis(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardTextWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardTextWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -282,20 +304,16 @@ class GetDashboardTextWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                        }
+                        node {"""
+        + TextWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated text widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -304,7 +322,7 @@ class GetDashboardTextWidgetsQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting dashboard text widgets"
 
-    class QueryResponse(WidgetBasis):
+    class QueryResponse(TextWidget):
         pass
 
     @classmethod
@@ -315,12 +333,13 @@ class GetDashboardTextWidgetsQuery(BaseQuery):
         widget_edges = result["node"]["textWidgets"]["edges"]
         has_next_page = result["node"]["textWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["textWidgets"]["pageInfo"]["endCursor"]
-        widgets = [WidgetBasis(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardExperimentChartWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardExperimentChartWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -330,20 +349,16 @@ class GetDashboardExperimentChartWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                        }
+                        node {"""
+        + ExperimentChartWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated experiment chart widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -352,25 +367,24 @@ class GetDashboardExperimentChartWidgetsQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting dashboard experiment chart widgets"
 
-    class QueryResponse(WidgetBasis):
+    class QueryResponse(ExperimentChartWidget):
         pass
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        from arize_toolkit.models import WidgetBasis
-
         if not result["node"]["experimentChartWidgets"]["edges"]:
             return [], False, None
 
         widget_edges = result["node"]["experimentChartWidgets"]["edges"]
         has_next_page = result["node"]["experimentChartWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["experimentChartWidgets"]["pageInfo"]["endCursor"]
-        widgets = [WidgetBasis(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardDriftLineChartWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardDriftLineChartWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -380,23 +394,16 @@ class GetDashboardDriftLineChartWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                            yMin
-                            yMax
-                            yAxisLabel
-                        }
+                        node {"""
+        + LineChartWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated drift line chart widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -410,20 +417,19 @@ class GetDashboardDriftLineChartWidgetsQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        from arize_toolkit.models import LineChartWidget
-
         if not result["node"]["driftLineChartWidgets"]["edges"]:
             return [], False, None
 
         widget_edges = result["node"]["driftLineChartWidgets"]["edges"]
         has_next_page = result["node"]["driftLineChartWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["driftLineChartWidgets"]["pageInfo"]["endCursor"]
-        widgets = [LineChartWidget(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor
 
 
 class GetDashboardMonitorLineChartWidgetsQuery(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     query getDashboardMonitorLineChartWidgets($dashboardId: ID!, $endCursor: String) {
         node(id: $dashboardId) {
             ... on Dashboard {
@@ -433,23 +439,16 @@ class GetDashboardMonitorLineChartWidgetsQuery(BaseQuery):
                         hasNextPage
                     }
                     edges {
-                        node {
-                            id
-                            dashboardId
-                            title
-                            gridPosition
-                            creationStatus
-                            timeSeriesMetricType
-                            yMin
-                            yMax
-                            yAxisLabel
-                        }
+                        node {"""
+        + LineChartWidget.to_graphql_fields()
+        + """}
                     }
                 }
             }
         }
     }
     """
+    )
     query_description = "Get paginated monitor line chart widgets for a dashboard"
 
     class Variables(BaseVariables):
@@ -463,13 +462,52 @@ class GetDashboardMonitorLineChartWidgetsQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        from arize_toolkit.models import LineChartWidget
-
         if not result["node"]["monitorLineChartWidgets"]["edges"]:
             return [], False, None
 
         widget_edges = result["node"]["monitorLineChartWidgets"]["edges"]
         has_next_page = result["node"]["monitorLineChartWidgets"]["pageInfo"]["hasNextPage"]
         end_cursor = result["node"]["monitorLineChartWidgets"]["pageInfo"]["endCursor"]
-        widgets = [LineChartWidget(**widget["node"]) for widget in widget_edges]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
+        return widgets, has_next_page, end_cursor
+
+
+class LineChartWidgetQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getLineChartWidget($dashboardId: ID!, $endCursor: String) {
+        node(id: $dashboardId) {
+            ... on Dashboard {
+                lineChartWidgets(first: 10, after: $endCursor) {
+                    edges {
+                        node {"""
+        + LineChartWidget.to_graphql_fields()
+        + """}
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a line chart widget by ID"
+
+    class Variables(BaseVariables):
+        dashboardId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting line chart widget"
+
+    class QueryResponse(LineChartWidget):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if not result["node"]["lineChartWidgets"]["edges"]:
+            return [], False, None
+
+        widget_edges = result["node"]["lineChartWidgets"]["edges"]
+        has_next_page = result["node"]["lineChartWidgets"]["pageInfo"]["hasNextPage"]
+        end_cursor = result["node"]["lineChartWidgets"]["pageInfo"]["endCursor"]
+        widgets = [cls.QueryResponse(**widget["node"]) for widget in widget_edges]
         return widgets, has_next_page, end_cursor

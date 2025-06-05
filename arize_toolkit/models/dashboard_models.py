@@ -1,14 +1,14 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from pydantic import Field
 
-from arize_toolkit.models.base_models import Dimension, Model, User
+from arize_toolkit.models.base_models import Dimension, DimensionValue, Model, User
 
 # Import common models that are used by dashboard models
 from arize_toolkit.models.custom_metrics_models import CustomMetric
 from arize_toolkit.models.space_models import Space
-from arize_toolkit.types import DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric
+from arize_toolkit.types import DataQualityMetric, DimensionCategory, ModelEnvironment, ModelType, PerformanceMetric, TimeSeriesMetricCategory, WidgetCreationStatus
 from arize_toolkit.utils import GraphQLModel
 
 ## Dashboard GraphQL Models ##
@@ -29,7 +29,7 @@ class WidgetBasis(GraphQLModel):
     dashboardId: Optional[str] = Field(default=None, description="The dashboard ID of the widget")
     title: Optional[str] = Field(default=None, description="The title of the widget")
     gridPosition: Optional[List[int]] = Field(default=None, description="The grid position of the widget")
-    creationStatus: Optional[str] = Field(default=None, description="The creation status of the widget")
+    creationStatus: Optional[WidgetCreationStatus] = Field(default=None, description="The creation status of the widget")
 
 
 # Supporting models for widgets
@@ -42,14 +42,24 @@ class WidgetModel(GraphQLModel):
     modelType: Optional[ModelType] = Field(default=None, description="The type of the model")
 
 
+class PredictionValueClass(GraphQLModel):
+    """A prediction value class"""
+
+    id: Optional[str] = Field(default=None, description="The ID of the prediction value class")
+    name: Optional[str] = Field(default=None, description="The name of the prediction value class")
+
+
 class StatisticWidgetFilterItem(GraphQLModel):
     """Filter item for statistic widgets"""
 
     id: Optional[str] = Field(default=None, description="The ID of the filter item")
     filterType: Optional[str] = Field(default=None, description="The type of filter")
     operator: Optional[str] = Field(default=None, description="The comparison operator")
-    dimension: Optional[Dimension] = Field(default=None, description="The dimension being filtered")
-    dimensionValues: Optional[List[Dict]] = Field(default=None, description="The dimension values")
+    dimension: Optional[Dimension] = Field(
+        default=None,
+        description="The dimension being filtered",
+    )
+    dimensionValues: Optional[List[DimensionValue]] = Field(default=None, description="The dimension values")
     binaryValues: Optional[List[str]] = Field(default=None, description="Binary values for filter")
     numericValues: Optional[List[str]] = Field(default=None, description="Numeric values for filter")
     categoricalValues: Optional[List[str]] = Field(default=None, description="Categorical values for filter")
@@ -65,11 +75,10 @@ class BarChartPlot(GraphQLModel):
     modelVersionIds: Optional[List[str]] = Field(default=None, description="The model version IDs")
     model: Optional[WidgetModel] = Field(default=None, description="The widget model")
     modelEnvironmentName: Optional[ModelEnvironment] = Field(default=None, description="The model environment")
-    modelVersionEnvironmentBatches: Optional[List[str]] = Field(default=None, description="Model version environment batches")
     dimensionCategory: Optional[DimensionCategory] = Field(default=None, description="The dimension category")
     aggregation: Optional[DataQualityMetric] = Field(default=None, description="The aggregation type")
     dimension: Optional[Dimension] = Field(default=None, description="The dimension")
-    predictionValueClass: Optional[str] = Field(default=None, description="The prediction value class")
+    predictionValueClass: Optional[PredictionValueClass] = Field(default=None, description="The prediction value class")
     rankingAtK: Optional[int] = Field(default=None, description="The ranking at K value")
     colors: Optional[List[str]] = Field(default=None, description="Colors for the plot")
 
@@ -98,7 +107,6 @@ class LineChartPlot(GraphQLModel):
     modelId: Optional[str] = Field(default=None, description="The model ID for the plot")
     modelVersionIds: Optional[List[str]] = Field(default=None, description="The model version IDs")
     modelEnvironmentName: Optional[ModelEnvironment] = Field(default=None, description="The model environment")
-    modelVersionEnvironmentBatches: Optional[List[str]] = Field(default=None, description="Model version environment batches")
     dimensionCategory: Optional[DimensionCategory] = Field(default=None, description="The dimension category")
     splitByEnabled: Optional[bool] = Field(default=None, description="Whether split by is enabled")
     splitByDimension: Optional[str] = Field(default=None, description="The split by dimension")
@@ -107,7 +115,7 @@ class LineChartPlot(GraphQLModel):
     cohorts: Optional[List[str]] = Field(default=None, description="Cohorts for the plot")
     colors: Optional[List[str]] = Field(default=None, description="Colors for the plot")
     dimension: Optional[Dimension] = Field(default=None, description="The dimension")
-    predictionValueClass: Optional[str] = Field(default=None, description="The prediction value class")
+    predictionValueClass: Optional[PredictionValueClass] = Field(default=None, description="The prediction value class")
     rankingAtK: Optional[int] = Field(default=None, description="The ranking at K value")
     model: Optional[WidgetModel] = Field(default=None, description="The widget model")
 
@@ -166,11 +174,10 @@ class StatisticWidget(WidgetBasis):
     dimensionCategory: Optional[DimensionCategory] = Field(default=None, description="The dimension category of the widget")
     performanceMetric: Optional[PerformanceMetric] = Field(default=None, description="The performance metric function of the widget")
     aggregation: Optional[DataQualityMetric] = Field(default=None, description="The data quality metric type of the widget")
-    predictionValueClass: Optional[str] = Field(default=None, description="The class of the classification model on the widget")
+    predictionValueClass: Optional[PredictionValueClass] = Field(default=None, description="The class of the classification model on the widget")
     rankingAtK: Optional[int] = Field(default=None, description="The @K value for the performance metric")
     modelEnvironmentName: Optional[ModelEnvironment] = Field(default=None, description="The model environment of the widget")
-    modelVersionEnvironmentBatches: Optional[List[str]] = Field(default=None, description="The batch ids on the widget")
-    timeSeriesMetricType: Optional[str] = Field(default=None, description="The type of timeseries metric on the widget")
+    timeSeriesMetricType: Optional[TimeSeriesMetricCategory] = Field(default=None, description="The type of timeseries metric on the widget")
     filters: Optional[List[StatisticWidgetFilterItem]] = Field(default=None, description="Filters applied to the widget")
     dimension: Optional[Dimension] = Field(default=None, description="The dimension")
     model: Optional[WidgetModel] = Field(default=None, description="The widget model")
