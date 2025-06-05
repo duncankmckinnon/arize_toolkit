@@ -3,8 +3,8 @@ from datetime import datetime
 import pytest
 
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.models import Dimension, DimensionFilterInput, DimensionValue, MetricFilterItem, MetricWindow, ModelEnvironment, Monitor, MonitorContact
-from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DimensionDataType, DriftMetric, FilterRowType, MonitorCategory, PerformanceMetric
+from arize_toolkit.models import Dimension, DimensionFilterInput, DimensionValue, MetricFilterItem, MetricWindow, Monitor, MonitorContact
+from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DimensionDataType, DriftMetric, FilterRowType, ModelEnvironment, MonitorCategory, PerformanceMetric
 
 
 class TestMonitorManager:
