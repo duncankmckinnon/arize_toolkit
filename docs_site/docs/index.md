@@ -14,6 +14,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
 - [Space Tools](space_tools.md) - Documentation for space, organization, & navigation tools
 - [Data Import Tools](data_import_tools.md) - Documentation for importing data from files and databases
+- [Dashboard Tools](dashboard_tools.md) - Documentation for dashboard tools
 
 ## Disclaimer
 

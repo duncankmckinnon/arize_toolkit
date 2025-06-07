@@ -2,19 +2,17 @@ from typing import List, Optional
 
 from arize_toolkit.models import (
     DataQualityMonitor,
-    DimensionCategory,
     DimensionFilterInput,
     DriftMonitor,
     DynamicAutoThreshold,
     MetricFilterItem,
-    ModelEnvironment,
     Monitor,
-    MonitorCategory,
     MonitorContact,
     MonitorContactInput,
     MonitorDetailedType,
     PerformanceMonitor,
 )
+from arize_toolkit.types import DimensionCategory, ModelEnvironment, MonitorCategory
 
 
 class MonitorManager:

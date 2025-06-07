@@ -10,7 +10,7 @@ from pandas import DataFrame
 
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
-from arize_toolkit.models import BaseModelSchema, DimensionFilterInput
+from arize_toolkit.models import BaseModelSchema, Dashboard, DimensionFilterInput
 from arize_toolkit.queries.custom_metric_queries import (
     CreateCustomMetricMutation,
     DeleteCustomMetricMutation,
@@ -19,6 +19,19 @@ from arize_toolkit.queries.custom_metric_queries import (
     GetCustomMetricByIDQuery,
     GetCustomMetricQuery,
     UpdateCustomMetricMutation,
+)
+from arize_toolkit.queries.dashboard_queries import (
+    GetAllDashboardsQuery,
+    GetDashboardBarChartWidgetsQuery,
+    GetDashboardByIdQuery,
+    GetDashboardDriftLineChartWidgetsQuery,
+    GetDashboardExperimentChartWidgetsQuery,
+    GetDashboardLineChartWidgetsQuery,
+    GetDashboardModelsQuery,
+    GetDashboardMonitorLineChartWidgetsQuery,
+    GetDashboardQuery,
+    GetDashboardStatisticWidgetsQuery,
+    GetDashboardTextWidgetsQuery,
 )
 from arize_toolkit.queries.data_import_queries import (
     CreateFileImportJobMutation,
@@ -32,7 +45,7 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
-from arize_toolkit.queries.language_model_queries import (
+from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
     CreatePromptVersionMutation,
@@ -168,6 +181,9 @@ class Client:
 
     def table_import_jobs_url(self) -> str:
         return f"{self.space_url}/imports?selectedSubTab=dataWarehouse"
+
+    def dashboard_url(self, dashboard_id: str) -> str:
+        return f"{self.space_url}/dashboards/{dashboard_id}"
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
@@ -2513,3 +2529,157 @@ class Client:
         if results.jobStatus == "deleted" or results.jobStatus is None:
             return True
         return False
+
+    def get_all_dashboards(self) -> List[Dict[str, Any]]:
+        """
+        Retrieves basic information about all dashboards in the current space.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dashboard dictionaries with the following fields:
+                - id: str
+                - name: str
+                - creator:
+                    - id: str
+                    - name: str
+                    - email: str
+                - createdAt: datetime
+                - status: st
+
+        Raises:
+            ArizeAPIException: If the dashboard retrieval fails or there is an API error
+        """
+        results = GetAllDashboardsQuery.iterate_over_pages(self._graphql_client, spaceId=self.space_id)
+        return [result.to_dict() for result in results]
+
+    def get_dashboard_by_id(self, dashboard_id: str) -> Dict[str, Any]:
+        """
+        Retrieves complete information about a dashboard by its ID.
+        This includes all models represented in the dashboard, as well as all widgets.
+        For full definitions of the models and widgets, see the documentation.
+
+        Args:
+            dashboard_id (str): ID of the dashboard to retrieve
+
+        Returns:
+            Dict[str, Any]: A dictionary representing the dashboard with the following fields:
+                - id: str
+                - name: str
+                - creator:
+                    - id: str
+                    - name: str
+                    - email: str
+                - createdAt: str
+                - status: str
+                - models: List[Model]
+                - statisticWidgets: List[StatisticWidget]
+                - lineChartWidgets: List[LineChartWidget]
+                - experimentChartWidgets: List[ExperimentChartWidget]
+                - driftLineChartWidgets: List[DriftLineChartWidget]
+                - monitorLineChartWidgets: List[MonitorLineChartWidget]
+                - textWidgets: List[TextWidget]
+                - barChartWidgets: List[BarChartWidget]
+
+        Raises:
+            ArizeAPIException: If the dashboard retrieval fails or there is an API error
+        """
+        # Get the dashboard basis
+        dashboard_basis = GetDashboardByIdQuery.run_graphql_query(self._graphql_client, dashboardId=dashboard_id).to_dict()
+        dashboard_id = dashboard_basis["id"]
+
+        # Get the statistic widgets
+        statistic_widgets = GetDashboardStatisticWidgetsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["statisticWidgets"] = [widget.to_dict() for widget in statistic_widgets]
+
+        # Get the line chart widgets
+        line_chart_widgets = GetDashboardLineChartWidgetsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["lineChartWidgets"] = [widget.to_dict() for widget in line_chart_widgets]
+
+        # Get the experiment chart widgets
+        experiment_chart_widgets = GetDashboardExperimentChartWidgetsQuery.iterate_over_pages(
+            self._graphql_client,
+            dashboardId=dashboard_id,
+            sleep_time=self.sleep_time,
+        )
+        dashboard_basis["experimentChartWidgets"] = [widget.to_dict() for widget in experiment_chart_widgets]
+
+        # Get the drift line chart widgets
+        drift_line_chart_widgets = GetDashboardDriftLineChartWidgetsQuery.iterate_over_pages(
+            self._graphql_client,
+            dashboardId=dashboard_id,
+            sleep_time=self.sleep_time,
+        )
+        dashboard_basis["driftLineChartWidgets"] = [widget.to_dict() for widget in drift_line_chart_widgets]
+
+        # Get the monitor line chart widgets
+        monitor_line_chart_widgets = GetDashboardMonitorLineChartWidgetsQuery.iterate_over_pages(
+            self._graphql_client,
+            dashboardId=dashboard_id,
+            sleep_time=self.sleep_time,
+        )
+        dashboard_basis["monitorLineChartWidgets"] = [widget.to_dict() for widget in monitor_line_chart_widgets]
+
+        # Get the text widgets
+        text_widgets = GetDashboardTextWidgetsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["textWidgets"] = [widget.to_dict() for widget in text_widgets]
+
+        # Get the bar chart widgets
+        bar_chart_widgets = GetDashboardBarChartWidgetsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["barChartWidgets"] = [widget.to_dict() for widget in bar_chart_widgets]
+
+        # Get the models
+        models = GetDashboardModelsQuery.iterate_over_pages(self._graphql_client, dashboardId=dashboard_id, sleep_time=self.sleep_time)
+        dashboard_basis["models"] = [model.to_dict() for model in models]
+
+        # Return the dashboard
+        return Dashboard(**dashboard_basis).to_dict()
+
+    def get_dashboard(self, dashboard_name: str) -> Dict[str, Any]:
+        """
+        Retrieves complete information about a dashboard by its name.
+        This includes all models represented in the dashboard, as well as all widgets.
+        For full definitions of the models and widgets, see the documentation.
+
+        Args:
+            dashboard_name (str): Name of the dashboard to retrieve
+
+        Returns:
+            Dict[str, Any]: A dictionary representing the dashboard with the following fields:
+                - id: str
+                - name: str
+                - creator:
+                    - id: str
+                    - name: str
+                    - email: str
+                - createdAt: str
+                - status: str
+                - models: List[Model]
+                - statisticWidgets: List[StatisticWidget]
+                - lineChartWidgets: List[LineChartWidget]
+                - experimentChartWidgets: List[ExperimentChartWidget]
+                - driftLineChartWidgets: List[DriftLineChartWidget]
+                - monitorLineChartWidgets: List[MonitorLineChartWidget]
+                - textWidgets: List[TextWidget]
+                - barChartWidgets: List[BarChartWidget]
+
+
+        Raises:
+            ArizeAPIException: If the dashboard retrieval fails or there is an API error
+        """
+        dashboard_id = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name).id
+        return self.get_dashboard_by_id(dashboard_id)
+
+    def get_dashboard_url(self, dashboard_name: str) -> str:
+        """
+        Retrieves the URL of a dashboard by its name.
+
+        Args:
+            dashboard_name (str): Name of the dashboard to retrieve
+
+        Returns:
+            str: The URL of the dashboard
+
+        Raises:
+            ArizeAPIException: If the dashboard retrieval fails or there is an API error
+        """
+        dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name)
+        return f"{self.space_url}/dashboards/{dashboard.id}"

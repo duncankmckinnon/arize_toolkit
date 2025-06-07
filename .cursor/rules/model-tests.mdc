@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # GraphQL Model Test Rules
 
-When creating tests for new models added to `arize_toolkit/models.py`, follow these guidelines to ensure consistent and comprehensive test coverage.
+When creating tests for new models added to `arize_toolkit/models/*.py`, follow these guidelines to ensure consistent and comprehensive test coverage.
 
 ## Test Structure
 
