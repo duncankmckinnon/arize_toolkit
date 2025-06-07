@@ -68,6 +68,7 @@ from arize_toolkit.models.llm_utils_models import (
     ToolInput,
 )
 from arize_toolkit.models.monitor_models import (
+    BasicMonitor,
     DataQualityMonitor,
     DriftMonitor,
     DynamicAutoThreshold,

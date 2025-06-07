@@ -54,31 +54,14 @@ If both are provided, `model_id` takes precedence.
 
 **Returns**
 
-A list of dictionaries, one per monitor. Each dictionary contains the monitor's details.
+A list of dictionaries, one per monitor. Each dictionary contains the monitor's basic details.
 
 - `id` – the canonical identifier for the monitor
 - `name` – the human-readable name shown in the Arize UI
 - `createdAt` – the date and time the monitor was created
 - `monitorCategory` – the category of the monitor (`"performance"`, `"drift"`, `"dataQuality"`)
-- `status` – the status of the monitor
-- `threshold` – the threshold value for the monitor
-- `operator` – the operator for the monitor
-- `thresholdMode` – the mode for the monitor
-- `threshold2` – the second threshold value for the monitor
-- `operator2` – the second operator for the monitor
-- `stdDevMultiplier` – the standard deviation multiplier for the monitor
-- `predictionClassValue` – the prediction class value for the monitor
-- `positiveClassValue` – the positive class value for the monitor
-- `downtimeStart` – the start time for the monitor
-- `downtimeDurationHrs` – the duration for the monitor
-- `downtimeFrequencyDays` – the frequency for the monitor
-- `scheduledRuntimeEnabled` – whether the monitor is scheduled to run
-- `scheduledRuntimeCadenceSeconds` – the cadence for the monitor
-- `scheduledRuntimeDaysOfWeek` – the days of the week for the monitor
-- `evaluationWindowLengthSeconds` – the evaluation window length for the monitor
-- `delaySeconds` – the delay for the monitor
-- `emailAddresses` – the email addresses for the monitor
-  ... other fields omitted due to differing monitor types
+- `notes` – the notes for the monitor
+- `creator` – the creator of the monitor
 
 **Example**
 
@@ -115,6 +98,8 @@ A dictionary containing the monitor's details.
 - `name` – the human-readable name shown in the Arize UI
 - `createdAt` – the date and time the monitor was created
 - `monitorCategory` – the category of the monitor (`"performance"`, `"drift"`, `"dataQuality"`)
+- `notes` – the notes for the monitor
+- `creator` – the creator of the monitor
 - `status` – the status of the monitor
 - `threshold` – the threshold value for the monitor
 - `operator` – the operator for the monitor
@@ -167,6 +152,8 @@ A dictionary containing the monitor's details.
 - `name` – the human-readable name shown in the Arize UI
 - `createdAt` – the date and time the monitor was created
 - `monitorCategory` – the category of the monitor (`"performance"`, `"drift"`, `"dataQuality"`)
+- `notes` – the notes for the monitor
+- `creator` – the creator of the monitor
 - `status` – the status of the monitor
 - `threshold` – the threshold value for the monitor
 - `operator` – the operator for the monitor

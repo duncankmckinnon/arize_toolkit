@@ -415,40 +415,8 @@ class TestMonitors:
                                 "name": "performance_monitor",
                                 "monitorCategory": "performance",
                                 "createdDate": "2024-03-20T10:00:00Z",
-                                "evaluationIntervalSeconds": 3600,
-                                "evaluatedAt": "2024-03-20T11:00:00Z",
                                 "creator": None,
                                 "notes": None,
-                                "contacts": None,
-                                "dimensionCategory": "prediction",
-                                "status": "cleared",
-                                "isTriggered": False,
-                                "isManaged": True,
-                                "threshold": 0.95,
-                                "thresholdMode": "single",
-                                "threshold2": None,
-                                "notificationsEnabled": True,
-                                "updatedAt": "2024-03-20T11:00:00Z",
-                                "downtimeStart": None,
-                                "downtimeDurationHrs": None,
-                                "downtimeFrequencyDays": None,
-                                "scheduledRuntimeEnabled": False,
-                                "scheduledRuntimeCadenceSeconds": None,
-                                "scheduledRuntimeDaysOfWeek": None,
-                                "latestComputedValue": None,
-                                "performanceMetric": "accuracy",
-                                "customMetric": None,
-                                "operator": "lessThan",
-                                "operator2": None,
-                                "stdDevMultiplier": None,
-                                "stdDevMultiplier2": None,
-                                "dynamicAutoThresholdEnabled": None,
-                                "driftMetric": None,
-                                "dataQualityMetric": None,
-                                "topKPercentileValue": None,
-                                "positiveClassValue": None,
-                                "metricAtRankingKValue": None,
-                                "primaryMetricWindow": None,
                             }
                         },
                         {
@@ -457,40 +425,8 @@ class TestMonitors:
                                 "name": "drift_monitor",
                                 "monitorCategory": "drift",
                                 "createdDate": "2024-03-20T10:00:00Z",
-                                "evaluationIntervalSeconds": 3600,
-                                "evaluatedAt": "2024-03-20T11:00:00Z",
                                 "creator": None,
                                 "notes": None,
-                                "contacts": None,
-                                "dimensionCategory": None,
-                                "status": "triggered",
-                                "isTriggered": True,
-                                "isManaged": True,
-                                "threshold": 0.1,
-                                "thresholdMode": "single",
-                                "threshold2": None,
-                                "notificationsEnabled": True,
-                                "updatedAt": "2024-03-20T11:00:00Z",
-                                "downtimeStart": None,
-                                "downtimeDurationHrs": None,
-                                "downtimeFrequencyDays": None,
-                                "scheduledRuntimeEnabled": False,
-                                "scheduledRuntimeCadenceSeconds": None,
-                                "scheduledRuntimeDaysOfWeek": None,
-                                "latestComputedValue": None,
-                                "performanceMetric": "accuracy",
-                                "customMetric": None,
-                                "operator": "lessThan",
-                                "operator2": None,
-                                "stdDevMultiplier": None,
-                                "stdDevMultiplier2": None,
-                                "dynamicAutoThresholdEnabled": None,
-                                "driftMetric": None,
-                                "dataQualityMetric": None,
-                                "topKPercentileValue": None,
-                                "positiveClassValue": None,
-                                "metricAtRankingKValue": None,
-                                "primaryMetricWindow": None,
                             }
                         },
                     ],
@@ -503,8 +439,13 @@ class TestMonitors:
         results = client.get_all_monitors(model_id="test_model_id")
         assert len(results) == 2
         assert results[0]["name"] == "performance_monitor"
-        assert results[0]["status"] == "cleared"
-        assert results[0]["dimensionCategory"] == "prediction"
+        assert results[0]["monitorCategory"] == "performance"
+        assert results[0]["creator"] is None
+        assert results[0]["notes"] is None
+        assert results[1]["name"] == "drift_monitor"
+        assert results[1]["monitorCategory"] == "drift"
+        assert results[1]["creator"] is None
+        assert results[1]["notes"] is None
 
     @pytest.mark.parametrize(
         "input",

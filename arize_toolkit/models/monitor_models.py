@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Literal, Optional
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from arize_toolkit.models.base_models import Dimension, DimensionFilterInput, DimensionValue, User
 from arize_toolkit.models.custom_metrics_models import CustomMetric
@@ -57,15 +57,18 @@ class DynamicAutoThreshold(GraphQLModel):
     stdDevMultiplier: Optional[float] = Field(default=2.0)
 
 
-class Monitor(GraphQLModel):
+class BasicMonitor(GraphQLModel):
     id: str
     name: str
     monitorCategory: MonitorCategory
     createdDate: Optional[datetime] = Field(default=None)
+    notes: Optional[str] = Field(default=None)
+    creator: Optional[User] = Field(default=None)
+
+
+class Monitor(BasicMonitor):
     evaluationIntervalSeconds: Optional[int] = Field(default=259200)
     evaluatedAt: Optional[datetime] = Field(default=None)
-    creator: Optional[User] = Field(default=None)
-    notes: Optional[str] = Field(default=None)
     contacts: Optional[List[MonitorContact]] = Field(default=None)
     dimensionCategory: Optional[DimensionCategory] = Field(default=None)
     status: Optional[Literal["triggered", "cleared", "noData"]] = Field(default="noData")
@@ -121,6 +124,12 @@ class MonitorDetailedType(GraphQLModel):
     dynamicAutoThreshold: Optional[DynamicAutoThreshold] = Field(default=None)
     stdDevMultiplier2: Optional[float] = Field(default=None)
     filters: Optional[List[DimensionFilterInput]] = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_filters(self):
+        if self.threshold and self.dynamicAutoThreshold:
+            self.dynamicAutoThreshold = None
+        return self
 
 
 class PerformanceMonitor(MonitorDetailedType):

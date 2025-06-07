@@ -9,6 +9,13 @@ from arize_toolkit.models import DataQualityMonitor, DriftMonitor, PerformanceMo
 # Integration test for the Arize API
 # This script runs on an Arize account with Developer Access
 # Since it updates, creates, and deletes monitors, it should not be run in a production environment
+#
+# Tests include:
+# - Model operations (get_all_models, get_model, get_model_volume, get_performance_metric_over_time)
+# - Monitor operations (get_all_monitors, get_monitor, create/delete monitors)
+# - Prompt operations (get_all_prompts, get_prompt, get_all_prompt_versions)
+# - Dashboard operations (get_all_dashboards, get_dashboard, get_dashboard_by_id, get_dashboard_url)
+#
 # To run this script, you need to set the following environment variables in your .env file:
 # ARIZE_DEVELOPER_KEY - The developer key for the Arize account
 # ORGANIZATION_NAME - The name of the organization in Arize account
@@ -83,32 +90,105 @@ def run_integration_tests():
                 print(f"Performance Metric Over Time Error: {e}")
 
         if model["id"]:
-            print("Running get_all_monitors query...")
-            monitors = client.get_all_monitors(model_id=model["id"])
-            print("Monitors:", monitors)
-            if not monitors:
-                print("No monitors found for model:", model_name)
-                for nm in model_names:
-                    print("Running get_all_monitors query...")
-                    model = client.get_model(model_name=nm)
-                    print(f"Model ID for {nm}: {model['id']}")
-                    monitors = client.get_all_monitors(model_id=model["id"])
-                    if monitors:
-                        model_name = nm
-                        print(f"Monitors found for model {model_name}:", monitors)
-                        break
-                    else:
-                        print("No monitors found for model:", nm)
+            try:
+                print("Running get_all_monitors query...")
+                monitors = client.get_all_monitors(model_id=model["id"])
+                print("Monitors:", monitors)
+                if not monitors:
+                    print("No monitors found for model:", model_name)
+                    for nm in model_names:
+                        print("Running get_all_monitors query...")
+                        model = client.get_model(model_name=nm)
+                        print(f"Model ID for {nm}: {model['id']}")
+                        monitors = client.get_all_monitors(model_id=model["id"])
+                        if monitors:
+                            model_name = nm
+                            print(f"Monitors found for model {model_name}:", monitors)
+                            break
+                        else:
+                            print("No monitors found for model:", nm)
+            except Exception as e:
+                print(f"Monitors Error: {e}")
+        try:
+            prompts = client.get_all_prompts()
+            print("Prompts:", prompts)
+            if prompts:
 
-        prompts = client.get_all_prompts()
-        print("Prompts:", prompts)
-        if prompts:
-            prompt_name = prompts.pop(0)["name"]
-            print(f"Running get_prompt query for prompt: {prompt_name}...")
-            prompt = client.get_prompt(prompt_name=prompt_name)
-            print(f"Prompt ID for {prompt_name}: {prompt['id']}")
-            prompt_versions = client.get_all_prompt_versions(prompt_name=prompt_name)
-            print("Prompt Versions:", [pv["id"] for pv in prompt_versions])
+                prompt_name = prompts.pop(0)["name"]
+                print(f"Running get_prompt query for prompt: {prompt_name}...")
+                prompt = client.get_prompt(prompt_name=prompt_name)
+                print(f"Prompt ID for {prompt_name}: {prompt['id']}")
+                prompt_versions = client.get_all_prompt_versions(prompt_name=prompt_name)
+                print("Prompt Versions:", [pv["id"] for pv in prompt_versions])
+        except Exception as e:
+            print(f"Prompts Error: {e}")
+
+        # Dashboard integration tests
+        print("Running dashboard integration tests...")
+        try:
+            # Test 1: Retrieve all dashboards
+            print("Running get_all_dashboards query...")
+            dashboards = client.get_all_dashboards()
+            print(f"Found {len(dashboards)} dashboards")
+            for dashboard in dashboards:
+                print(f"  Dashboard: {dashboard['name']} (ID: {dashboard['id']})")
+
+            # Test 2: For a specific dashboard retrieve the detailed set of widgets
+            if dashboards:
+                dashboard_name = dashboards[0]["name"]
+                dashboard_id = dashboards[0]["id"]
+
+                print(f"Running get_dashboard query for dashboard: {dashboard_name}...")
+                detailed_dashboard = client.get_dashboard(dashboard_name)
+
+                # Print widget counts and details
+                widget_counts = {
+                    "statisticWidgets": len(detailed_dashboard.get("statisticWidgets", [])),
+                    "lineChartWidgets": len(detailed_dashboard.get("lineChartWidgets", [])),
+                    "experimentChartWidgets": len(detailed_dashboard.get("experimentChartWidgets", [])),
+                    "driftLineChartWidgets": len(detailed_dashboard.get("driftLineChartWidgets", [])),
+                    "monitorLineChartWidgets": len(detailed_dashboard.get("monitorLineChartWidgets", [])),
+                    "textWidgets": len(detailed_dashboard.get("textWidgets", [])),
+                    "barChartWidgets": len(detailed_dashboard.get("barChartWidgets", [])),
+                }
+
+                print(f"Dashboard '{dashboard_name}' widget counts:")
+                for widget_type, count in widget_counts.items():
+                    print(f"  {widget_type}: {count}")
+
+                # Print model information
+                models_in_dashboard = detailed_dashboard.get("models", [])
+                print(f"  Models referenced: {len(models_in_dashboard)}")
+                for model in models_in_dashboard:
+                    print(f"    Model: {model.get('name', 'Unknown')} (ID: {model.get('id', 'Unknown')})")
+
+                # Print some sample widget details if available
+                if detailed_dashboard.get("statisticWidgets"):
+                    print("  Sample statistic widgets:")
+                    for widget in detailed_dashboard["statisticWidgets"][:3]:  # Show first 3
+                        print(f"    Widget: {widget.get('title', 'Untitled')}")
+                        print(f"      Metric: {widget.get('performanceMetric', 'N/A')}")
+                        print(f"      Environment: {widget.get('modelEnvironmentName', 'N/A')}")
+
+                # Test 3: Retrieve the URL for the dashboard
+                print(f"Running get_dashboard_url query for dashboard: {dashboard_name}...")
+                dashboard_url = client.get_dashboard_url(dashboard_name)
+                print(f"Dashboard URL: {dashboard_url}")
+
+                # Also test the dashboard_url property method
+                direct_url = client.dashboard_url(dashboard_id)
+                print(f"Direct dashboard URL: {direct_url}")
+
+                # Test get_dashboard_by_id as well
+                print(f"Running get_dashboard_by_id query for dashboard ID: {dashboard_id}...")
+                dashboard_by_id = client.get_dashboard_by_id(dashboard_id)
+                print(f"Dashboard by ID name: {dashboard_by_id['name']}")
+
+            else:
+                print("No dashboards found in the space")
+
+        except Exception as e:
+            print(f"Dashboard integration tests error: {e}")
 
         if monitors:
             monitor_name = monitors.pop(0)["name"]  # Get the first monitor name

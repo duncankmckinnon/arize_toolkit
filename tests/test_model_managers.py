@@ -189,7 +189,7 @@ class TestMonitorManager:
         assert result.threshold2 == 0.95
         assert result.operator == ComparisonOperator.greaterThan
         assert result.operator2 == ComparisonOperator.lessThan
-        assert result.dynamicAutoThreshold.stdDevMultiplier == 1.5
+        assert result.dynamicAutoThreshold is None
         assert result.stdDevMultiplier2 == 2.5
 
         assert (

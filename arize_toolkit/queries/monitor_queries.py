@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor
+from arize_toolkit.models import BasicMonitor, DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -17,7 +17,7 @@ class GetAllModelMonitorsQuery(BaseQuery):
                         }
                         edges{
                             node{ """
-        + Monitor.to_graphql_fields()
+        + BasicMonitor.to_graphql_fields()
         + """     }
                         }
                     }
@@ -35,7 +35,7 @@ class GetAllModelMonitorsQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting all monitors for a given model"
 
-    class QueryResponse(Monitor):
+    class QueryResponse(BasicMonitor):
         pass
 
     @classmethod
