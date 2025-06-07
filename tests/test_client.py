@@ -3097,11 +3097,35 @@ class TestDashboards:
             {
                 "node": {
                     "lineChartWidgets": {
-                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor1"},
                         "edges": [
                             {
                                 "node": {
                                     "id": "line_widget_123",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Performance Over Time",
+                                    "gridPosition": [0, 2, 4, 3],
+                                    "creationStatus": "created",
+                                    "yMin": 0.0,
+                                    "yMax": 1.0,
+                                    "yAxisLabel": "Accuracy",
+                                    "timeSeriesMetricType": None,
+                                    "config": None,
+                                    "plots": None,
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "lineChartWidgets": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "line_widget_456",
                                     "dashboardId": "dashboard_123",
                                     "title": "Performance Over Time",
                                     "gridPosition": [0, 2, 4, 3],
@@ -3169,7 +3193,7 @@ class TestDashboards:
             {
                 "node": {
                     "barChartWidgets": {
-                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor1"},
                         "edges": [
                             {
                                 "node": {
@@ -3197,25 +3221,31 @@ class TestDashboards:
                     }
                 }
             },
-            # Performance slices - GetDashboardPerformanceSlicesQuery
             {
                 "node": {
-                    "performanceSlices": {
+                    "barChartWidgets": {
                         "pageInfo": {"hasNextPage": False, "endCursor": None},
                         "edges": [
                             {
                                 "node": {
-                                    "id": "slice_123",
-                                    "evalMetricMin": 0.0,
-                                    "evalMetricMax": 1.0,
-                                    "performanceMetric": "accuracy",
-                                    "metricValue": "0.95",
-                                    "metricValueType": "number",
-                                    "metricValueColorIndex": 2,
-                                    "metricValueKey": "feature_1",
-                                    "metricValueKeyType": "string",
-                                    "widget": None,
-                                    "barChartBarNode": None,
+                                    "id": "bar_widget_456",
+                                    "dashboardId": "dashboard_123",
+                                    "title": "Feature Performance 2",
+                                    "gridPosition": [4, 0, 2, 3],
+                                    "creationStatus": "created",
+                                    "sortOrder": "vol_desc",
+                                    "yMin": None,
+                                    "yMax": None,
+                                    "yAxisLabel": "Accuracy",
+                                    "topN": 10.0,
+                                    "isNormalized": False,
+                                    "binOption": None,
+                                    "numBins": None,
+                                    "customBins": None,
+                                    "quantiles": None,
+                                    "performanceMetric": None,
+                                    "plots": None,
+                                    "config": None,
                                 }
                             }
                         ],
@@ -3235,7 +3265,16 @@ class TestDashboards:
                                     "createdAt": "2024-01-01T00:00:00Z",
                                     "isDemoModel": False,
                                 }
-                            }
+                            },
+                            {
+                                "node": {
+                                    "id": "model_456",
+                                    "name": "Test Model 2",
+                                    "modelType": "score_categorical",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            },
                         ]
                     }
                 }
@@ -3256,25 +3295,23 @@ class TestDashboards:
         assert result["statisticWidgets"][0]["title"] == "Accuracy Widget"
         assert result["statisticWidgets"][0]["performanceMetric"] == "accuracy"
 
-        assert len(result["lineChartWidgets"]) == 1
+        assert len(result["lineChartWidgets"]) == 2
         assert result["lineChartWidgets"][0]["title"] == "Performance Over Time"
         assert result["lineChartWidgets"][0]["yAxisLabel"] == "Accuracy"
 
         assert len(result["textWidgets"]) == 1
         assert result["textWidgets"][0]["content"] == "This dashboard shows model performance metrics."
 
-        assert len(result["barChartWidgets"]) == 1
+        assert len(result["barChartWidgets"]) == 2
         assert result["barChartWidgets"][0]["title"] == "Feature Performance"
         assert result["barChartWidgets"][0]["topN"] == 10.0
-
-        # Check performance slices
-        assert len(result["performanceSlices"]) == 1
-        assert result["performanceSlices"][0]["performanceMetric"] == "accuracy"
-        assert result["performanceSlices"][0]["metricValue"] == "0.95"
+        assert result["barChartWidgets"][1]["title"] == "Feature Performance 2"
+        assert result["barChartWidgets"][1]["topN"] == 10.0
 
         # Check models
-        assert len(result["models"]) == 1
+        assert len(result["models"]) == 2
         assert result["models"][0]["name"] == "Test Model"
+        assert result["models"][1]["name"] == "Test Model 2"
 
         # Check empty widget lists
         assert len(result["experimentChartWidgets"]) == 0
@@ -3346,14 +3383,6 @@ class TestDashboards:
             },
             {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
             {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
-            {
-                "node": {
-                    "performanceSlices": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
             # Models - Need at least one to avoid "No models found" error
             {
                 "node": {
@@ -3383,7 +3412,7 @@ class TestDashboards:
         assert result["creator"]["name"] == "Test User"
 
         # Verify it called the name lookup first
-        assert mock_graphql_client.return_value.execute.call_count == 11
+        assert mock_graphql_client.return_value.execute.call_count == 10
 
     def test_get_dashboard_not_found(self, client, mock_graphql_client):
         """Test dashboard not found by name"""
@@ -3400,85 +3429,21 @@ class TestDashboards:
 
         # Mock responses for name lookup and dashboard details
         mock_responses = [
-            # Dashboard name lookup - GetDashboardQuery
-            {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard_123", "name": "Test Dashboard"}}]}}},
-            # Dashboard basis - GetDashboardByIdQuery
             {
                 "node": {
-                    "id": "dashboard_123",
-                    "name": "Test Dashboard",
-                    "creator": {
-                        "id": "user_123",
-                        "name": "Test User",
-                        "email": "test@example.com",
-                    },
-                    "createdAt": "2024-01-01T00:00:00Z",
-                    "status": "active",
-                }
-            },
-            # Empty responses for all widget types (minimal for URL generation)
-            {
-                "node": {
-                    "statisticWidgets": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            {
-                "node": {
-                    "lineChartWidgets": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            {
-                "node": {
-                    "experimentChartWidgets": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            {
-                "node": {
-                    "driftLineChartWidgets": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            {
-                "node": {
-                    "monitorLineChartWidgets": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
-            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
-            {
-                "node": {
-                    "performanceSlices": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
-            # Models - Need at least one to avoid "No models found" error
-            {
-                "node": {
-                    "models": {
+                    "dashboards": {
                         "edges": [
                             {
                                 "node": {
-                                    "id": "model_123",
-                                    "name": "Test Model",
-                                    "modelType": "score_categorical",
+                                    "id": "dashboard_123",
+                                    "name": "Test Dashboard",
+                                    "creator": {
+                                        "id": "user_123",
+                                        "name": "Test User",
+                                        "email": "test@example.com",
+                                    },
                                     "createdAt": "2024-01-01T00:00:00Z",
-                                    "isDemoModel": False,
+                                    "status": "active",
                                 }
                             }
                         ]
@@ -3653,14 +3618,6 @@ class TestDashboards:
             },
             {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
             {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
-            {
-                "node": {
-                    "performanceSlices": {
-                        "pageInfo": {"hasNextPage": False},
-                        "edges": [],
-                    }
-                }
-            },
             # Models - Need at least one to avoid "No models found" error
             {
                 "node": {

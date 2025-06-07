@@ -332,4 +332,3 @@ class Dashboard(DashboardBasis):
     driftLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The drift line chart widgets on the dashboard")
     monitorLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The monitor line chart widgets on the dashboard")
     textWidgets: Optional[List[TextWidget]] = Field(default=None, description="The text widgets on the dashboard")
-    performanceSlices: Optional[List[DashboardPerformanceSlice]] = Field(default=None, description="The performance slices on the dashboard")
