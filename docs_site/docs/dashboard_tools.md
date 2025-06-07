@@ -85,7 +85,6 @@ A complete dashboard dictionary containing:
 - `monitorLineChartWidgets` – list of monitor line chart widgets
 - `textWidgets` – list of text widgets
 - `barChartWidgets` – list of bar chart widgets
-- `performanceSlices` – list of dashboard performance slices
 
 (see [Widget Types](#widget-types) below for more information on the widget types)
 
@@ -134,7 +133,6 @@ A complete dashboard dictionary with the same structure as `get_dashboard`.
 - `monitorLineChartWidgets` – list of monitor line chart widgets
 - `textWidgets` – list of text widgets
 - `barChartWidgets` – list of bar chart widgets
-- `performanceSlices` – list of dashboard performance slices
 
 (see [Widget Types](#widget-types) below for more information on the widget types)
 
@@ -306,21 +304,6 @@ Experiment chart widgets display evaluation results from experiments and A/B tes
 - `datasetId` – Dataset used for the experiment
 - `evaluationMetric` – Metric being evaluated
 
-### Performance Slices
-
-Performance slices provide detailed breakdowns of model performance across different data segments or conditions.
-
-**Key Properties:**
-
-- `id` – Unique identifier for the slice
-- `performanceMetric` – The performance metric measured
-- `metricValue` – The calculated metric value
-- `metricValueType` – Type of the value ("number", "string", "range", "total")
-- `metricValueKey` – The segment or condition this applies to
-- `evalMetricMin`/`evalMetricMax` – Range for heatmap visualization
-- `widget` – Associated bar chart widget
-- `barChartBarNode` – Corresponding bar chart data
-
 ______________________________________________________________________
 
 ## End-to-End Example
@@ -360,15 +343,7 @@ for widget in dashboard["lineChartWidgets"]:
     print(f"Chart: {widget['title']}")
     print(f"  Plots: {len(widget['plots']) if widget['plots'] else 0}")
 
-# 5. Check performance slices for detailed insights
-print(f"\n=== Performance Slices ===")
-for slice in dashboard["performanceSlices"]:
-    if slice["performanceMetric"] and slice["metricValue"]:
-        print(f"Metric: {slice['performanceMetric']} = {slice['metricValue']}")
-        if slice["metricValueKey"]:
-            print(f"  Segment: {slice['metricValueKey']}")
-
-# 6. Get dashboard URL for sharing
+# 5. Get dashboard URL for sharing
 url = client.get_dashboard_url(dashboard_name)
 print(f"\nDashboard URL: {url}")
 ```
