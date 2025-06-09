@@ -9,15 +9,16 @@ from arize_toolkit.utils import GraphQLModel
 ## Common GraphQL Models ##
 
 
-class User(GraphQLModel):
-    id: str = Field(description="The ID of the user")
-    name: Optional[str] = Field(default=None, description="The name of the user")
+class BaseNode(GraphQLModel):
+    id: Optional[str] = Field(default=None, description="The ID of the node")
+    name: Optional[str] = Field(default=None, description="The name of the node")
+
+
+class User(BaseNode):
     email: Optional[str] = Field(default=None, description="The email of the user")
 
 
-class Dimension(GraphQLModel):
-    id: Optional[str] = Field(default=None)
-    name: str
+class Dimension(BaseNode):
     dataType: Optional[DimensionDataType] = Field(default=None)
     category: Optional[DimensionCategory] = Field(default=None)
 
@@ -44,9 +45,7 @@ class DimensionFilterInput(GraphQLModel):
 ## Model GraphQL Models ##
 
 
-class Model(GraphQLModel):
-    id: str
-    name: str
+class Model(BaseNode):
     modelType: ModelType
     createdAt: datetime
     isDemoModel: bool
