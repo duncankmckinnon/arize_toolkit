@@ -83,11 +83,12 @@ Retrieves all organizations in the current account. This method returns a list o
 
 **Returns**
 
-- `List[dict]` – A list of organization dictionaries, each containing:
-  - `id` (str): Unique identifier for the organization
-  - `name` (str): Name of the organization
-  - `createdAt` (datetime): When the organization was created
-  - `description` (str): Description of the organization
+A list of organization dictionaries, each containing:
+
+- `id` (str): Unique identifier for the organization
+- `name` (str): Name of the organization
+- `createdAt` (datetime): When the organization was created
+- `description` (str): Description of the organization
 
 **Raises**
 
@@ -116,12 +117,13 @@ Retrieves all spaces in the current organization. This method returns a list of 
 
 **Returns**
 
-- `List[dict]` – A list of space dictionaries, each containing:
-  - `id` (str): Unique identifier for the space
-  - `name` (str): Name of the space
-  - `createdAt` (datetime): When the space was created
-  - `description` (str): Description of the space
-  - `private` (bool): Whether the space is private
+A list of space dictionaries, each containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
 
 **Raises**
 
