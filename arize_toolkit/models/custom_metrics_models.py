@@ -3,15 +3,14 @@ from typing import Optional
 
 from pydantic import Field
 
+from arize_toolkit.models.base_models import BaseNode
 from arize_toolkit.types import ModelEnvironment
 from arize_toolkit.utils import GraphQLModel
 
 ## Custom Metric GraphQL Models ##
 
 
-class CustomMetric(GraphQLModel):
-    id: Optional[str] = Field(default=None)
-    name: str
+class CustomMetric(BaseNode):
     createdAt: Optional[datetime] = Field(default=None)
     description: Optional[str] = Field(default=None)
     metric: str

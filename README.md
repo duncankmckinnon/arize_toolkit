@@ -69,37 +69,3 @@ For the example below, the organization is `Demo Models` and the space is `Demo 
 For SaaS users, the default API endpoint is always going to be `https://api.arize.com`.
 If you are using an on prem deployment of Arize, you will need to provide the `api_url` parameter.
 This parameters should just be the base url of your Arize instance.
-
-### Sleep Time
-
-The `Client` class can be configured to wait a certain amount of time between requests. This is useful to avoid rate limiting.
-The default sleep time is 0 seconds. When instantiating the client, you can set the `sleep_time` parameter to the number of seconds to wait between requests. This can save time if you are making a large number or requests or getting a large amount of data. If you start seeing rate limit errors, you can increase this value. There is a helper function in the client to update the sleep time in line:
-
-#### `set_sleep_time`
-
-```python
-from arize_toolkit import Client
-
-client: Client = client.set_sleep_time(sleep_time: int)
-```
-
-This will update the sleep time for the existing client in line.
-
-- **Parameters**
-
-  - `sleep_time` – The number of seconds to wait between requests
-
-- **Returns**
-
-  - `Client` – The updated client
-
-- **Example**
-
-```python
-from arize_toolkit import Client
-
-client = Client(..., sleep_time=0)
-
-# Update the sleep time in line
-lots_of_models = client.set_sleep_time(10).get_all_models()
-```

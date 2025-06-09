@@ -26,9 +26,10 @@ nav:
     - Monitor Tools: monitor_tools.md
     - Custom Metrics Tools: custom_metrics_tools.md
     - Language Model Tools: language_model_tools.md
-    - Space Tools: space_tools.md
+    - Space & Organization Tools: space_and_organization_tools.md
     - Data Import Tools: data_import_tools.md
     - Dashboard Tools: dashboard_tools.md
+    - Utility Tools: utility_tools.md
 
   - For Developers:
     - Development: developers/development.md

@@ -66,7 +66,7 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
-from arize_toolkit.queries.space_queries import OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
 logger = logging.getLogger("arize_toolkit")
@@ -131,25 +131,34 @@ class Client:
 
         Returns:
             Client: The updated client
-
         """
         self.sleep_time = sleep_time
         return self
 
-    def switch_space(self, space: str, organization: Optional[str] = None) -> str:
+    def switch_space(self, space: Optional[str] = None, organization: Optional[str] = None) -> str:
         """Switches the space for the client. Can also switch to a space in a different organization.
+        If no arguments are provided, the space and organization are unchanged.
+        If only the space is provided, the current organization is used.
+        If only the organization is provided, the first space in the provided organization is used.
 
         Args:
-            space (str): The space to switch to
+            space (Optional[str]): The space to switch to (defaults to the first space in the organization)
             organization (Optional[str]): The organization to switch to (defaults to the current organization)
 
         Returns:
             str: The URL of the new space
 
+        Raises:
+            ArizeAPIException: If there is an error switching spaces
         """
-        space = space
-        organization = organization or self.organization
-        result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
+        if space and space == self.space and (not organization or organization == self.organization):
+            return self.space_url
+        if not space:
+            result = OrgAndFirstSpaceQuery.run_graphql_query(self._graphql_client, organization=organization)
+        else:
+            if not organization:
+                organization = self.organization
+            result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
         if self.space_id != result.space_id:
             self.org_id = result.organization_id
             self.space_id = result.space_id
@@ -184,6 +193,46 @@ class Client:
 
     def dashboard_url(self, dashboard_id: str) -> str:
         return f"{self.space_url}/dashboards/{dashboard_id}"
+
+    def get_all_organizations(self) -> List[dict]:
+        """Retrieves all organizations in the current account.
+
+        Returns:
+            List[dict]: A list of organization dictionaries, each containing:
+            - id (str): Unique identifier for the organization
+            - name (str): Name of the organization
+            - createdAt (datetime): When the organization was created
+            - description (str): Description of the organization
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving organizations from the API
+        """
+        results = GetAllOrganizationsQuery.iterate_over_pages(
+            self._graphql_client,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
+    def get_all_spaces(self) -> List[dict]:
+        """Retrieves all spaces in the current organization.
+
+        Returns:
+            List[dict]: A list of space dictionaries, each containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving organizations from the API
+        """
+        results = GetAllSpacesQuery.iterate_over_pages(
+            self._graphql_client,
+            organization_id=self.org_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
