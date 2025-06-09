@@ -35,6 +35,8 @@ When creating tests for GraphQL queries and mutations in the Arize Toolkit, foll
    - Client Verification
 
 3. **Mock Response Pattern**
+   Always use the `gql_client` fixture defined in conftest.py to mock requests to the graphql client.
+
    ```python
    mock_response = {
        "queryName": {  # or "mutationName" for mutations
@@ -267,3 +269,6 @@ class TestGetModelQuery:
        assert result.field1 == "value1"
        assert result.nested.field2 == "value2"
    ``` 
+
+   References
+
