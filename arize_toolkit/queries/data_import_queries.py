@@ -32,8 +32,8 @@ class GetFileImportJobQuery(BaseQuery):
         spaceId: str
         jobId: str
 
-        class QueryException(ArizeAPIException):
-            """Exception raised when file import job status check fails."""
+    class QueryException(ArizeAPIException):
+        """Exception raised when file import job status check fails."""
 
         message: str = "Error getting file import job"
 
