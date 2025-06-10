@@ -10,7 +10,7 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.openai import OpenAIInstrumentor
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from arize_toolkit.trace_converters.openllmetry.map_openll_to_openinference import OpenLLMetryToOpenInferenceSpanProcessor
+from arize_toolkit.trace_converters.openllmetry.map_openllmetry_to_openinference import OpenLLMetryToOpenInferenceSpanProcessor
 
 load_dotenv()  # Load environment variables from .env file
 
