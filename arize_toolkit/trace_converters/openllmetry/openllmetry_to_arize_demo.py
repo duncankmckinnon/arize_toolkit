@@ -1,21 +1,21 @@
 import os
-import openai
 
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from arize_toolkit.trace_converters.openllmetry.map_openll_to_openinference import OpenLLMetryToOpenInferenceSpanProcessor
-
-from opentelemetry.instrumentation.openai import OpenAIInstrumentor
-from arize.otel import register  # convenience helper from Arize
 import grpc  # for the Compression enum
-
+import openai
+from arize.otel import register  # convenience helper from Arize
 
 # ✏️  Secrets
 from dotenv import load_dotenv
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.openai import OpenAIInstrumentor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+from arize_toolkit.trace_converters.openllmetry.map_openll_to_openinference import OpenLLMetryToOpenInferenceSpanProcessor
+
 load_dotenv()  # Load environment variables from .env file
 
 SPACE_ID = os.getenv("SPACE_ID")
-API_KEY = os.getenv("API_KEY") 
+API_KEY = os.getenv("API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if __name__ == "__main__":

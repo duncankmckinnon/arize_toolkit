@@ -1,7 +1,7 @@
 import json
+import re
 import sys
 from typing import Any, Dict, List
-import re
 
 # Add OpenTelemetry import for SpanProcessor
 from opentelemetry.sdk.trace import SpanProcessor
@@ -78,6 +78,7 @@ _OPENINF_TOOL_LIST_KEY = "llm.tools"
 # Helper to transform gen_ai.prompt / gen_ai.completion dict into list format
 # ---------------------------------------------------------------------------
 
+
 def _normalize(msg: Dict[str, Any]) -> Dict[str, Any]:
     """Convert message.* keys to bare keys (role, content, etc.)."""
     normalized = {}
@@ -143,14 +144,14 @@ def _normalize(msg: Dict[str, Any]) -> Dict[str, Any]:
 def _transform_tool_calls_list(tool_calls: List[Any]) -> List[Dict[str, Any]]:
     """Transform a list of tool calls to proper OpenInference structure."""
     transformed = []
-    
+
     for tool_call in tool_calls:
         if not isinstance(tool_call, dict):
             transformed.append(tool_call)
             continue
-            
+
         converted: Dict[str, Any] = {}
-        
+
         # Handle different input formats and convert to OpenInference structure
         for key, value in tool_call.items():
             if key == "name":
@@ -174,9 +175,9 @@ def _transform_tool_calls_list(tool_calls: List[Any]) -> List[Dict[str, Any]]:
             else:
                 # Copy other fields as-is
                 converted[key] = value
-                
+
         transformed.append(converted)
-    
+
     return transformed
 
 
@@ -275,6 +276,7 @@ def _map_prompt_or_completion(value: Any, dst: Dict[str, Any], *, is_prompt: boo
 # MAPPING LOGIC
 # ---------------------------------------------------------------------------
 
+
 def _ensure_json_serialisable(value: Any) -> Any:
     """Ensure value can be JSON-serialised. Convert complex types to strings."""
     if isinstance(value, (str, int, float, bool)) or value is None:
@@ -285,12 +287,14 @@ def _ensure_json_serialisable(value: Any) -> Any:
 def _is_debug_enabled() -> bool:
     """Return True if the environment variable DEBUG_OPENINF is set to truthy."""
     import os
+
     return os.getenv("DEBUG_OPENINF", "").lower() not in ("", "0", "false", "no")
 
 
 def _is_bracket_conversion_disabled() -> bool:
     """Return True if the environment variable DISABLE_BRACKET_CONVERSION is set to truthy."""
     import os
+
     return os.getenv("DISABLE_BRACKET_CONVERSION", "").lower() not in ("", "0", "false", "no")
 
 
@@ -316,21 +320,15 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
     #    than one level so that the value (a dict with numeric keys, etc.) is
     #    still available intact for _map_prompt_or_completion().
     # ------------------------------------------------------------------
-    
+
     flat_src: Dict[str, Any] = {}
-    
+
     # Important context attributes that should be preserved as-is
-    context_attributes = {
-        "session.id", "user.id", "openinference.span.kind", 
-        "metadata", "tag.tags", "llm.prompt_template.template",
-        "llm.prompt_template.version", "llm.prompt_template.variables"
-    }
-    
+    context_attributes = {"session.id", "user.id", "openinference.span.kind", "metadata", "tag.tags", "llm.prompt_template.template", "llm.prompt_template.version", "llm.prompt_template.variables"}
+
     # Keys that should be preserved as-is and not flattened
-    preserve_keys = {
-        "gen_ai.prompt", "gen_ai.completion"
-    }
-    
+    preserve_keys = {"gen_ai.prompt", "gen_ai.completion"}
+
     for key, value in src.items():
         if key in context_attributes:
             # Preserve context attributes directly without flattening
@@ -369,14 +367,11 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
         #      ALSO: exclude llm.request.functions.* and llm.request.tools.* keys since we only want llm.tools.* output
         #      ALSO: exclude gen_ai.* keys since they're intermediate data that gets converted to llm.input_messages/llm.output_messages
         #      ALSO: skip if bracket conversion is disabled (for Arize compatibility)
-        if (_needs_bracket_conversion(key) and 
-            not _is_bracket_conversion_disabled() and 
-            not (
-                key.startswith("llm.input_messages.") or 
-                key.startswith("llm.output_messages.") or
-                key.startswith("llm.tools.") or
-                key.startswith("gen_ai.")
-            )):
+        if (
+            _needs_bracket_conversion(key)
+            and not _is_bracket_conversion_disabled()
+            and not (key.startswith("llm.input_messages.") or key.startswith("llm.output_messages.") or key.startswith("llm.tools.") or key.startswith("gen_ai."))
+        ):
             bkey = _dot_to_bracket(key)
             if bkey not in dst:  # don't overwrite if already set
                 # Ensure OTLP-compatible scalar / string value
@@ -400,17 +395,19 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
             continue
 
         # 2) Invocation parameters accumulation.
-        if key in _INVOCATION_PARAMETER_KEYS or key.startswith("gen_ai.request.") or (
-            key.startswith("llm.request.")
-            and key != _OPENLL_TOOL_LIST_KEY
-            and key != "llm.request.tools"
-            and not key.startswith("llm.request.functions.")
-            and not key.startswith("llm.request.tools.")
+        if (
+            key in _INVOCATION_PARAMETER_KEYS
+            or key.startswith("gen_ai.request.")
+            or (
+                key.startswith("llm.request.")
+                and key != _OPENLL_TOOL_LIST_KEY
+                and key != "llm.request.tools"
+                and not key.startswith("llm.request.functions.")
+                and not key.startswith("llm.request.tools.")
+            )
         ):
             # Remove the prefix that is not relevant for OpenInference.
-            trimmed = (
-                key.split(".", 2)[-1] if key.startswith("gen_ai.request.") else key.split(".", 2)[-1]
-            )
+            trimmed = key.split(".", 2)[-1] if key.startswith("gen_ai.request.") else key.split(".", 2)[-1]
             invocation_params[trimmed] = val
             continue
 
@@ -442,8 +439,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
 
         # 4.2) Accumulate dotted tool schema pieces e.g. llm.request.functions.0.name
         #      Also handle llm.request.tools.* format that some instrumentations use
-        if (key.startswith("llm.request.functions.") or
-            key.startswith("llm.request.tools.") or key.startswith("gen_ai.request.tools.")):
+        if key.startswith("llm.request.functions.") or key.startswith("llm.request.tools.") or key.startswith("gen_ai.request.tools."):
             parts = key.split(".")
             if len(parts) >= 5 and parts[3].isdigit():
                 idx = int(parts[3])
@@ -454,7 +450,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
 
         # 4.3) Handle pre-existing llm.input_messages/output_messages dotted attributes
         #      These are already in OpenInference format, so pass them through directly
-        if (key.startswith("llm.input_messages.") or key.startswith("llm.output_messages.")):
+        if key.startswith("llm.input_messages.") or key.startswith("llm.output_messages."):
             # Copy directly to dst - these are already in the right format
             dst[key] = val
             continue
@@ -505,7 +501,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
     # 3) Add input.value and output.value composite JSON structures
     #    (same logic as in openllmetry_conversion_simple.py)
     # ------------------------------------------------------------------
-    
+
     # Create input.value composite structure
     prompt_content = dst.get("llm.input_messages.0.message.content")
     prompt_role = dst.get("llm.input_messages.0.message.role", "user")
@@ -566,7 +562,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
 
     # ------------------------------------------------------------------
     # 4) Convert dot-number-dot paths → bracket-index notation for non-OpenInference keys
-    #    OpenInference keys (llm.input_messages.*, llm.output_messages.*, llm.tools.*) 
+    #    OpenInference keys (llm.input_messages.*, llm.output_messages.*, llm.tools.*)
     #    stay in dotted format as required by the spec.
     #    Skip bracket conversion if disabled (for Arize compatibility)
     # ------------------------------------------------------------------
@@ -578,10 +574,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
     bracketised: Dict[str, Any] = {}
     for key, value in dst.items():
         # OpenInference keys stay dotted
-        if (key.startswith("llm.input_messages.") or 
-            key.startswith("llm.output_messages.") or
-            key.startswith("llm.tools.") or
-            key.startswith("gen_ai.")):
+        if key.startswith("llm.input_messages.") or key.startswith("llm.output_messages.") or key.startswith("llm.tools.") or key.startswith("gen_ai."):
             bracketised[key] = value
         # Convert other keys to bracket notation if they have numeric indices
         elif _needs_bracket_conversion(key):
@@ -596,6 +589,7 @@ def map_openll_to_openinference(src: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # TOOL LIST TRANSFORMATION
 # ---------------------------------------------------------------------------
+
 
 def _handle_tool_list(raw_value: Any, dst: Dict[str, Any]) -> None:
     """Convert OpenLLMetry llm.request.functions → OpenInference tool attrs."""
@@ -635,46 +629,47 @@ def _handle_tool_list(raw_value: Any, dst: Dict[str, Any]) -> None:
 # SPAN PROCESSOR CLASS
 # ---------------------------------------------------------------------------
 
+
 class OpenLLMetryToOpenInferenceSpanProcessor(SpanProcessor):
     """SpanProcessor that converts OpenLLMetry span attributes to OpenInference format.
-    
+
     This processor should be added to your TracerProvider to automatically
     transform span attributes during export. It uses the comprehensive mapping
     logic from map_openll_to_openinference() to handle complex transformations
     including tool calls, message structures, and attribute formatting.
-    
+
     Example:
         tracer_provider = register(space_id=SPACE_ID, api_key=API_KEY, project_name="my-project")
         tracer_provider.add_span_processor(OpenLLMetryToOpenInferenceSpanProcessor())
     """
-    
+
     def __init__(self):
         """Initialize the processor."""
         super().__init__()
-    
+
     def on_start(self, span, parent_context=None):
         """Called when a span is started. No action needed."""
         pass
-    
+
     def on_end(self, span):
         """Called when a span ends. Transform the span attributes."""
-        if not hasattr(span, '_attributes') or not span._attributes:
+        if not hasattr(span, "_attributes") or not span._attributes:
             return
-            
+
         # Create a copy of the original attributes
         original_attrs = dict(span._attributes)
-        
+
         try:
             # Apply the comprehensive mapping transformation
             transformed_attrs = map_openll_to_openinference(original_attrs)
-            
+
             # Replace the span's attributes with the transformed ones
             span._attributes.clear()
             span._attributes.update(transformed_attrs)
-            
+
             if _is_debug_enabled():
                 print(f"[DEBUG] Transformed span '{span.name}': {len(original_attrs)} -> {len(transformed_attrs)} attributes", file=sys.stderr)
-                
+
         except Exception as e:
             # If transformation fails, keep original attributes and log error
             if _is_debug_enabled():
@@ -682,11 +677,11 @@ class OpenLLMetryToOpenInferenceSpanProcessor(SpanProcessor):
             # Keep original attributes on failure
             span._attributes.clear()
             span._attributes.update(original_attrs)
-    
+
     def shutdown(self):
         """Called when the processor is shutdown. No cleanup needed."""
         pass
-    
+
     def force_flush(self, timeout_millis=None):
         """Called to force flush. Always return True since no buffering."""
         return True
@@ -713,4 +708,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()
