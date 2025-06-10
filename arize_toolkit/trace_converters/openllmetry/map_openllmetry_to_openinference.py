@@ -84,7 +84,7 @@ def _normalize(msg: Dict[str, Any]) -> Dict[str, Any]:
     # Handle non-dict inputs gracefully
     if not isinstance(msg, dict):
         return {"message.content": str(msg)} if msg is not None else {"message.content": None}
-    
+
     normalized = {}
 
     # First pass: split out dotted tool_call keys and everything else.

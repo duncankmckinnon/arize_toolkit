@@ -2,8 +2,6 @@ import json
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from arize_toolkit.trace_converters.openllmetry.map_openllmetry_to_openinference import (
     OpenLLMetryToOpenInferenceSpanProcessor,
     _canonicalize_messages,
@@ -30,9 +28,9 @@ class TestDirectMapping:
             "gen_ai.usage.prompt_tokens": 100,
             "gen_ai.usage.completion_tokens": 50,
         }
-        
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert result["llm.system"] == "openai"
         assert result["llm.model_name"] == "gpt-4"
         assert result["llm.token_count.prompt"] == 100
@@ -49,7 +47,7 @@ class TestDirectMapping:
             ("unknown", "UNKNOWN"),
             ("invalid", "UNKNOWN"),  # Default for unknown values
         ]
-        
+
         for input_kind, expected_kind in test_cases:
             input_attrs = {"traceloop.span.kind": input_kind}
             result = map_openll_to_openinference(input_attrs)
@@ -65,9 +63,9 @@ class TestDirectMapping:
             "llm.presence_penalty": 0.2,
             "llm.request.repetition_penalty": 1.1,
         }
-        
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         invocation_params = json.loads(result["llm.invocation_parameters"])
         assert invocation_params["max_tokens"] == 100
         assert invocation_params["temperature"] == 0.7
@@ -82,37 +80,20 @@ class TestMessageCanonicalization:
 
     def test_normalize_basic_message(self):
         """Test basic message normalization."""
-        msg = {
-            "role": "user",
-            "content": "Hello world",
-            "name": "test_user"
-        }
-        
+        msg = {"role": "user", "content": "Hello world", "name": "test_user"}
+
         result = _normalize(msg)
-        
+
         assert result["message.role"] == "user"
         assert result["message.content"] == "Hello world"
         assert result["message.name"] == "test_user"
 
     def test_normalize_tool_calls_list(self):
         """Test normalization of tool calls in list format."""
-        msg = {
-            "role": "assistant",
-            "content": None,
-            "tool_calls": [
-                {
-                    "id": "call_123",
-                    "type": "function",
-                    "function": {
-                        "name": "get_weather",
-                        "arguments": '{"city": "SF"}'
-                    }
-                }
-            ]
-        }
-        
+        msg = {"role": "assistant", "content": None, "tool_calls": [{"id": "call_123", "type": "function", "function": {"name": "get_weather", "arguments": '{"city": "SF"}'}}]}
+
         result = _normalize(msg)
-        
+
         assert result["message.role"] == "assistant"
         assert result["message.content"] is None
         assert isinstance(result["message.tool_calls"], list)
@@ -131,32 +112,29 @@ class TestMessageCanonicalization:
             "tool_calls.0.function.arguments": '{"city": "SF"}',
             "tool_calls.1.id": "call_456",
             "tool_calls.1.function.name": "get_temperature",
-            "tool_calls.1.function.arguments": '{"location": "NYC"}'
+            "tool_calls.1.function.arguments": '{"location": "NYC"}',
         }
-        
+
         result = _normalize(msg)
-        
+
         assert result["message.role"] == "assistant"
         assert isinstance(result["message.tool_calls"], list)
         assert len(result["message.tool_calls"]) == 2
-        
+
         tool_call_0 = result["message.tool_calls"][0]
         assert tool_call_0["tool_call.id"] == "call_123"
         assert tool_call_0["function.name"] == "get_weather"
-        
+
         tool_call_1 = result["message.tool_calls"][1]
         assert tool_call_1["tool_call.id"] == "call_456"
         assert tool_call_1["function.name"] == "get_temperature"
 
     def test_canonicalize_messages_dict_format(self):
         """Test canonicalizing messages from dict format."""
-        raw_messages = {
-            "0": {"role": "user", "content": "Hello"},
-            "1": {"role": "assistant", "content": "Hi there"}
-        }
-        
+        raw_messages = {"0": {"role": "user", "content": "Hello"}, "1": {"role": "assistant", "content": "Hi there"}}
+
         result = _canonicalize_messages(raw_messages)
-        
+
         assert len(result) == 2
         assert result[0]["message.role"] == "user"
         assert result[0]["message.content"] == "Hello"
@@ -165,13 +143,10 @@ class TestMessageCanonicalization:
 
     def test_canonicalize_messages_list_format(self):
         """Test canonicalizing messages from list format."""
-        raw_messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there"}
-        ]
-        
+        raw_messages = [{"role": "user", "content": "Hello"}, {"role": "assistant", "content": "Hi there"}]
+
         result = _canonicalize_messages(raw_messages)
-        
+
         assert len(result) == 2
         assert result[0]["message.role"] == "user"
         assert result[0]["message.content"] == "Hello"
@@ -181,30 +156,19 @@ class TestMessageCanonicalization:
     def test_transform_tool_calls_list(self):
         """Test transformation of tool calls list."""
         tool_calls = [
-            {
-                "id": "call_123",
-                "type": "function",
-                "function": {
-                    "name": "get_weather",
-                    "arguments": '{"city": "SF"}'
-                }
-            },
-            {
-                "name": "get_temperature",  # Different format
-                "arguments": '{"location": "NYC"}',
-                "id": "call_456"
-            }
+            {"id": "call_123", "type": "function", "function": {"name": "get_weather", "arguments": '{"city": "SF"}'}},
+            {"name": "get_temperature", "arguments": '{"location": "NYC"}', "id": "call_456"},  # Different format
         ]
-        
+
         result = _transform_tool_calls_list(tool_calls)
-        
+
         assert len(result) == 2
-        
+
         # First tool call (nested function format)
         assert result[0]["tool_call.id"] == "call_123"
         assert result[0]["tool_call.function.name"] == "get_weather"
         assert result[0]["tool_call.function.arguments"] == '{"city": "SF"}'
-        
+
         # Second tool call (flat format)
         assert result[1]["tool_call.function.name"] == "get_temperature"
         assert result[1]["tool_call.function.arguments"] == '{"location": "NYC"}'
@@ -216,44 +180,28 @@ class TestPromptCompletionMapping:
 
     def test_map_prompt_or_completion_basic(self):
         """Test basic prompt/completion mapping."""
-        messages = [
-            {"role": "user", "content": "Hello"}
-        ]
+        messages = [{"role": "user", "content": "Hello"}]
         dst = {}
-        
+
         _map_prompt_or_completion(messages, dst, is_prompt=True)
-        
+
         assert "llm.input_messages" in dst
         parsed_messages = json.loads(dst["llm.input_messages"])
         assert len(parsed_messages) == 1
         assert parsed_messages[0]["message.role"] == "user"
         assert parsed_messages[0]["message.content"] == "Hello"
-        
+
         # Check dotted attributes
         assert dst["llm.input_messages.0.message.role"] == "user"
         assert dst["llm.input_messages.0.message.content"] == "Hello"
 
     def test_map_prompt_or_completion_with_tool_calls(self):
         """Test mapping with tool calls."""
-        messages = [
-            {
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [
-                    {
-                        "id": "call_123",
-                        "function": {
-                            "name": "get_weather",
-                            "arguments": '{"city": "SF"}'
-                        }
-                    }
-                ]
-            }
-        ]
+        messages = [{"role": "assistant", "content": None, "tool_calls": [{"id": "call_123", "function": {"name": "get_weather", "arguments": '{"city": "SF"}'}}]}]
         dst = {}
-        
+
         _map_prompt_or_completion(messages, dst, is_prompt=False)
-        
+
         assert "llm.output_messages" in dst
         # Check that tool calls are properly exploded
         assert dst["llm.output_messages.0.message.tool_calls.0.tool_call.id"] == "call_123"
@@ -264,9 +212,9 @@ class TestPromptCompletionMapping:
         """Test prompt mapping with debug output enabled."""
         messages = [{"role": "user", "content": "Test"}]
         dst = {}
-        
+
         _map_prompt_or_completion(messages, dst, is_prompt=True)
-        
+
         captured = capsys.readouterr()
         assert "[DEBUG] Set llm.input_messages (is_prompt=True)" in captured.err
 
@@ -276,47 +224,34 @@ class TestToolHandling:
 
     def test_handle_tool_list_basic(self):
         """Test basic tool list handling."""
-        tools = [
-            {
-                "name": "get_weather",
-                "description": "Get current weather",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "city": {"type": "string"}
-                    }
-                }
-            }
-        ]
+        tools = [{"name": "get_weather", "description": "Get current weather", "parameters": {"type": "object", "properties": {"city": {"type": "string"}}}}]
         dst = {}
-        
+
         _handle_tool_list(tools, dst)
-        
+
         assert dst["llm.tools.0.name"] == "get_weather"
         assert dst["llm.tools.0.description"] == "Get current weather"
         assert isinstance(dst["llm.tools.0.parameters"], str)  # JSON encoded
-        
+
         params = json.loads(dst["llm.tools.0.parameters"])
         assert params["type"] == "object"
 
     def test_handle_tool_list_json_string(self):
         """Test tool list handling with JSON string input."""
-        tools_json = json.dumps([
-            {"name": "test_tool", "description": "A test tool"}
-        ])
+        tools_json = json.dumps([{"name": "test_tool", "description": "A test tool"}])
         dst = {}
-        
+
         _handle_tool_list(tools_json, dst)
-        
+
         assert dst["llm.tools.0.name"] == "test_tool"
         assert dst["llm.tools.0.description"] == "A test tool"
 
     def test_handle_tool_list_invalid_json(self):
         """Test tool list handling with invalid JSON."""
         dst = {}
-        
+
         _handle_tool_list("invalid json", dst)
-        
+
         # Should not add any tool attributes on failure
         assert not any(key.startswith("llm.tools.") for key in dst.keys())
 
@@ -369,17 +304,13 @@ class TestMainConversionFunction:
             "gen_ai.usage.prompt_tokens": 100,
             "gen_ai.usage.completion_tokens": 50,
             "gen_ai.request.temperature": 0.7,
-            "gen_ai.prompt": {
-                "0": {"role": "user", "content": "Hello world"}
-            },
-            "gen_ai.completion": {
-                "0": {"role": "assistant", "content": "Hi there!"}
-            },
-            "traceloop.span.kind": "workflow"
+            "gen_ai.prompt": {"0": {"role": "user", "content": "Hello world"}},
+            "gen_ai.completion": {"0": {"role": "assistant", "content": "Hi there!"}},
+            "traceloop.span.kind": "workflow",
         }
-        
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Basic mappings
         assert result["llm.system"] == "openai"
         assert result["llm.model_name"] == "gpt-4"
@@ -387,41 +318,36 @@ class TestMainConversionFunction:
         assert result["llm.token_count.prompt"] == 100
         assert result["llm.token_count.completion"] == 50
         assert result["openinference.span.kind"] == "CHAIN"
-        
+
         # Invocation parameters
         assert "llm.invocation_parameters" in result
         params = json.loads(result["llm.invocation_parameters"])
         assert params["temperature"] == 0.7
-        
+
         # Messages
         assert "llm.input_messages" in result
         assert "llm.output_messages" in result
-        
+
         # Input/output composite structures
         assert "input.value" in result
         assert "output.value" in result
-        
+
         input_value = json.loads(result["input.value"])
         assert input_value["model"] == "gpt-4"
         assert input_value["messages"][0]["content"] == "Hello world"
-        
+
         output_value = json.loads(result["output.value"])
         assert output_value["choices"][0]["message"]["content"] == "Hi there!"
 
     def test_dotted_prompt_completion_reconstruction(self):
         """Test reconstruction of prompt/completion from dotted attributes."""
-        input_attrs = {
-            "gen_ai.prompt.0.role": "user",
-            "gen_ai.prompt.0.content": "Hello",
-            "gen_ai.completion.0.role": "assistant",
-            "gen_ai.completion.0.content": "Hi"
-        }
-        
+        input_attrs = {"gen_ai.prompt.0.role": "user", "gen_ai.prompt.0.content": "Hello", "gen_ai.completion.0.role": "assistant", "gen_ai.completion.0.content": "Hi"}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert "llm.input_messages" in result
         assert "llm.output_messages" in result
-        
+
         input_messages = json.loads(result["llm.input_messages"])
         assert len(input_messages) == 1
         assert input_messages[0]["message.role"] == "user"
@@ -433,47 +359,38 @@ class TestMainConversionFunction:
             "llm.request.functions.0.name": "get_weather",
             "llm.request.functions.0.description": "Get weather info",
             "llm.request.functions.1.name": "get_time",
-            "llm.request.functions.1.description": "Get current time"
+            "llm.request.functions.1.description": "Get current time",
         }
-        
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert "llm.tools.0.name" in result
         assert "llm.tools.0.description" in result
         assert "llm.tools.1.name" in result
         assert "llm.tools.1.description" in result
-        
+
         assert result["llm.tools.0.name"] == "get_weather"
         assert result["llm.tools.1.name"] == "get_time"
 
     def test_metadata_collection(self):
         """Test that unknown attributes are collected in metadata."""
-        input_attrs = {
-            "custom.attribute": "value",
-            "another.unknown": 123,
-            "gen_ai.system": "openai"  # This should map directly
-        }
-        
+        input_attrs = {"custom.attribute": "value", "another.unknown": 123, "gen_ai.system": "openai"}  # This should map directly
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert result["llm.system"] == "openai"
         assert "metadata" in result
-        
+
         metadata = json.loads(result["metadata"])
         assert metadata["custom.attribute"] == "value"
         assert metadata["another.unknown"] == 123
 
     def test_context_attributes_preservation(self):
         """Test that context attributes are preserved at top level."""
-        input_attrs = {
-            "session.id": "session_123",
-            "user.id": "user_456",
-            "metadata": "existing_metadata",
-            "openinference.span.kind": "LLM"
-        }
-        
+        input_attrs = {"session.id": "session_123", "user.id": "user_456", "metadata": "existing_metadata", "openinference.span.kind": "LLM"}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # These should stay at top level, not in metadata
         assert result["session.id"] == "session_123"
         assert result["user.id"] == "user_456"
@@ -483,13 +400,10 @@ class TestMainConversionFunction:
     @patch.dict(os.environ, {"DISABLE_BRACKET_CONVERSION": "true"})
     def test_bracket_conversion_disabled(self):
         """Test behavior when bracket conversion is disabled."""
-        input_attrs = {
-            "custom.0.field": "value",
-            "gen_ai.system": "openai"
-        }
-        
+        input_attrs = {"custom.0.field": "value", "gen_ai.system": "openai"}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should preserve dot notation when bracket conversion is disabled
         # Unknown attributes still go to metadata but without bracket conversion
         assert "metadata" in result
@@ -499,17 +413,10 @@ class TestMainConversionFunction:
 
     def test_flattening_behavior(self):
         """Test one-level flattening behavior."""
-        input_attrs = {
-            "gen_ai": {
-                "system": "openai",
-                "request": {
-                    "model": "gpt-4"
-                }
-            }
-        }
-        
+        input_attrs = {"gen_ai": {"system": "openai", "request": {"model": "gpt-4"}}}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert result["llm.system"] == "openai"
         # Nested dict should be flattened and stored as JSON in metadata
         assert "metadata" in result
@@ -527,7 +434,7 @@ class TestSpanProcessor:
         """Test on_start method does nothing."""
         processor = OpenLLMetryToOpenInferenceSpanProcessor()
         mock_span = MagicMock()
-        
+
         # Should not raise any exception
         processor.on_start(mock_span)
 
@@ -536,13 +443,10 @@ class TestSpanProcessor:
         processor = OpenLLMetryToOpenInferenceSpanProcessor()
         mock_span = MagicMock()
         mock_span.name = "test_span"
-        mock_span._attributes = {
-            "gen_ai.system": "openai",
-            "gen_ai.request.model": "gpt-4"
-        }
-        
+        mock_span._attributes = {"gen_ai.system": "openai", "gen_ai.request.model": "gpt-4"}
+
         processor.on_end(mock_span)
-        
+
         # Check that attributes were transformed
         assert mock_span._attributes["llm.system"] == "openai"
         assert mock_span._attributes["llm.model_name"] == "gpt-4"
@@ -553,7 +457,7 @@ class TestSpanProcessor:
         processor = OpenLLMetryToOpenInferenceSpanProcessor()
         mock_span = MagicMock()
         mock_span._attributes = None
-        
+
         # Should not raise any exception
         processor.on_end(mock_span)
 
@@ -562,7 +466,7 @@ class TestSpanProcessor:
         processor = OpenLLMetryToOpenInferenceSpanProcessor()
         mock_span = MagicMock()
         mock_span._attributes = {}
-        
+
         # Should not raise any exception
         processor.on_end(mock_span)
 
@@ -573,12 +477,11 @@ class TestSpanProcessor:
         mock_span.name = "test_span"
         original_attrs = {"gen_ai.system": "openai"}
         mock_span._attributes = original_attrs.copy()
-        
+
         # Mock the transformation to raise an exception
-        with patch('map_openllmetry_to_openinference.map_openll_to_openinference', 
-                   side_effect=Exception("Transformation error")):
+        with patch("map_openllmetry_to_openinference.map_openll_to_openinference", side_effect=Exception("Transformation error")):
             processor.on_end(mock_span)
-            
+
             # Should preserve original attributes on error
             assert mock_span._attributes == original_attrs
 
@@ -589,9 +492,9 @@ class TestSpanProcessor:
         mock_span = MagicMock()
         mock_span.name = "test_span"
         mock_span._attributes = {"gen_ai.system": "openai"}
-        
+
         processor.on_end(mock_span)
-        
+
         captured = capsys.readouterr()
         assert "Transformed span 'test_span'" in captured.err
 
@@ -606,7 +509,7 @@ class TestSpanProcessor:
         processor = OpenLLMetryToOpenInferenceSpanProcessor()
         result = processor.force_flush()
         assert result is True
-        
+
         result = processor.force_flush(timeout_millis=1000)
         assert result is True
 
@@ -621,22 +524,19 @@ class TestEdgeCases:
 
     def test_non_dict_values(self):
         """Test handling of non-dict values in complex structures."""
-        input_attrs = {
-            "gen_ai.prompt": "not a dict",
-            "gen_ai.completion": ["not", "a", "dict"]
-        }
-        
+        input_attrs = {"gen_ai.prompt": "not a dict", "gen_ai.completion": ["not", "a", "dict"]}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should handle gracefully and still produce valid output
         assert isinstance(result, dict)
-        
+
         # Check that the non-dict values were handled gracefully
         assert "llm.input_messages" in result
         input_messages = json.loads(result["llm.input_messages"])
         assert len(input_messages) == 1
         assert input_messages[0]["message.content"] == "not a dict"
-        
+
         assert "llm.output_messages" in result
         output_messages = json.loads(result["llm.output_messages"])
         # List should be processed element by element
@@ -644,43 +544,29 @@ class TestEdgeCases:
 
     def test_invalid_message_structures(self):
         """Test handling of invalid message structures."""
-        input_attrs = {
-            "gen_ai.prompt": {
-                "invalid": "structure"
-            }
-        }
-        
+        input_attrs = {"gen_ai.prompt": {"invalid": "structure"}}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should handle gracefully
         assert isinstance(result, dict)
 
     def test_malformed_tool_calls(self):
         """Test handling of malformed tool calls."""
-        messages = [{
-            "role": "assistant",
-            "tool_calls": [
-                {"invalid": "structure"},
-                None,
-                "not a dict"
-            ]
-        }]
-        
+        messages = [{"role": "assistant", "tool_calls": [{"invalid": "structure"}, None, "not a dict"]}]
+
         result = _transform_tool_calls_list(messages[0]["tool_calls"])
-        
+
         # Should handle gracefully without raising exceptions
         assert isinstance(result, list)
 
     def test_very_large_attribute_values(self):
         """Test handling of very large attribute values."""
         large_dict = {f"key_{i}": f"value_{i}" for i in range(1000)}
-        input_attrs = {
-            "gen_ai.system": "openai",
-            "large_attribute": large_dict
-        }
-        
+        input_attrs = {"gen_ai.system": "openai", "large_attribute": large_dict}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should handle large values by JSON encoding them
         assert result["llm.system"] == "openai"
         assert "metadata" in result
@@ -693,39 +579,21 @@ class TestRegressionCases:
         """Test handling of mixed tool call formats in the same message."""
         input_attrs = {
             "gen_ai.completion": {
-                "0": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls.0.id": "call_1",
-                    "tool_calls.0.function.name": "func_1",
-                    "tool_calls": [
-                        {
-                            "id": "call_2",
-                            "function": {"name": "func_2"}
-                        }
-                    ]
-                }
+                "0": {"role": "assistant", "content": None, "tool_calls.0.id": "call_1", "tool_calls.0.function.name": "func_1", "tool_calls": [{"id": "call_2", "function": {"name": "func_2"}}]}
             }
         }
-        
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should handle mixed formats gracefully
         assert "llm.output_messages" in result
 
     def test_unicode_content(self):
         """Test handling of unicode content in messages."""
-        input_attrs = {
-            "gen_ai.prompt": {
-                "0": {
-                    "role": "user",
-                    "content": "Hello 世界! 🌍 Emoji test 😀"
-                }
-            }
-        }
-        
+        input_attrs = {"gen_ai.prompt": {"0": {"role": "user", "content": "Hello 世界! 🌍 Emoji test 😀"}}}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         assert "llm.input_messages" in result
         messages = json.loads(result["llm.input_messages"])
         assert "世界" in messages[0]["message.content"]
@@ -733,20 +601,10 @@ class TestRegressionCases:
 
     def test_null_and_none_values(self):
         """Test handling of null and None values."""
-        input_attrs = {
-            "gen_ai.system": "openai",
-            "null_value": None,
-            "gen_ai.prompt": {
-                "0": {
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": None
-                }
-            }
-        }
-        
+        input_attrs = {"gen_ai.system": "openai", "null_value": None, "gen_ai.prompt": {"0": {"role": "assistant", "content": None, "tool_calls": None}}}
+
         result = map_openll_to_openinference(input_attrs)
-        
+
         # Should handle None values gracefully
         assert result["llm.system"] == "openai"
         assert "llm.input_messages" in result
