@@ -1,5 +1,14 @@
 # Arize Toolkit
 
+<meta property="og:title" content="Arize Toolkit">
+<meta property="og:description" content="Arize Toolkit is a Python client for interacting with the Arize AI API.">
+<meta property="og:image" content="https://arize.com/images/arize_toolkit_v2.png">
+<meta property="og:url" content="https://arize.com/toolkit">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Arize Toolkit">
+<meta property="og:locale" content="en_US">
+<meta property="og:image:width" content="200">
+<meta property="og:image:height" content="200">
 <div align="center">
   <img src="images/logos/arize_toolkit_v2.png" alt="Arize Toolkit Logo" width="200"/>
 </div>
