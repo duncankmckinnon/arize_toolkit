@@ -8,6 +8,7 @@ Welcome to the documentation for Arize Toolkit, a Python client for interacting 
 
 ## Quick Links
 
+- **[🚀 Quickstart Guide](quickstart.md)** - Step-by-step guide to get started with Arize Toolkit
 - [Model Tools](model_tools.md) - Documentation for model tools
 - [Monitor Tools](monitor_tools.md) - Documentation for monitor tools
 - [Custom Metrics Tools](custom_metrics_tools.md) - Documentation for custom metrics tools

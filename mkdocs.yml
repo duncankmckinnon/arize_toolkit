@@ -20,6 +20,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   
   - Tools:
     - Model Tools: model_tools.md
