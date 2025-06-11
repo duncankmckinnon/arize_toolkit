@@ -8,6 +8,7 @@ site_dir: site
 
 theme:
   name: material
+  favicon: images/logos/arize_toolkit_v1.png
   palette:
     primary: indigo
     accent: indigo
@@ -46,4 +47,9 @@ markdown_extensions:
       custom_checkbox: true
 
 plugins:
-  - search 
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/duncankmckinnon/arize_toolkit
