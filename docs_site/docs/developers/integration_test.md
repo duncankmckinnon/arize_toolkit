@@ -4,7 +4,15 @@ This guide explains how to set up and run integration tests for the Arize API cl
 
 ## Setup
 
-### 1. Environment Variables
+### 1. Select an Arize Organization and Space
+
+For these integration tests, you will need to select an Arize organization and space. The space used for the tests should be separated from any sensitive use cases or production data that may also exist in the same account. Ideally, you should create Arize models and other resources in a separate space for testing, because this script will attempt to alter, delete and then recreate data resources in the chosen space, and it works best when:
+
+- there is a good representation of all different types of resources in the space.
+- it's easy to make synthetic resources for testing that won't be missed if they are deleted and fail to be recreated.
+- new resources can be created easily to test new features without needing to setup entire use cases.
+
+### 2. Environment Variables
 
 Create a `.env` file in the root directory with the following variables:
 
@@ -14,7 +22,7 @@ ORGANIZATION_NAME=your_organization
 SPACE_NAME=your_space_name
 ```
 
-### 2. Prerequisites
+### 3. Prerequisites
 
 Install required dependencies:
 

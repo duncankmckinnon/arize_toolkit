@@ -4,6 +4,8 @@
 
 Custom metrics allow you to define bespoke SQL-like aggregations (e.g. `SELECT avg(prediction) FROM model`) and surface them across Arize. They are particularly useful when the built-in metrics do not capture a domain-specific definition of performance or quality. Use **[these reference documents](https://docs.arize.com/arize/machine-learning/machine-learning/how-to-ml/custom-metrics-api/custom-metric-syntax)** to understand the syntax of the SQL expressions in Arize Custom Metrics.
 
+For more information about custom metrics in Arize check out the **[documentation on Arize custom metrics](https://arize.com/docs/ax/machine-learning/machine-learning/how-to-ml/custom-metrics-api)**.
+
 `arize-toolkit` exposes helpers for:
 
 1. Discovering existing custom metrics

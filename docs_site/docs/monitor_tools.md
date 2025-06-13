@@ -247,6 +247,7 @@ monitor_url: str = client.create_performance_monitor(
   std_dev_multiplier2: float | None = None,
   # ––– Notifications –––
   email_addresses: list[str] | None = None,
+  filters: list[dict] | None = None,
 )
 ```
 
@@ -289,6 +290,7 @@ Creates a new performance monitor. Returns a URL path to the newly created monit
 - `operator2` – Comparison operator for the secondary threshold.
 - `std_dev_multiplier2` – Standard-deviation multiplier for the secondary adaptive threshold.
 - `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `filters` – List of filters to apply to the monitor.
 
 **Returns**
 
@@ -333,6 +335,7 @@ monitor_url: str = client.create_drift_monitor(
   evaluation_window_length_seconds: int = 259200,  # 3 days
   delay_seconds: int = 0,
   email_addresses: list[str] | None = None,
+  filters: list[dict] | None = None,
 )
 ```
 
@@ -370,6 +373,7 @@ Creates a new drift monitor. Returns a URL path to the newly created monitor.
 - `delay_seconds` – How long to wait before evaluating newly-arrived data (to accommodate ingestion lag).\
   Default is `0`.
 - `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `filters` – List of filters to apply to the monitor.
 
 **Returns**
 
@@ -414,6 +418,7 @@ monitor_url: str = client.create_data_quality_monitor(
   evaluation_window_length_seconds: int = 259200,  # 3 days
   delay_seconds: int = 0,
   email_addresses: list[str] | None = None,
+  filters: list[dict] | None = None,
 )
 ```
 
@@ -449,6 +454,7 @@ Creates a data-quality monitor. Returns a URL path to the newly created monitor.
 - `evaluation_window_length_seconds` – Size of the rolling aggregation window.
 - `delay_seconds` – How long to wait before evaluating newly-arrived data (to accommodate ingestion lag).
 - `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `filters` – List of filters to apply to the monitor.
 
 **Returns**
 
