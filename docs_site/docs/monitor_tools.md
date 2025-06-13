@@ -118,7 +118,6 @@ A dictionary containing the monitor's details.
 - `evaluationWindowLengthSeconds` – the evaluation window length for the monitor
 - `delaySeconds` – the delay for the monitor
 - `emailAddresses` – the email addresses for the monitor
-- `filters` – the filters for the monitor
   ... other fields omitted due to differing monitor types
 
 **Example**
@@ -173,7 +172,6 @@ A dictionary containing the monitor's details.
 - `evaluationWindowLengthSeconds` – the evaluation window length for the monitor
 - `delaySeconds` – the delay for the monitor
 - `emailAddresses` – the email addresses for the monitor
-- `filters` – the filters for the monitor
   ... other fields omitted due to differing monitor types
 
 **Example**
