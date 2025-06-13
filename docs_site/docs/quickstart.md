@@ -7,39 +7,42 @@ Welcome to the Arize Toolkit! This guide will walk you through getting started w
 Install the Arize Toolkit using pip:
 
 ```bash
-pip install arize-toolkit
+pip install arize_toolkit
 ```
 
 ## 🔐 Authentication & Setup
 
 ### Step 1: Get Your API Key
 
-1. Log into your Arize account at [app.arize.com](https://app.arize.com)
-1. Navigate to your space settings
-1. Copy your **Developer API Key** (this will only be shown once, so make sure to save it somewhere safe)
+1. Log in or create an Arize account at [app.arize.com](https://app.arize.com)
+1. Navigate in the sidebar to the **Settings->Account Settings** page
+1. Go to the **API Keys** tab and click **Create API Key**
+1. Name and copy your **Developer API Key**. This will only be shown once, so make sure to save it somewhere safe, or use the `.env` file method below
 
 For detailed instructions on how to get your API key, see [this guide](https://arize.com/docs/ax/reference/authentication-and-security/api-keys).
 
 ### Step 2: Set Up Your Environment
 
-You can authenticate using an environment variable (recommended) or pass the key directly:
+You can authenticate using an environment variable (recommended in most cases) or pass the key to the client.
+To use the environment variable method, you can set the `ARIZE_DEVELOPER_KEY` environment variable to your API key.
 
 ```bash
 # Option 1: Set environment variable (recommended)
 export ARIZE_DEVELOPER_KEY="your-api-key-here"
 ```
 
-Alternatively, you can use a `.env` file to store your API key and other configuration.
+#### Using a `.env` File
+
+Alternatively, you can use a `.env` file to store your API key (and other configurations) as shown below. Using a `.env` file with a `.gitignore` for development is generally safer because you won't accidentally commit your API key or other sensitive information to a public repository.
 
 ```bash
 # Option 2: Use .env file
 ARIZE_DEVELOPER_KEY=your-api-key-here
-ARIZE_APP_URL=https://your-arize-instance.com
 ARIZE_ORGANIZATION=your-org-name
 ARIZE_SPACE=your-space-name
 ```
 
-The developer key will automatically be picked up from the environment variables, but the other parameters will need to be passed in manually. You can use the `dotenv` package and `load_dotenv` function to load the environment variables from the `.env` file.
+You can use the `dotenv` package and `load_dotenv` function to load the environment variables from the `.env` file. With this approach, `ARIZE_DEVELOPER_KEY` will automatically be picked up from the environment variables, but the other parameters need to be passed in manually.
 
 ```python
 import os
@@ -51,9 +54,8 @@ load_dotenv()
 
 ORGANIZATION = os.getenv("ARIZE_ORGANIZATION")
 SPACE = os.getenv("ARIZE_SPACE")
-ARIZE_APP_URL = os.getenv("ARIZE_APP_URL")
 
-client = Client(organization=ORGANIZATION, space=SPACE, arize_app_url=ARIZE_APP_URL)
+client = Client(organization=ORGANIZATION, space=SPACE)
 ```
 
 ### Step 3: Initialize the Client
@@ -66,30 +68,42 @@ If you are working with an on-premise deployment, you will need to provide the `
 
 ```python
 from arize_toolkit import Client
+from dotenv import load_dotenv
 
-# Option 1: Using environment variable
+load_dotenv()
+
+# Option 1: Using environment variable or .env file (recommended)
 client = Client(organization="your-org-name", space="your-space-name")
+```
 
+```python
 # Option 2: Pass API key directly
 client = Client(
     organization="your-org-name",
     space="your-space-name",
     arize_developer_key="your-api-key-here",
 )
+```
 
+```python
 # Option 3: For on-premise deployments
 client = Client(
     organization="your-org-name",
     space="your-space-name",
+    arize_developer_key="your-api-key-here",
     arize_app_url="https://your-arize-instance.com",
 )
 ```
 
 ______________________________________________________________________
 
-## 🏢 Managing Spaces & Organizations
+## 🏢 [Managing Spaces & Organizations](space_and_organization_tools.md)
+
+In some cases, you may need to work across multiple organizations or spaces. The toolkit provides tools to manage these resources while working with a single client. If you need to be able to run operations across multiple organizations or spaces you have permissions for, you can use the `get_all_organizations` and `get_all_spaces` methods to get list the available organizations and spaces.
 
 ### Get All Organizations
+
+Get all organizations in the account for which you have permissions.
 
 ```python
 # List all organizations in your account
@@ -103,6 +117,8 @@ for org in organizations:
 
 ### Get All Spaces
 
+Get all spaces in the current organization for which you have permissions.
+
 ```python
 # List all spaces in current organization
 spaces = client.get_all_spaces()
@@ -115,11 +131,11 @@ for space in spaces:
 
 ### Switch Spaces
 
-The `switch_space` method can be used to transition between spaces. There are three ways to call the method:
+The `switch_space` method can be used to transition between spaces and organizations. There are three ways to call the method:
 
 1. `switch_space(space="space-name")` - Switch to a space in the current organization
 1. `switch_space(space="space-name", organization="organization-name")` - Switch to a space in a different organization
-1. `switch_space(organization="organization-name")` - Switch to the any existing space in a different organization
+1. `switch_space(organization="organization-name")` - Switch to a different organization (the first available space in the organization will be selected)
 
 ```python
 # Switch to a different space in the same organization
@@ -137,9 +153,9 @@ print(f"Current space: {client.space_url}")
 
 ______________________________________________________________________
 
-## 🤖 Working with Models
+## 🤖 [Working with Projects or Models](model_tools.md)
 
-### List All Models
+### List All Models (Projects)
 
 ```python
 # Get all models in the current space
@@ -152,7 +168,7 @@ for model in models:
     print(f"  Demo Model: {model['isDemoModel']}")
 ```
 
-### Get a Specific Model
+### Get a Specific Model (Project)
 
 When retrieving a model, you can either get the model by name or by ID. The model ID is the unique identifier for the model in Arize. The model name is the name of the model as it appears in the Arize UI. The model retrieved is a simplified version of the model object that can then be used to get more detailed information about the model with other tools.
 
@@ -208,7 +224,7 @@ for model_name, vol in model_volumes.items():
 
 ______________________________________________________________________
 
-## 📊 Custom Metrics
+## 📊 [Custom Metrics](custom_metrics_tools.md)
 
 Arize supports many metrics out of the box, but often you will want to create your own metrics to track specific performance or KPI's. Custom metrics are created by writing a SQL query that returns a single value. The query is run on the features, tags, inference data, and actuals for a model and the result is made available in Arize for monitoring and tracking.
 
@@ -338,7 +354,7 @@ is_deleted = client.delete_custom_metric_by_id(custom_metric_id="metric_123")
 
 ______________________________________________________________________
 
-## 🚨 Monitors
+## 🚨 [Monitors](monitor_tools.md)
 
 Monitors are used to track the performance of a model over time. There are three categories of monitors in Arize:
 
@@ -448,9 +464,40 @@ dq_monitor_url = client.create_data_quality_monitor(
 print(f"Created data quality monitor: {dq_monitor_url}")
 ```
 
+### Copy a Monitor
+
+You can copy an existing monitor to the same or a different model. The new monitor name is optional and will default to the current monitor name as long as it is unique in the new model. The other fields are optional and will default to the current monitor values. The copy method returns the URL of the new monitor, so you can check the monitor in the Arize UI directly or get the monitor id from the URL.
+
+```python
+# Copy a monitor
+new_monitor_url = client.copy_monitor(
+    current_monitor_name="accuracy_alert_v1",
+    current_model_name="fraud-detection-v1",
+    new_monitor_name="accuracy_alert_v2",
+    new_model_name="fraud-detection-v2",
+    ...,  # any fields you want to override in the new monitor
+)
+
+print(f"Copied monitor: {new_monitor_url}")
+```
+
+### Delete a Monitor
+
+You can delete a monitor by providing the monitor name and the model name. There is also an option to delete a monitor by its id.
+
+```python
+# Delete a monitor
+is_deleted = client.delete_monitor(
+    monitor_name="accuracy_alert_v1",
+    model_name="fraud-detection-v1",
+)
+
+is_deleted = client.delete_monitor_by_id(monitor_id="monitor_123")
+```
+
 ______________________________________________________________________
 
-## 🧠 Language Models & Prompts
+## 🧠 [Prompts](language_model_tools.md)
 
 Arize has robust support for AI engineering workflows, including prompts, annotations, experiments, datasets and more. There is a lot of support already for these features in other packages in the Arize ecosystem, but the `arize_toolkit` provides a few additional tools for interacting with the prompt and annotations api.
 
@@ -561,7 +608,7 @@ is_deleted = client.delete_prompt_by_id(prompt_id="prompt_123")
 
 ______________________________________________________________________
 
-## 🔗 Annotations
+## 📝 [Annotations](language_model_tools.md)
 
 Annotations are used to provide human feedback on LLM responses. The annotations provided can be used to monitor or improve model performance and align expectations with the business needs.
 
@@ -609,7 +656,7 @@ print(f"Score annotation created: {score_annotation_success}")
 
 ______________________________________________________________________
 
-## 📥 Data Import Jobs
+## 📥 [Data Import Jobs](data_import_tools.md)
 
 Data import jobs are the backbone of continuous model monitoring in Arize. They automate the process of ingesting prediction data, actual outcomes, and feature values from your production systems into Arize for monitoring and analysis. This is essential for maintaining visibility into model performance over time without manual data uploads.
 
@@ -869,7 +916,7 @@ monitor_import_jobs()
 
 ______________________________________________________________________
 
-## 📊 Dashboards
+## 📊 [Dashboards](dashboard_tools.md)
 
 Dashboards in Arize provide a powerful way to visualize and monitor your machine learning models through customizable widgets and charts. They serve as centralized monitoring hubs where you can track model performance, data drift, data quality, and custom business metrics all in one place. Dashboards are particularly useful for stakeholders who need high-level overviews of model health without diving into detailed technical metrics.
 
@@ -959,7 +1006,7 @@ webbrowser.open(dashboard_url)
 
 ______________________________________________________________________
 
-## 🛠️ Utility Functions
+## 🛠️ [Utility Functions](utility_tools.md)
 
 Utility functions are available to help you configure rate limiting, get URLs for different resources, and handle errors.
 
