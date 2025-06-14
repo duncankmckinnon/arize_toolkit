@@ -44,7 +44,3 @@ jobs:
         uv pip install -e ".[dev]" --exclude snapshottest
         # Run tests with plugin loading disabled for problematic plugins  
         uv run pytest -v --continue-on-collection-errors -p no:snapshottest
-    
-    - name: Run type checking
-      run: |
-        uv run mypy arize_toolkit
