@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "arize_toolkit"
-version = "1.0.0"
+dynamic = ["version"]
 description = "A library to interact with Arize AI APIs"
 authors = [
     {name = "Duncan McKinnon", email = "dmckinnon@arize.com"}
@@ -49,6 +49,12 @@ dev = [
 integration = [
     "python-dotenv",
 ]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "arize_toolkit/_version.py"
 
 [tool.flake8]
 ignore = ["E266", "W503", "E203"]
