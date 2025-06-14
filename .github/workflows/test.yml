@@ -40,7 +40,6 @@ jobs:
     - name: Run tests (Python 3.12)
       if: ${{ matrix.python-version == '3.12' }}
       run: |
-        # Install without snapshottest for Python 3.12 compatibility
-        uv pip install -e ".[dev]" --exclude snapshottest
+        # snapshottest is automatically excluded for Python 3.12 via pyproject.toml
         # Run tests with plugin loading disabled for problematic plugins  
         uv run pytest -v --continue-on-collection-errors -p no:snapshottest
