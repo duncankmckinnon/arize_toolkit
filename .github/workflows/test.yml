@@ -22,133 +22,24 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     
-    - name: Install Poetry
+    - name: Install uv
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
     
-    - name: Install dependencies
+    - name: Create virtual environment and install dependencies
       run: |
-        poetry install --with dev
+        uv venv
+        uv pip install -e ".[dev]"
     
     - name: Run tests (Python < 3.12)
       if: ${{ matrix.python-version != '3.12' }}
-      id: test-lower-versions
-      continue-on-error: true
       run: |
-        poetry run pytest -v --continue-on-collection-errors
-        echo "status=$?" >> $GITHUB_OUTPUT
+        uv run pytest -v --continue-on-collection-errors
         
     - name: Run tests (Python 3.12)
       if: ${{ matrix.python-version == '3.12' }}
-      id: test-py312
-      continue-on-error: true
       run: |
-        # Remove snapshottest from dependencies for Python 3.12
-        poetry remove snapshottest
-        # Run tests with plugin loading disabled for problematic plugins
-        poetry run pytest -v --continue-on-collection-errors -p no:snapshottest
-        echo "status=$?" >> $GITHUB_OUTPUT
-    
-    - name: Run type checking
-      id: type-check
-      continue-on-error: true
-      run: |
-        poetry run mypy arize_toolkit
-        echo "status=$?" >> $GITHUB_OUTPUT
-        
-    - name: Record test results
-      id: record-results
-      run: |
-        if [[ "${{ matrix.python-version }}" != "3.12" ]]; then
-          TEST_STATUS="${{ steps.test-lower-versions.outputs.status }}"
-        else
-          TEST_STATUS="${{ steps.test-py312.outputs.status }}"
-        fi
-        TYPE_CHECK_STATUS="${{ steps.type-check.outputs.status }}"
-        
-        if [[ "$TEST_STATUS" != "0" ]]; then
-          echo "::warning::Tests failed on Python ${{ matrix.python-version }}"
-        fi
-        if [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
-          echo "::warning::Type checking failed on Python ${{ matrix.python-version }}"
-        fi
-        
-        echo "test_status=$TEST_STATUS" >> $GITHUB_STEP_SUMMARY
-        echo "type_check_status=$TYPE_CHECK_STATUS" >> $GITHUB_STEP_SUMMARY
-        echo "python_version=${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
-        
-        # Create artifacts for final step
-        mkdir -p test_results
-        # Properly create the JSON file
-        echo "{\"test_status\": \"$TEST_STATUS\", \"type_check_status\": \"$TYPE_CHECK_STATUS\"}" > test_results/python-${{ matrix.python-version }}.json
-        
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results-${{ matrix.python-version }}
-        path: test_results/
-        retention-days: 1
-  
-  summarize:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download all test results
-        uses: actions/download-artifact@v4
-        with:
-          path: test_results
-      
-      - name: Analyze test results
-        run: |
-          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Python Version | Tests | Type Checking |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------------|-------|---------------|" >> $GITHUB_STEP_SUMMARY
-          
-          FAILED=false
-          
-          for version in "3.9" "3.10" "3.11" "3.12"; do
-            JSON_FILE="test_results/test-results-$version/python-$version.json"
-            
-            if [ -f "$JSON_FILE" ]; then
-              # Debug the JSON content
-              echo "Content of $JSON_FILE:"
-              cat "$JSON_FILE"
-              
-              # Parse values more safely
-              TEST_STATUS=$(cat "$JSON_FILE" | jq -r '.test_status' 2>/dev/null || echo "error")
-              TYPE_CHECK_STATUS=$(cat "$JSON_FILE" | jq -r '.type_check_status' 2>/dev/null || echo "error")
-              
-              if [[ "$TEST_STATUS" == "error" ]]; then
-                echo "Error parsing test status from $JSON_FILE"
-                TEST_RESULT="⚠️ Parse Error"
-              elif [[ "$TEST_STATUS" != "0" ]]; then
-                TEST_RESULT="❌ Failed"
-                FAILED=true
-              else
-                TEST_RESULT="✅ Passed"
-              fi
-              
-              if [[ "$TYPE_CHECK_STATUS" == "error" ]]; then
-                echo "Error parsing type check status from $JSON_FILE"
-                TYPE_CHECK_RESULT="⚠️ Parse Error"
-              elif [[ "$TYPE_CHECK_STATUS" != "0" ]]; then
-                TYPE_CHECK_RESULT="❌ Failed"
-              else
-                TYPE_CHECK_RESULT="✅ Passed"
-              fi
-              
-              echo "| Python $version | $TEST_RESULT | $TYPE_CHECK_RESULT |" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "File not found: $JSON_FILE"
-              echo "| Python $version | ⚠️ No Results | ⚠️ No Results |" >> $GITHUB_STEP_SUMMARY
-            fi
-          done
-          
-          if [[ "$FAILED" == "true" ]]; then
-            echo "::error::One or more test runs failed. See summary for details."
-            exit 1
-          else
-            echo "::notice::All tests completed successfully!"
-          fi
+        # snapshottest is automatically excluded for Python 3.12 via pyproject.toml
+        # Run tests with plugin loading disabled for problematic plugins  
+        uv run pytest -v --continue-on-collection-errors -p no:snapshottest

@@ -9,7 +9,7 @@
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
 [![Lint and Format](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml)
 [![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org)
-[![Poetry](https://img.shields.io/badge/poetry-1.0+-blueviolet)](https://python-poetry.org)
+[![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Flake8](https://img.shields.io/badge/flake8-7.2.0-blue)](https://flake8.pycqa.org)
 [![isort](https://img.shields.io/badge/isort-5.13.2-blue)](https://pycqa.github.io/isort)

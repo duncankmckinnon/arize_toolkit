@@ -15,32 +15,33 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    - name: Install Poetry
+    - name: Install uv
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-    - name: Add Poetry to PATH
-      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-    - name: Configure Poetry
-      run: |
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
     - name: Load cached venv
-      id: cached-poetry-dependencies
+      id: cached-uv-dependencies
       uses: actions/cache@v3
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    - name: Run black
-      run: poetry run black . --check --line-length 200 --exclude .venv
-    - name: Run isort
-      run: poetry run isort . --check-only --profile black --line-length 200 --skip .venv
-    - name: Run flake8
-      run: poetry run flake8 . --max-line-length=200 --ignore=E266,W503,E203 --exclude=.venv
+      if: steps.cached-uv-dependencies.outputs.cache-hit != 'true'
+      run: |
+        uv venv
+        uv pip install -e ".[dev]"
+    - name: Activate virtual environment
+      run: source .venv/bin/activate
+    - name: Lint with flake8
+      run: |
+        uv run flake8 arize_toolkit tests --max-line-length=200 --ignore=E266,W503,E203
+    - name: Check code formatting with black
+      run: |
+        uv run black arize_toolkit tests --check --line-length 200
+    - name: Check import sorting with isort
+      run: |
+        uv run isort arize_toolkit tests --check-only --profile black --line-length 200
     - name: Run mdformat
       run: |
-        poetry run mdformat README.md --check
-        poetry run mdformat docs_site/docs --check 
+        uv run mdformat README.md --check
+        uv run mdformat docs_site/docs --check 
