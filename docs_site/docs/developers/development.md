@@ -10,7 +10,7 @@ git clone https://github.com/duncankmckinnon/arize_toolkit.git
 cd arize_toolkit
 ```
 
-To set up a development environment for this project, firstrun the bootstrap script to create a named virtual environment and install the dependencies using poetry:
+To set up a development environment for this project, first run the bootstrap script to create a named virtual environment and install the dependencies using uv:
 
 ```bash
 sh ./bin/bootstrap.sh
@@ -19,10 +19,10 @@ sh ./bin/bootstrap.sh
 Then activate the virtual environment:
 
 ```bash
-source .venv/bin/activate
+source arize-toolkit-venv/bin/activate
 ```
 
-You're ready to develop! The virtual environment will be created in the `.venv` directory with the name "arize-toolkit-venv".
+You're ready to develop! The virtual environment will be created in the current directory with the name "arize-toolkit-venv".
 
 ## Base Classes Explained
 

@@ -21,16 +21,10 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Configure Poetry
-      env:
-        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        poetry config pypi-token.pypi "$PYPI_TOKEN"
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
 
     - name: Extract version from tag
       id: get_version
@@ -45,27 +39,31 @@ jobs:
 
     - name: Update version in pyproject.toml
       run: |
-        poetry version ${{ steps.get_version.outputs.version }}
+        # Update version in pyproject.toml
+        sed -i "s/version = \".*\"/version = \"${{ steps.get_version.outputs.version }}\"/" pyproject.toml
         echo "📝 Updated pyproject.toml version to ${{ steps.get_version.outputs.version }}"
 
     - name: Run tests before publishing
       run: |
         echo "🧪 Installing dependencies and running tests..."
-        poetry install --with dev
-        poetry run pytest -v
+        uv venv
+        uv pip install -e ".[dev]"
+        uv run pytest -v
         echo "✅ All tests passed!"
 
     - name: Build package
       run: |
         echo "🔨 Building package..."
-        poetry build
+        uv build
         echo "📦 Package built successfully!"
         ls -la dist/
 
     - name: Publish to PyPI
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         echo "🚀 Publishing to PyPI..."
-        poetry publish
+        uv publish --token $PYPI_TOKEN
         echo "✅ Successfully published to PyPI!"
 
     - name: Generate additional release notes
@@ -73,7 +71,7 @@ jobs:
       run: |
         # Get build information
         BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        POETRY_VERSION=$(poetry --version)
+        UV_VERSION=$(uv --version)
         
         # Safely handle release body (escape any problematic characters)
         RELEASE_BODY=$(cat << 'RELEASE_BODY_EOF'
@@ -92,7 +90,7 @@ jobs:
         \`\`\`bash
         pip install arize-toolkit==${{ steps.get_version.outputs.version }}
         # or
-        poetry add arize-toolkit@${{ steps.get_version.outputs.version }}
+        uv add arize-toolkit@${{ steps.get_version.outputs.version }}
         \`\`\`
 
         ### 📋 Original Release Notes
@@ -108,7 +106,7 @@ jobs:
         - **Built from commit:** ${{ github.sha }}
         - **Build date:** ${BUILD_DATE}
         - **Python version:** 3.10
-        - **Poetry version:** ${POETRY_VERSION}
+        - **uv version:** ${UV_VERSION}
         BUILD_INFO_EOF
         
         echo "📝 Generated enhanced release notes"
