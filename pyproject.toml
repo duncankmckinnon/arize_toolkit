@@ -53,8 +53,5 @@ integration = [
 [tool.hatch.version]
 source = "vcs"
 
-[tool.hatch.build.hooks.vcs]
-version-file = "arize_toolkit/_version.py"
-
 [tool.flake8]
 ignore = ["E266", "W503", "E203"]
