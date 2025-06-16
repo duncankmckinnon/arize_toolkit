@@ -11,11 +11,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org)
 [![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Flake8](https://img.shields.io/badge/flake8-7.2.0-blue)](https://flake8.pycqa.org)
-[![isort](https://img.shields.io/badge/isort-5.13.2-blue)](https://pycqa.github.io/isort)
-[![mdformat](https://img.shields.io/badge/mdformat-0.7.22-blue)](https://mdformat.readthedocs.io)
-[![pytest](https://img.shields.io/badge/pytest-latest-blue)](https://docs.pytest.org)
-[![coverage](https://img.shields.io/badge/coverage-latest-blue)](https://coverage.readthedocs.io)
+[![coverage](https://img.shields.io/badge/coverage-92%25-green)](https://coverage.readthedocs.io)
 
 </div>
 
