@@ -4,7 +4,7 @@
 set -e
 
 # Define virtual environment name (based on project name)
-VENV_NAME="arize-toolkit-venv"
+VENV_NAME=".venv"
 
 # Make sure uv is on PATH
 if ! command -v uv &> /dev/null; then
