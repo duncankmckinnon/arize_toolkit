@@ -149,3 +149,21 @@ class DriftMonitor(MonitorDetailedType):
     driftMetric: Optional[DriftMetric] = Field(default=DriftMetric.psi)
     dimensionCategory: Optional[DimensionCategory] = Field(default=None)
     dimensionName: Optional[str] = Field(default=None)
+
+
+## Time Series Models ##
+
+
+class DataPoint(GraphQLModel):
+    """Represents a single data point in a time series."""
+
+    x: datetime = Field(description="Timestamp of the data point")
+    y: Optional[float] = Field(description="Value at this timestamp")
+
+
+class TimeSeriesWithThresholdDataType(GraphQLModel):
+    """Represents time series data with optional threshold data points."""
+
+    key: str = Field(description="Key identifier for the time series")
+    dataPoints: List[DataPoint] = Field(default_factory=list, description="List of data points in the time series")
+    thresholdDataPoints: Optional[List[DataPoint]] = Field(default=None, description="List of threshold data points")

@@ -492,3 +492,90 @@ class TestDimensionFilterInput:
             assert filter_input.dimensionType == filter_type
             assert filter_input.name is None
             assert filter_input.values == ["test_value"]
+
+
+class TestTimeSeriesModels:
+    """Test time series related models"""
+
+    def test_data_point(self):
+        """Test DataPoint model initialization"""
+        from arize_toolkit.models import DataPoint
+
+        # Test with both x and y values
+        timestamp = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+        point = DataPoint(x=timestamp, y=0.95)
+
+        assert point.x == timestamp
+        assert point.y == 0.95
+
+        # Test with None y value
+        point_none = DataPoint(x=timestamp, y=None)
+        assert point_none.x == timestamp
+        assert point_none.y is None
+
+    def test_time_series_with_threshold_data_type(self):
+        """Test TimeSeriesWithThresholdDataType model"""
+        from arize_toolkit.models import DataPoint, TimeSeriesWithThresholdDataType
+
+        # Create data points
+        data_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.9 + i * 0.01) for i in range(5)]
+
+        # Create threshold data points
+        threshold_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.85) for i in range(5)]
+
+        # Test with all fields
+        time_series = TimeSeriesWithThresholdDataType(
+            key="accuracy_metric",
+            dataPoints=data_points,
+            thresholdDataPoints=threshold_points,
+        )
+
+        assert time_series.key == "accuracy_metric"
+        assert len(time_series.dataPoints) == 5
+        assert len(time_series.thresholdDataPoints) == 5
+        assert time_series.dataPoints[0].y == 0.9
+        assert time_series.thresholdDataPoints[0].y == 0.85
+
+    def test_time_series_without_threshold(self):
+        """Test TimeSeriesWithThresholdDataType without threshold data"""
+        from arize_toolkit.models import DataPoint, TimeSeriesWithThresholdDataType
+
+        # Create only data points (no threshold)
+        data_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=100 + i * 10) for i in range(3)]
+
+        time_series = TimeSeriesWithThresholdDataType(key="volume_metric", dataPoints=data_points, thresholdDataPoints=None)
+
+        assert time_series.key == "volume_metric"
+        assert len(time_series.dataPoints) == 3
+        assert time_series.thresholdDataPoints is None
+
+    def test_time_series_empty_data_points(self):
+        """Test TimeSeriesWithThresholdDataType with empty data points"""
+        from arize_toolkit.models import TimeSeriesWithThresholdDataType
+
+        # Test with empty lists (default)
+        time_series = TimeSeriesWithThresholdDataType(key="empty_metric")
+
+        assert time_series.key == "empty_metric"
+        assert time_series.dataPoints == []
+        assert time_series.thresholdDataPoints is None
+
+    def test_time_series_mixed_y_values(self):
+        """Test TimeSeriesWithThresholdDataType with mixed None and float y values"""
+        from arize_toolkit.models import DataPoint, TimeSeriesWithThresholdDataType
+
+        # Create data points with some None values
+        data_points = [
+            DataPoint(x=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc), y=0.9),
+            DataPoint(x=datetime(2024, 1, 1, 1, 0, 0, tzinfo=timezone.utc), y=None),
+            DataPoint(x=datetime(2024, 1, 1, 2, 0, 0, tzinfo=timezone.utc), y=0.85),
+            DataPoint(x=datetime(2024, 1, 1, 3, 0, 0, tzinfo=timezone.utc), y=None),
+        ]
+
+        time_series = TimeSeriesWithThresholdDataType(key="sparse_metric", dataPoints=data_points)
+
+        assert len(time_series.dataPoints) == 4
+        assert time_series.dataPoints[0].y == 0.9
+        assert time_series.dataPoints[1].y is None
+        assert time_series.dataPoints[2].y == 0.85
+        assert time_series.dataPoints[3].y is None
