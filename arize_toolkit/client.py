@@ -2061,13 +2061,13 @@ class Client:
         time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
         to_dataframe: Optional[bool] = False,
     ) -> Dict[str, Any]:
-        """Gets the metric history for a monitor.
+        """Gets the metric history for a monitor. Dates are in UTC.
 
         Args:
             monitor_name (str): Name of the monitor to get the metric history for
             model_name (str): Name of the model to get the metric history for
-            start_date (Optional[Union[datetime, str]]): Start date for the metric history (default is 30 days ago)
-            end_date (Optional[Union[datetime, str]]): End date for the metric history (default is today)
+            start_date (Optional[Union[datetime, str]]): Start date for the metric history (default is 30 days ago in UTC)
+            end_date (Optional[Union[datetime, str]]): End date for the metric history (default is now in UTC)
             time_series_data_granularity (Literal["hour", "day", "week", "month"]): Granularity of the time series data (default is "hour")
             to_dataframe (Optional[bool]): Whether to return the metric history as a pandas DataFrame (default is False)
 
@@ -2091,8 +2091,8 @@ class Client:
             self._graphql_client,
             monitor_name=monitor_name,
             model_name=model_name,
-            start_date=(parse_datetime(start_date) if start_date else datetime.now() - timedelta(days=30)),
-            end_date=parse_datetime(end_date) if end_date else datetime.now(),
+            start_date=(parse_datetime(start_date) if start_date else datetime.now(tz=timezone.utc) - timedelta(days=30)),
+            end_date=(parse_datetime(end_date) if end_date else datetime.now(tz=timezone.utc)),
             time_series_data_granularity=time_series_data_granularity,
             space_id=self.space_id,
         )
@@ -2143,7 +2143,7 @@ class Client:
         """
         if time_series_data_granularity not in ["hour", "day", "week", "month"]:
             raise ArizeAPIException("Invalid time series data granularity. Must be one of: hour, day, week, month")
-        end_date = datetime.now()
+        end_date = datetime.now(tz=timezone.utc)
         if time_series_data_granularity == "month":
             start_date = end_date - timedelta(days=30)
         else:
