@@ -69,6 +69,7 @@ from arize_toolkit.models.llm_utils_models import (
 )
 from arize_toolkit.models.monitor_models import (
     BasicMonitor,
+    DataPoint,
     DataQualityMonitor,
     DriftMonitor,
     DynamicAutoThreshold,
@@ -80,5 +81,6 @@ from arize_toolkit.models.monitor_models import (
     MonitorContactInput,
     MonitorDetailedType,
     PerformanceMonitor,
+    TimeSeriesWithThresholdDataType,
 )
 from arize_toolkit.models.space_models import Space

@@ -196,6 +196,24 @@ def run_integration_tests():
             monitor = client.get_monitor(model_name=model_name, monitor_name=monitor_name)
             print(f"Monitor ID for {monitor_name}: {monitor['id']}")
             print(f"Monitor Category for {monitor_name}: {monitor.get('monitorCategory')}")
+            try:
+                print(f"Running get_monitor_metric_values query for monitor: {monitor_name}...")
+                monitor_metric_values = client.get_monitor_metric_values(
+                    model_name=model_name,
+                    monitor_name=monitor_name,
+                    start_date="2024-01-01",
+                    end_date="2025-01-01",
+                    to_dataframe=True,
+                )
+                print(f"Monitor Metric Values: {monitor_metric_values}")
+                print(f"Running get_latest_monitor_value query for monitor: {monitor_name}...")
+                latest_monitor_value = client.get_latest_monitor_value(
+                    model_name=model_name,
+                    monitor_name=monitor_name,
+                )
+                print(f"Latest Monitor Value: {latest_monitor_value}")
+            except Exception as e:
+                print(f"Monitor Metric Values Error: {e}")
 
             if monitor:
                 monitor_creator = MonitorManager.extract_monitor_type_from_dict(

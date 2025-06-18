@@ -63,6 +63,7 @@ from arize_toolkit.queries.monitor_queries import (
     CreatePerformanceMonitorMutation,
     DeleteMonitorMutation,
     GetAllModelMonitorsQuery,
+    GetModelMetricValueQuery,
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
@@ -2050,6 +2051,120 @@ class Client:
             **monitor_type.to_dict(),
         )
         return self.monitor_url(new_monitor.monitor_id)
+
+    def get_monitor_metric_values(
+        self,
+        monitor_name: str,
+        model_name: str,
+        start_date: Optional[Union[datetime, str]] = None,
+        end_date: Optional[Union[datetime, str]] = None,
+        time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
+        to_dataframe: Optional[bool] = False,
+    ) -> Dict[str, Any]:
+        """Gets the metric history for a monitor. Dates are in UTC.
+
+        Args:
+            monitor_name (str): Name of the monitor to get the metric history for
+            model_name (str): Name of the model to get the metric history for
+            start_date (Optional[Union[datetime, str]]): Start date for the metric history (default is 30 days ago in UTC)
+            end_date (Optional[Union[datetime, str]]): End date for the metric history (default is now in UTC)
+            time_series_data_granularity (Literal["hour", "day", "week", "month"]): Granularity of the time series data (default is "hour")
+            to_dataframe (Optional[bool]): Whether to return the metric history as a pandas DataFrame (default is False)
+
+        Returns:
+            If to_dataframe is False:
+            The metric history for the monitor
+            - key: str - the metric name
+            - dataPoints: List[(datetime, float)] - the metric values
+            - thresholdDataPoints: List[(datetime, float)] - the threshold values (only for monitors with a threshold)
+
+            If to_dataframe is True:
+            A pandas DataFrame with the metric history for the monitor with the following columns:
+            - timestamp: datetime - the timestamp of the metric value
+            - metric_value: float - the metric value
+            - threshold_value: float - the threshold value (only for monitors with a threshold)
+
+        Raises:
+            ArizeAPIException: If metric history retrieval fails or there is an API error
+        """
+        results = GetModelMetricValueQuery.run_graphql_query(
+            self._graphql_client,
+            monitor_name=monitor_name,
+            model_name=model_name,
+            start_date=(parse_datetime(start_date) if start_date else datetime.now(tz=timezone.utc) - timedelta(days=30)),
+            end_date=(parse_datetime(end_date) if end_date else datetime.now(tz=timezone.utc)),
+            time_series_data_granularity=time_series_data_granularity,
+            space_id=self.space_id,
+        )
+        if to_dataframe:
+            rows = (
+                [
+                    {
+                        "timestamp": data_point.x,
+                        "metric_value": data_point.y,
+                        "threshold_value": (threshold_point.y if threshold_point else None),
+                    }
+                    for data_point, threshold_point in zip(results.dataPoints, results.thresholdDataPoints)
+                ]
+                if results.thresholdDataPoints
+                else [
+                    {
+                        "timestamp": data_point.x,
+                        "metric_value": data_point.y,
+                        "threshold_value": None,
+                    }
+                    for data_point in results.dataPoints
+                ]
+            )
+            return DataFrame(rows)
+        return results.to_dict()
+
+    def get_latest_monitor_value(
+        self,
+        monitor_name: str,
+        model_name: str,
+        time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
+    ) -> Dict[str, Any]:
+        """Gets the latest metric value for a monitor.
+
+        Args:
+            monitor_name (str): Name of the monitor to get the latest metric value for
+            model_name (str): Name of the model to get the latest metric value for
+            time_series_data_granularity (Literal["hour", "day", "week", "month"]): Granularity of the time series data (default is "hour")
+
+        Returns:
+            The latest metric value for the monitor
+            - timestamp: datetime - the timestamp of the metric value
+            - metric_value: float - the metric value
+            - threshold_value: float - the threshold value (only for monitors with a threshold)
+
+        Raises:
+            ArizeAPIException: If input validation fails or metric retrieval fails or there is an API error
+        """
+        if time_series_data_granularity not in ["hour", "day", "week", "month"]:
+            raise ArizeAPIException("Invalid time series data granularity. Must be one of: hour, day, week, month")
+        end_date = datetime.now(tz=timezone.utc)
+        if time_series_data_granularity == "month":
+            start_date = end_date - timedelta(days=30)
+        else:
+            granularity = f"{time_series_data_granularity}s"
+            start_date = end_date - timedelta(**{granularity: 2})
+        results = GetModelMetricValueQuery.run_graphql_query(
+            self._graphql_client,
+            monitor_name=monitor_name,
+            model_name=model_name,
+            start_date=start_date,
+            end_date=end_date,
+            time_series_data_granularity=time_series_data_granularity,
+            space_id=self.space_id,
+        )
+        if len(results.dataPoints) == 0:
+            raise ArizeAPIException("No metric values found for the given time range")
+        return {
+            "timestamp": results.dataPoints[-1].x,
+            "metric_value": results.dataPoints[-1].y,
+            "threshold_value": (results.thresholdDataPoints[-1].y if results.thresholdDataPoints else None),
+        }
 
     ## Data Import ##
 

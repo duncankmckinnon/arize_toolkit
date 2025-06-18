@@ -2766,6 +2766,556 @@ class TestMonitorsExtended:
 
         assert url == client.monitor_url("new_drift_monitor_id")
 
+    def test_get_monitor_metric_values(self, client, mock_graphql_client):
+        """Test getting monitor metric values over time"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response with metric history data
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "accuracy_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.95,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": 0.94,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T02:00:00Z",
+                                                            "y": 0.96,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T03:00:00Z",
+                                                            "y": 0.93,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T02:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T03:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                    ],
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test with datetime objects
+        from datetime import datetime, timezone
+
+        start_date = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        end_date = datetime(2024, 1, 2, tzinfo=timezone.utc)
+
+        result = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="test_monitor",
+            start_date=start_date,
+            end_date=end_date,
+            time_series_data_granularity="hour",
+        )
+
+        # Verify the result structure
+        assert result["key"] == "accuracy_metric"
+        assert len(result["dataPoints"]) == 4
+        assert result["dataPoints"][0]["y"] == 0.95
+        assert result["dataPoints"][1]["y"] == 0.94
+        assert result["dataPoints"][2]["y"] == 0.96
+        assert result["dataPoints"][3]["y"] == 0.93
+        assert len(result["thresholdDataPoints"]) == 4
+        assert all(point["y"] == 0.90 for point in result["thresholdDataPoints"])
+
+        # Verify the GraphQL call was made
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_monitor_metric_values_with_string_dates(self, client, mock_graphql_client):
+        """Test getting monitor metric values with string dates"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "drift_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.05,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-02T00:00:00Z",
+                                                            "y": 0.08,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test with string dates
+        result = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="drift_monitor",
+            start_date="2024-01-01",
+            end_date="2024-01-07",
+            time_series_data_granularity="day",
+        )
+
+        assert result["key"] == "drift_metric"
+        assert len(result["dataPoints"]) == 2
+        assert result["dataPoints"][0]["y"] == 0.05
+        assert result["dataPoints"][1]["y"] == 0.08
+        assert result["thresholdDataPoints"] is None
+
+    def test_get_monitor_metric_values_different_granularities(self, client, mock_graphql_client):
+        """Test getting monitor metric values with different granularities"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response for weekly data
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "weekly_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 100,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-08T00:00:00Z",
+                                                            "y": 110,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-15T00:00:00Z",
+                                                            "y": 105,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-22T00:00:00Z",
+                                                            "y": 115,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": [],
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test with week granularity
+        result = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="test_monitor",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            time_series_data_granularity="week",
+        )
+
+        assert result["key"] == "weekly_metric"
+        assert len(result["dataPoints"]) == 4
+        assert result["dataPoints"][0]["y"] == 100
+        assert result["dataPoints"][3]["y"] == 115
+        assert result["thresholdDataPoints"] == []
+
+    def test_get_monitor_metric_values_no_data(self, client, mock_graphql_client):
+        """Test getting monitor metric values when no data is available"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response with no metric history
+        mock_response = {"node": {"models": {"edges": [{"node": {"monitors": {"edges": [{"node": {"metricHistory": None}}]}}}]}}}
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test should raise exception when no data
+        with pytest.raises(ArizeAPIException, match="No metric history data available"):
+            client.get_monitor_metric_values(
+                model_name="test_model",
+                monitor_name="test_monitor",
+                start_date="2024-01-01",
+                end_date="2024-01-02",
+                time_series_data_granularity="hour",
+            )
+
+    def test_get_monitor_metric_values_no_model(self, client, mock_graphql_client):
+        """Test getting monitor metric values when model doesn't exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response with no model
+        mock_response = {"node": {"models": {"edges": []}}}
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test should raise exception when model not found
+        with pytest.raises(ArizeAPIException, match="No model found"):
+            client.get_monitor_metric_values(
+                model_name="non_existent_model",
+                monitor_name="test_monitor",
+                start_date="2024-01-01",
+                end_date="2024-01-02",
+                time_series_data_granularity="hour",
+            )
+
+    def test_get_monitor_metric_values_df(self, client, mock_graphql_client):
+        """Test getting monitor metric values as a DataFrame"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "accuracy_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.95,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": 0.94,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T02:00:00Z",
+                                                            "y": 0.96,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T02:00:00Z",
+                                                            "y": 0.90,
+                                                        },
+                                                    ],
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test returning as DataFrame
+        df = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="test_monitor",
+            start_date="2024-01-01T00:00:00Z",
+            end_date="2024-01-01T03:00:00Z",
+            time_series_data_granularity="hour",
+            to_dataframe=True,
+        )
+
+        # Verify DataFrame structure
+        assert len(df) == 3
+        assert list(df.columns) == ["timestamp", "metric_value", "threshold_value"]
+        assert df["metric_value"].tolist() == [0.95, 0.94, 0.96]
+        assert df["threshold_value"].tolist() == [0.90, 0.90, 0.90]
+
+        # Verify timestamps are datetime objects
+        assert df["timestamp"].dtype.name.startswith("datetime")
+
+    def test_get_monitor_metric_values_df_no_threshold(self, client, mock_graphql_client):
+        """Test getting monitor metric values as DataFrame without threshold data"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response without threshold data
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "volume_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 1000,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": 1200,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test returning as DataFrame
+        df = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="volume_monitor",
+            start_date="2024-01-01T00:00:00Z",
+            end_date="2024-01-01T02:00:00Z",
+            time_series_data_granularity="hour",
+            to_dataframe=True,
+        )
+
+        # Verify DataFrame structure without threshold
+        assert len(df) == 2
+        assert list(df.columns) == ["timestamp", "metric_value", "threshold_value"]
+        assert df["metric_value"].tolist() == [1000, 1200]
+        assert df["threshold_value"].isna().all()
+
+    def test_get_monitor_metric_values_df_with_null_values(self, client, mock_graphql_client):
+        """Test getting monitor metric values as DataFrame with null values"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response with null values
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "sparse_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 0.95,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T01:00:00Z",
+                                                            "y": None,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T02:00:00Z",
+                                                            "y": 0.93,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-01T03:00:00Z",
+                                                            "y": None,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": [],
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test returning as DataFrame
+        df = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="sparse_monitor",
+            start_date="2024-01-01T00:00:00Z",
+            end_date="2024-01-01T04:00:00Z",
+            time_series_data_granularity="hour",
+            to_dataframe=True,
+        )
+
+        # Verify DataFrame handles null values correctly
+        assert len(df) == 4
+        assert df["metric_value"].isna().sum() == 2  # Two null values
+        assert df["metric_value"].dropna().tolist() == [0.95, 0.93]
+
+    def test_get_monitor_metric_values_df_empty_data(self, client, mock_graphql_client):
+        """Test getting monitor metric values as DataFrame with empty data"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response with empty data points
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": "empty_metric",
+                                                    "dataPoints": [],
+                                                    "thresholdDataPoints": None,
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test returning as DataFrame
+        df = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="empty_monitor",
+            start_date="2024-01-01T00:00:00Z",
+            end_date="2024-01-01T01:00:00Z",
+            time_series_data_granularity="hour",
+            to_dataframe=True,
+        )
+
+        # Verify empty DataFrame
+        assert len(df) == 0
+        assert list(df.columns) == []
+
+    @pytest.mark.parametrize(
+        "granularity",
+        ["hour", "day", "week", "month"],
+    )
+    def test_get_monitor_metric_values_all_granularities(self, client, mock_graphql_client, granularity):
+        """Test getting monitor metric values with all supported granularities"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock response
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "metricHistory": {
+                                                    "key": f"{granularity}_metric",
+                                                    "dataPoints": [
+                                                        {
+                                                            "x": "2024-01-01T00:00:00Z",
+                                                            "y": 100,
+                                                        },
+                                                        {
+                                                            "x": "2024-01-02T00:00:00Z",
+                                                            "y": 110,
+                                                        },
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        # Test with each granularity
+        result = client.get_monitor_metric_values(
+            model_name="test_model",
+            monitor_name="test_monitor",
+            start_date="2024-01-01",
+            end_date="2024-01-31",
+            time_series_data_granularity=granularity,
+        )
+
+        assert result["key"] == f"{granularity}_metric"
+        assert len(result["dataPoints"]) == 2
+
 
 class TestDataImportExtended:
     """Extended tests for data import operations"""

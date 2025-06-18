@@ -20,6 +20,8 @@ Click any function name to jump to the detailed section.
 | Retrieve a monitor by *name* | [`get_monitor`](#get_monitor) |
 | Retrieve a monitor by *id* | [`get_monitor_by_id`](#get_monitor_by_id) |
 | Quick-link to a monitor in the UI | [`get_monitor_url`](#get_monitor_url) |
+| Get monitor metric values over time | [`get_monitor_metric_values`](#get_monitor_metric_values) |
+| Get latest monitor metric value | [`get_latest_monitor_value`](#get_latest_monitor_value) |
 | Create a **performance** monitor | [`create_performance_monitor`](#create_performance_monitor) |
 | Create a **drift** monitor | [`create_drift_monitor`](#create_drift_monitor) |
 | Create a **data-quality** monitor | [`create_data_quality_monitor`](#create_data_quality_monitor) |
@@ -207,6 +209,133 @@ url = client.get_monitor_url(
     monitor_name="Accuracy < 80%", model_name="fraud-detection-v3"
 )
 print(url)
+```
+
+______________________________________________________________________
+
+### `get_monitor_metric_values`
+
+```python
+result: dict = client.get_monitor_metric_values(
+    model_name: str,
+    monitor_name: str,
+    start_date: datetime | str,
+    end_date: datetime | str,
+    time_series_data_granularity: str = "hour",  # "hour", "day", "week", "month",
+    to_dataframe: bool = False,
+)
+```
+
+Retrieves historical metric values for a specific monitor over a time range. This is useful for analyzing monitor performance trends and threshold violations over time.
+
+**Parameters**
+
+- `model_name` – *Human-readable* model name
+- `monitor_name` – Monitor name as shown in the UI
+- `start_date` – Start date for the time range (datetime object or ISO string)
+- `end_date` – End date for the time range (datetime object or ISO string)
+- `time_series_data_granularity` – Data aggregation granularity. Options: `"hour"`, `"day"`, `"week"`, `"month"`. Default is `"hour"`.
+- `to_dataframe` – Whether to return the result as a pandas DataFrame. Default is `False`.
+
+**Returns**
+
+A dictionary containing:
+
+- `key` – The metric key/identifier
+- `dataPoints` – List of dictionaries with `x` (timestamp) and `y` (metric value) pairs
+- `thresholdDataPoints` – List of dictionaries with `x` (timestamp) and `y` (threshold value) pairs, or `None` if no threshold is set
+
+If `to_dataframe` is `True`, returns a pandas DataFrame with columns:
+
+- `timestamp` – The timestamp of the metric value
+- `metric_value` – The metric value
+- `threshold_value` – The threshold value (float or None if no threshold is set)
+
+**Example**
+
+```python
+# Get hourly metric values for the last 7 days
+from datetime import datetime, timedelta
+
+end_date = datetime.now()
+start_date = end_date - timedelta(days=7)
+
+result = client.get_monitor_metric_values(
+    model_name="fraud-detection-v3",
+    monitor_name="Accuracy < 80%",
+    start_date=start_date,
+    end_date=end_date,
+)
+
+# Process the metric values
+for point in result["dataPoints"]:
+    timestamp = point["x"]
+    metric_value = point["y"]
+    print(f"{timestamp}: {metric_value}")
+
+# With to_dataframe=True
+df = client.get_monitor_metric_values(
+    model_name="fraud-detection-v3",
+    monitor_name="Accuracy < 80%",
+    start_date=start_date,
+    end_date=end_date,
+    to_dataframe=True,
+    time_series_data_granularity="day",
+)
+
+# Plot the data
+import matplotlib.pyplot as plt
+
+df.plot(x="timestamp", y=["metric_value", "threshold_value"], style=["-", "--"])
+plt.title("Monitor Metric Values Over Time")
+plt.show()
+```
+
+______________________________________________________________________
+
+### `get_latest_monitor_value`
+
+```python
+result: dict = client.get_latest_monitor_value(
+    model_name: str,
+    monitor_name: str,
+    time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
+)
+```
+
+Retrieves the most recent metric value for a specific monitor. This is useful for quickly checking the current state of a monitor without fetching historical data.
+
+**Parameters**
+
+- `model_name` – *Human-readable* model name
+- `monitor_name` – Monitor name as shown in the UI
+- `time_series_data_granularity` – Data aggregation granularity. Options: `"hour"`, `"day"`, `"week"`, `"month"`. Default is `"hour"`.
+
+**Returns**
+
+A dictionary containing:
+
+- `timestamp` – The timestamp of the latest metric value
+- `metric_value` – The latest metric value
+- `threshold_value` – The current threshold value (float or None if no threshold is set)
+
+**Example**
+
+```python
+# Get the latest value for a performance monitor
+result = client.get_latest_monitor_value(
+    model_name="fraud-detection-v3",
+    monitor_name="Accuracy < 80%",
+    time_series_data_granularity="hour",
+)
+
+print(f"Latest timestamp: {result['timestamp']}")
+print(f"Current value: {result['metric_value']}")
+print(f"Threshold: {result['threshold_value']}")
+
+# Check if monitor is currently triggered
+if result["metric_value"] > result["threshold_value"]:
+    print("Alert! Monitor is currently in triggered state")
 ```
 
 ______________________________________________________________________
