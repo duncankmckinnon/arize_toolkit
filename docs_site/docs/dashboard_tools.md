@@ -21,6 +21,8 @@ Click on the function name to jump to the detailed section.
 | Fetch a complete dashboard by *id* | [`get_dashboard_by_id`](#get_dashboard_by_id) |
 | Quick-link to a dashboard in the UI | [`get_dashboard_url`](#get_dashboard_url) |
 | Build dashboard URL by *id* | [`dashboard_url`](#dashboard_url) |
+| Create a new empty dashboard | [`create_dashboard`](#create_dashboard) |
+| Create a dashboard with model volume widgets | [`create_model_volume_dashboard`](#create_model_volume_dashboard) |
 
 ## Dashboard Operations
 
@@ -204,6 +206,80 @@ dashboard_id = "******"
 url = client.dashboard_url(dashboard_id)
 print(f"Dashboard URL: {url}")
 ```
+
+______________________________________________________________________
+
+### `create_dashboard`
+
+```python
+dashboard_id: str = client.create_dashboard(name: str)
+```
+
+Creates a new empty dashboard in the current space. This is useful when you want to programmatically create dashboards and then add widgets to them.
+
+**Parameters**
+
+- `name` – The name for the new dashboard
+
+**Returns**
+
+The ID of the newly created dashboard.
+
+**Example**
+
+```python
+# Create a new dashboard
+dashboard_id = client.create_dashboard("My New Dashboard")
+print(f"Created dashboard with ID: {dashboard_id}")
+
+# Get the URL to view it
+url = client.dashboard_url(dashboard_id)
+print(f"View dashboard at: {url}")
+```
+
+______________________________________________________________________
+
+### `create_model_volume_dashboard`
+
+```python
+dashboard_url: str = client.create_model_volume_dashboard(
+    dashboard_name: str,
+    model_names: Optional[List[str]] = None
+)
+```
+
+Creates a new dashboard with model volume line chart widgets for each model in the space. This is a convenience function that automatically creates a dashboard with prediction volume tracking for your models.
+
+**Parameters**
+
+- `dashboard_name` – The name for the new dashboard
+- `model_names` – Optional list of model names to include. If None, includes all models in the space.
+
+**Returns**
+
+The URL of the newly created dashboard.
+
+**Example**
+
+```python
+# Create a dashboard for all models
+url = client.create_model_volume_dashboard("All Models Volume Dashboard")
+print(f"Dashboard created at: {url}")
+
+# Create a dashboard for specific models only
+selected_models = ["fraud_detection_model", "churn_prediction_model"]
+url = client.create_model_volume_dashboard(
+    "Selected Models Dashboard", model_names=selected_models
+)
+print(f"Dashboard created at: {url}")
+```
+
+**Notes**
+
+- The function creates a grid layout with 2 widgets per row
+- Each widget displays the prediction volume over time for a model
+- If a model specified in `model_names` doesn't exist, it will be skipped with a warning
+- The widgets use the `modelDataMetric` time series type to show prediction volumes
 
 ______________________________________________________________________
 

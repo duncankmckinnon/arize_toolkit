@@ -329,3 +329,35 @@ class Dashboard(DashboardBasis):
     driftLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The drift line chart widgets on the dashboard")
     monitorLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The monitor line chart widgets on the dashboard")
     textWidgets: Optional[List[TextWidget]] = Field(default=None, description="The text widgets on the dashboard")
+
+
+## Dashboard Mutation Input Models ##
+
+
+class CreateDashboardMutationInput(GraphQLModel):
+    """Input for creating a new dashboard"""
+
+    name: str = Field(description="The name of the dashboard")
+    spaceId: str = Field(description="The ID of the space to create the dashboard in")
+    clientMutationId: Optional[str] = Field(default=None, description="Client mutation ID for tracking")
+
+
+class LineChartPlotInput(GraphQLModel):
+    """Input for a line chart plot"""
+
+    modelId: str = Field(description="The model ID for the plot")
+    modelVersionIds: Optional[List[str]] = Field(default=None, description="The model version IDs")
+    modelEnvironmentName: Optional[ModelEnvironment] = Field(default=None, description="The model environment")
+    title: Optional[str] = Field(default=None, description="The title of the plot")
+    position: Optional[int] = Field(default=None, description="The position of the plot")
+
+
+class CreateLineChartWidgetMutationInput(GraphQLModel):
+    """Input for creating a line chart widget"""
+
+    title: str = Field(description="The title of the widget")
+    dashboardId: str = Field(description="The dashboard ID to add the widget to")
+    timeSeriesMetricType: str = Field(default="modelDataMetric", description="The type of time series metric")
+    plots: List[LineChartPlotInput] = Field(description="The plots for the line chart")
+    gridPosition: Optional[List[int]] = Field(default=None, description="The grid position of the widget")
+    clientMutationId: Optional[str] = Field(default=None, description="Client mutation ID for tracking")

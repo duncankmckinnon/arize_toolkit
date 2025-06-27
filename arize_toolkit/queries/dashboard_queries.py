@@ -552,11 +552,120 @@ class GetDashboardPerformanceSlicesQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if not result["node"]["performanceSlices"]["edges"]:
-            return [], False, None
+        pageInfo = result["node"]["performanceSlices"]["pageInfo"]
+        edges = result["node"]["performanceSlices"]["edges"]
+        performance_slices = []
+        if len(edges) > 0:
+            performance_slices = [cls.QueryResponse(**edge["node"]) for edge in edges]
+        return performance_slices, pageInfo["hasNextPage"], pageInfo["endCursor"]
 
-        slice_edges = result["node"]["performanceSlices"]["edges"]
-        has_next_page = result["node"]["performanceSlices"]["pageInfo"]["hasNextPage"]
-        end_cursor = result["node"]["performanceSlices"]["pageInfo"]["endCursor"]
-        slices = [cls.QueryResponse(**slice["node"]) for slice in slice_edges]
-        return slices, has_next_page, end_cursor
+
+## Dashboard Mutations ##
+
+
+class CreateDashboardMutation(BaseQuery):
+    graphql_query = """
+    mutation CreateDashboard($input: CreateDashboardMutationInput!) {
+        createDashboard(input: $input) {
+            dashboard {
+                id
+                name
+                status
+                createdAt
+            }
+            clientMutationId
+        }
+    }
+    """
+    query_description = "Create a new dashboard in a space"
+
+    class Variables(BaseVariables):
+        name: str
+        spaceId: str
+        clientMutationId: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating dashboard"
+
+    class QueryResponse(BaseResponse):
+        dashboard_id: str
+        name: str
+        status: Optional[str] = None
+        created_at: Optional[str] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        create_result = result.get("createDashboard", {})
+        if "dashboard" not in create_result:
+            cls.raise_exception("No dashboard created")
+
+        dashboard = create_result["dashboard"]
+        return (
+            [
+                cls.QueryResponse(
+                    dashboard_id=dashboard["id"],
+                    name=dashboard["name"],
+                    status=dashboard.get("status"),
+                    created_at=dashboard.get("createdAt"),
+                )
+            ],
+            False,
+            None,
+        )
+
+
+class CreateLineChartWidgetMutation(BaseQuery):
+    graphql_query = """
+    mutation CreateLineChartWidget($input: CreateLineChartWidgetMutationInput!) {
+        createLineChartWidget(input: $input) {
+            lineChartWidget {
+                id
+                title
+                dashboardId
+                timeSeriesMetricType
+                gridPosition
+            }
+            clientMutationId
+        }
+    }
+    """
+    query_description = "Create a line chart widget on a dashboard"
+
+    class Variables(BaseVariables):
+        title: str
+        dashboardId: str
+        timeSeriesMetricType: str = "modelDataMetric"
+        plots: List[dict]
+        gridPosition: Optional[List[int]] = None
+        clientMutationId: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating line chart widget"
+
+    class QueryResponse(BaseResponse):
+        widget_id: str
+        title: str
+        dashboard_id: str
+        time_series_metric_type: str
+        grid_position: Optional[List[int]] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        create_result = result.get("createLineChartWidget", {})
+        if "lineChartWidget" not in create_result:
+            cls.raise_exception("No line chart widget created")
+
+        widget = create_result["lineChartWidget"]
+        return (
+            [
+                cls.QueryResponse(
+                    widget_id=widget["id"],
+                    title=widget["title"],
+                    dashboard_id=widget["dashboardId"],
+                    time_series_metric_type=widget["timeSeriesMetricType"],
+                    grid_position=widget.get("gridPosition"),
+                )
+            ],
+            False,
+            None,
+        )

@@ -4474,3 +4474,213 @@ class TestDashboards:
         assert line_widget["config"]["xScale"]["format"] == "%Y-%m-%d"
         assert len(line_widget["plots"]) == 1
         assert line_widget["plots"][0]["title"] == "Model A"
+
+    def test_get_dashboard_url_simple_client(self, mock_graphql_client):
+        client = Client(organization="test_org", space="test_space")
+        mock_graphql_client.return_value.execute.return_value = {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard123", "name": "Test Dashboard"}}]}}}
+        url = client.get_dashboard_url("Test Dashboard")
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
+
+    def test_create_dashboard(self, mock_graphql_client):
+        """Test creating a new dashboard"""
+        client = Client(organization="test_org", space="test_space")
+        mock_graphql_client.return_value.execute.return_value = {
+            "createDashboard": {
+                "dashboard": {
+                    "id": "new_dashboard_id",
+                    "name": "New Dashboard",
+                    "status": "active",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                },
+                "clientMutationId": None,
+            }
+        }
+
+        dashboard_id = client.create_dashboard("New Dashboard")
+        assert dashboard_id == "new_dashboard_id"
+
+        # Verify the mutation was called correctly
+        call_args = mock_graphql_client.return_value.execute.call_args
+        # The first argument is a DocumentNode, so we check the variable values instead
+        assert call_args[1]["variable_values"]["input"]["name"] == "New Dashboard"
+        assert call_args[1]["variable_values"]["input"]["spaceId"] == "test_space_id"
+
+    def test_create_model_volume_dashboard_all_models(self, mock_graphql_client):
+        """Test creating a model volume dashboard with all models"""
+        client = Client(organization="test_org", space="test_space")
+
+        # Reset the mock to clear the initialization calls
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses
+        mock_responses = [
+            # Create dashboard response
+            {
+                "createDashboard": {
+                    "dashboard": {
+                        "id": "dashboard123",
+                        "name": "Model Volume Dashboard",
+                        "status": "active",
+                        "createdAt": "2024-01-01T00:00:00Z",
+                    },
+                    "clientMutationId": None,
+                }
+            },
+            # Get all models response
+            {
+                "node": {
+                    "models": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model1",
+                                    "name": "Model A",
+                                    "modelType": "classification",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            },
+                            {
+                                "node": {
+                                    "id": "model2",
+                                    "name": "Model B",
+                                    "modelType": "regression",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            },
+                        ],
+                    }
+                }
+            },
+            # Create widget 1 response
+            {
+                "createLineChartWidget": {
+                    "lineChartWidget": {
+                        "id": "widget1",
+                        "title": "Model A - Prediction Volume",
+                        "dashboardId": "dashboard123",
+                        "timeSeriesMetricType": "modelDataMetric",
+                        "gridPosition": [0, 0, 6, 4],
+                    },
+                    "clientMutationId": None,
+                }
+            },
+            # Create widget 2 response
+            {
+                "createLineChartWidget": {
+                    "lineChartWidget": {
+                        "id": "widget2",
+                        "title": "Model B - Prediction Volume",
+                        "dashboardId": "dashboard123",
+                        "timeSeriesMetricType": "modelDataMetric",
+                        "gridPosition": [6, 0, 6, 4],
+                    },
+                    "clientMutationId": None,
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        url = client.create_model_volume_dashboard("Model Volume Dashboard")
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
+
+        # Verify all mutations were called
+        assert mock_graphql_client.return_value.execute.call_count == 4
+
+    def test_create_model_volume_dashboard_specific_models(self, mock_graphql_client):
+        """Test creating a model volume dashboard with specific models"""
+        client = Client(organization="test_org", space="test_space")
+
+        # Reset the mock to clear the initialization calls
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses
+        mock_responses = [
+            # Create dashboard response
+            {
+                "createDashboard": {
+                    "dashboard": {
+                        "id": "dashboard123",
+                        "name": "Selected Models Dashboard",
+                        "status": "active",
+                        "createdAt": "2024-01-01T00:00:00Z",
+                    },
+                    "clientMutationId": None,
+                }
+            },
+            # Get model A response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model1",
+                                    "name": "Model A",
+                                    "modelType": "classification",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Get model B response (not found)
+            {"node": {"models": {"edges": []}}},
+            # Get model C response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model3",
+                                    "name": "Model C",
+                                    "modelType": "ranking",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Create widget for Model A
+            {
+                "createLineChartWidget": {
+                    "lineChartWidget": {
+                        "id": "widget1",
+                        "title": "Model A - Prediction Volume",
+                        "dashboardId": "dashboard123",
+                        "timeSeriesMetricType": "modelDataMetric",
+                        "gridPosition": [0, 0, 6, 4],
+                    },
+                    "clientMutationId": None,
+                }
+            },
+            # Create widget for Model C
+            {
+                "createLineChartWidget": {
+                    "lineChartWidget": {
+                        "id": "widget2",
+                        "title": "Model C - Prediction Volume",
+                        "dashboardId": "dashboard123",
+                        "timeSeriesMetricType": "modelDataMetric",
+                        "gridPosition": [6, 0, 6, 4],
+                    },
+                    "clientMutationId": None,
+                }
+            },
+        ]
+
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        url = client.create_model_volume_dashboard("Selected Models Dashboard", model_names=["Model A", "Model B", "Model C"])
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
+
+        # Verify the correct number of calls (1 create dashboard + 3 get model + 2 create widget)
+        assert mock_graphql_client.return_value.execute.call_count == 6

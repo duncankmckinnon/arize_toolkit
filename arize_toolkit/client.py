@@ -21,6 +21,8 @@ from arize_toolkit.queries.custom_metric_queries import (
     UpdateCustomMetricMutation,
 )
 from arize_toolkit.queries.dashboard_queries import (
+    CreateDashboardMutation,
+    CreateLineChartWidgetMutation,
     GetAllDashboardsQuery,
     GetDashboardBarChartWidgetsQuery,
     GetDashboardByIdQuery,
@@ -2847,3 +2849,86 @@ class Client:
         """
         dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name)
         return f"{self.space_url}/dashboards/{dashboard.id}"
+
+    def create_dashboard(self, name: str) -> str:
+        """
+        Creates a new empty dashboard in the current space.
+
+        Args:
+            name (str): Name for the new dashboard
+
+        Returns:
+            str: The ID of the created dashboard
+
+        Raises:
+            ArizeAPIException: If the dashboard creation fails or there is an API error
+        """
+        result = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=name, spaceId=self.space_id)
+        return result.dashboard_id
+
+    def create_model_volume_dashboard(self, dashboard_name: str, model_names: Optional[List[str]] = None) -> str:
+        """
+        Creates a new dashboard with model volume line chart widgets for each model in the space.
+        If model_names is provided, only creates widgets for those models.
+
+        Args:
+            dashboard_name (str): Name for the new dashboard
+            model_names (Optional[List[str]]): List of model names to include. If None, includes all models in the space.
+
+        Returns:
+            str: The URL of the created dashboard
+
+        Raises:
+            ArizeAPIException: If the dashboard creation fails or there is an API error
+        """
+        # Create the dashboard
+        dashboard_id = self.create_dashboard(dashboard_name)
+
+        # Get models to include
+        if model_names:
+            models = []
+            for model_name in model_names:
+                try:
+                    model = self.get_model(model_name)
+                    models.append(model)
+                except ArizeAPIException:
+                    logger.warning(f"Model '{model_name}' not found, skipping")
+        else:
+            # Get all models in the space
+            models = self.get_all_models()
+
+        # Create a line chart widget for each model
+        grid_row = 0
+        grid_col = 0
+        widgets_per_row = 2
+        widget_width = 6
+        widget_height = 4
+
+        for i, model in enumerate(models):
+            # Calculate grid position
+            grid_col = (i % widgets_per_row) * widget_width
+            grid_row = (i // widgets_per_row) * widget_height
+
+            # Create the widget
+            plots = [
+                {
+                    "modelId": model["id"],
+                    "title": f"{model['name']} Volume",
+                    "position": 0,
+                }
+            ]
+
+            try:
+                CreateLineChartWidgetMutation.run_graphql_mutation(
+                    self._graphql_client,
+                    title=f"{model['name']} - Prediction Volume",
+                    dashboardId=dashboard_id,
+                    timeSeriesMetricType="modelDataMetric",
+                    plots=plots,
+                    gridPosition=[grid_col, grid_row, widget_width, widget_height],
+                )
+                sleep(self.sleep_time)
+            except ArizeAPIException as e:
+                logger.warning(f"Failed to create widget for model '{model['name']}': {e}")
+
+        return self.dashboard_url(dashboard_id)
