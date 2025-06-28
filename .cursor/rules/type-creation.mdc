@@ -1,5 +1,5 @@
 ---
-description: 
+description: Must follow when creating new enum types defined in the graphql query schema
 globs: 
 alwaysApply: false
 ---

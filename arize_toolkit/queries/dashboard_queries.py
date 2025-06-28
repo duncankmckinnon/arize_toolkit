@@ -1,6 +1,18 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import BarChartWidget, Dashboard, DashboardBasis, DashboardPerformanceSlice, ExperimentChartWidget, LineChartWidget, Model, StatisticWidget, TextWidget
+from arize_toolkit.models import (
+    BarChartWidget,
+    CreateLineChartWidgetMutationInput,
+    Dashboard,
+    DashboardBasis,
+    DashboardPerformanceSlice,
+    ExperimentChartWidget,
+    LineChartWidget,
+    Model,
+    StatisticWidget,
+    TextWidget,
+    WidgetBasis,
+)
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -552,11 +564,93 @@ class GetDashboardPerformanceSlicesQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        if not result["node"]["performanceSlices"]["edges"]:
-            return [], False, None
+        pageInfo = result["node"]["performanceSlices"]["pageInfo"]
+        edges = result["node"]["performanceSlices"]["edges"]
+        performance_slices = []
+        if len(edges) > 0:
+            performance_slices = [cls.QueryResponse(**edge["node"]) for edge in edges]
+        return performance_slices, pageInfo["hasNextPage"], pageInfo["endCursor"]
 
-        slice_edges = result["node"]["performanceSlices"]["edges"]
-        has_next_page = result["node"]["performanceSlices"]["pageInfo"]["hasNextPage"]
-        end_cursor = result["node"]["performanceSlices"]["pageInfo"]["endCursor"]
-        slices = [cls.QueryResponse(**slice["node"]) for slice in slice_edges]
-        return slices, has_next_page, end_cursor
+
+## Dashboard Mutations ##
+
+
+class CreateDashboardMutation(BaseQuery):
+    graphql_query = """
+    mutation CreateDashboard($input: CreateDashboardMutationInput!) {
+        createDashboard(input: $input) {
+            dashboard {
+                id
+                name
+                status
+                createdAt
+            }
+            clientMutationId
+        }
+    }
+    """
+    query_description = "Create a new dashboard in a space"
+
+    class Variables(BaseVariables):
+        name: str
+        spaceId: str
+        clientMutationId: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating dashboard"
+
+    class QueryResponse(BaseResponse):
+        id: str
+        name: str
+        status: Optional[str] = None
+        createdAt: Optional[str] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        create_result = result.get("createDashboard", {})
+        if "dashboard" not in create_result:
+            cls.raise_exception("No dashboard created")
+
+        dashboard = create_result["dashboard"]
+        return (
+            [cls.QueryResponse(**dashboard)],
+            False,
+            None,
+        )
+
+
+class CreateLineChartWidgetMutation(BaseQuery):
+    graphql_query = (
+        """
+    mutation CreateLineChartWidget($input: CreateLineChartWidgetMutationInput!) {
+        createLineChartWidget(input: $input) {
+            lineChartWidget {"""
+        + WidgetBasis.to_graphql_fields()
+        + """}
+        }
+    }
+    """
+    )
+    query_description = "Create a line chart widget on a dashboard"
+
+    class Variables(CreateLineChartWidgetMutationInput):
+        pass
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error creating line chart widget"
+
+    class QueryResponse(WidgetBasis):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        create_result = result.get("createLineChartWidget", {})
+        if "lineChartWidget" not in create_result:
+            cls.raise_exception("No line chart widget created")
+
+        widget = create_result["lineChartWidget"]
+        return (
+            [cls.QueryResponse(**widget)],
+            False,
+            None,
+        )
