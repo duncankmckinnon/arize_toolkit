@@ -1,6 +1,7 @@
 import pytest
 
 from arize_toolkit.queries.dashboard_queries import CreateDashboardMutation, CreateLineChartWidgetMutation, GetDashboardPerformanceSlicesQuery
+from arize_toolkit.types import WidgetCreationStatus
 
 
 class TestDashboardQueries:
@@ -45,10 +46,10 @@ class TestDashboardMutations:
             clientMutationId="test_mutation_id",
         )
 
-        assert result.dashboard_id == "new_dashboard_id"
+        assert result.id == "new_dashboard_id"
         assert result.name == "Test Dashboard"
         assert result.status == "active"
-        assert result.created_at == "2024-01-01T00:00:00Z"
+        assert result.createdAt == "2024-01-01T00:00:00Z"
 
     def test_create_dashboard_mutation_error(self, gql_client):
         """Test error handling when dashboard creation fails"""
@@ -65,35 +66,50 @@ class TestDashboardMutations:
                     "id": "new_widget_id",
                     "title": "Model Volume",
                     "dashboardId": "test_dashboard_id",
-                    "timeSeriesMetricType": "modelDataMetric",
                     "gridPosition": [0, 0, 6, 4],
+                    "creationStatus": "created",
                 },
-                "clientMutationId": "test_mutation_id",
             }
         }
 
-        plots = [{"modelId": "test_model_id", "title": "Model A Volume", "position": 0}]
+        plots = [
+            {
+                "modelId": "test_model_id",
+                "title": "Model A Volume",
+                "position": 0,
+                "modelEnvironmentName": "production",
+                "metric": "count",
+                "filters": [],
+            }
+        ]
 
         result = CreateLineChartWidgetMutation.run_graphql_mutation(
             gql_client,
             title="Model Volume",
             dashboardId="test_dashboard_id",
             plots=plots,
-            gridPosition=[0, 0, 6, 4],
-            clientMutationId="test_mutation_id",
         )
 
-        assert result.widget_id == "new_widget_id"
+        assert result.id == "new_widget_id"
         assert result.title == "Model Volume"
-        assert result.dashboard_id == "test_dashboard_id"
-        assert result.time_series_metric_type == "modelDataMetric"
-        assert result.grid_position == [0, 0, 6, 4]
+        assert result.dashboardId == "test_dashboard_id"
+        assert result.gridPosition == [0, 0, 6, 4]
+        assert result.creationStatus == WidgetCreationStatus.created
 
     def test_create_line_chart_widget_mutation_error(self, gql_client):
         """Test error handling when widget creation fails"""
         gql_client.execute.return_value = {"createLineChartWidget": {}}
 
-        plots = [{"modelId": "test_model_id"}]
+        plots = [
+            {
+                "modelId": "test_model_id",
+                "title": "Model A Volume",
+                "position": 0,
+                "modelEnvironmentName": "production",
+                "metric": "count",
+                "filters": [],
+            }
+        ]
 
         with pytest.raises(CreateLineChartWidgetMutation.QueryException):
             CreateLineChartWidgetMutation.run_graphql_mutation(

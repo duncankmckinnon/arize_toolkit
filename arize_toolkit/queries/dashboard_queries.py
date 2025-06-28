@@ -1,6 +1,18 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import BarChartWidget, Dashboard, DashboardBasis, DashboardPerformanceSlice, ExperimentChartWidget, LineChartWidget, Model, StatisticWidget, TextWidget
+from arize_toolkit.models import (
+    BarChartWidget,
+    CreateLineChartWidgetMutationInput,
+    Dashboard,
+    DashboardBasis,
+    DashboardPerformanceSlice,
+    ExperimentChartWidget,
+    LineChartWidget,
+    Model,
+    StatisticWidget,
+    TextWidget,
+    WidgetBasis,
+)
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -588,10 +600,10 @@ class CreateDashboardMutation(BaseQuery):
         message: str = "Error creating dashboard"
 
     class QueryResponse(BaseResponse):
-        dashboard_id: str
+        id: str
         name: str
         status: Optional[str] = None
-        created_at: Optional[str] = None
+        createdAt: Optional[str] = None
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
@@ -601,53 +613,34 @@ class CreateDashboardMutation(BaseQuery):
 
         dashboard = create_result["dashboard"]
         return (
-            [
-                cls.QueryResponse(
-                    dashboard_id=dashboard["id"],
-                    name=dashboard["name"],
-                    status=dashboard.get("status"),
-                    created_at=dashboard.get("createdAt"),
-                )
-            ],
+            [cls.QueryResponse(**dashboard)],
             False,
             None,
         )
 
 
 class CreateLineChartWidgetMutation(BaseQuery):
-    graphql_query = """
+    graphql_query = (
+        """
     mutation CreateLineChartWidget($input: CreateLineChartWidgetMutationInput!) {
         createLineChartWidget(input: $input) {
-            lineChartWidget {
-                id
-                title
-                dashboardId
-                timeSeriesMetricType
-                gridPosition
-            }
-            clientMutationId
+            lineChartWidget {"""
+        + WidgetBasis.to_graphql_fields()
+        + """}
         }
     }
     """
+    )
     query_description = "Create a line chart widget on a dashboard"
 
-    class Variables(BaseVariables):
-        title: str
-        dashboardId: str
-        timeSeriesMetricType: str = "modelDataMetric"
-        plots: List[dict]
-        gridPosition: Optional[List[int]] = None
-        clientMutationId: Optional[str] = None
+    class Variables(CreateLineChartWidgetMutationInput):
+        pass
 
     class QueryException(ArizeAPIException):
         message: str = "Error creating line chart widget"
 
-    class QueryResponse(BaseResponse):
-        widget_id: str
-        title: str
-        dashboard_id: str
-        time_series_metric_type: str
-        grid_position: Optional[List[int]] = None
+    class QueryResponse(WidgetBasis):
+        pass
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
@@ -657,15 +650,7 @@ class CreateLineChartWidgetMutation(BaseQuery):
 
         widget = create_result["lineChartWidget"]
         return (
-            [
-                cls.QueryResponse(
-                    widget_id=widget["id"],
-                    title=widget["title"],
-                    dashboard_id=widget["dashboardId"],
-                    time_series_metric_type=widget["timeSeriesMetricType"],
-                    grid_position=widget.get("gridPosition"),
-                )
-            ],
+            [cls.QueryResponse(**widget)],
             False,
             None,
         )

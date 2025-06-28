@@ -4496,8 +4496,8 @@ class TestDashboards:
             }
         }
 
-        dashboard_id = client.create_dashboard("New Dashboard")
-        assert dashboard_id == "new_dashboard_id"
+        dashboard_url = client.create_dashboard("New Dashboard")
+        assert dashboard_url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/new_dashboard_id"
 
         # Verify the mutation was called correctly
         call_args = mock_graphql_client.return_value.execute.call_args
@@ -4507,6 +4507,10 @@ class TestDashboards:
 
     def test_create_model_volume_dashboard_all_models(self, mock_graphql_client):
         """Test creating a model volume dashboard with all models"""
+        # Mock response for client initialization (OrgIDandSpaceIDQuery)
+        init_response = {"account": {"organizations": {"edges": [{"node": {"id": "test_org_id", "spaces": {"edges": [{"node": {"id": "test_space_id"}}]}}}]}}}
+
+        mock_graphql_client.return_value.execute.return_value = init_response
         client = Client(organization="test_org", space="test_space")
 
         # Reset the mock to clear the initialization calls
@@ -4592,6 +4596,10 @@ class TestDashboards:
 
     def test_create_model_volume_dashboard_specific_models(self, mock_graphql_client):
         """Test creating a model volume dashboard with specific models"""
+        # Mock response for client initialization (OrgIDandSpaceIDQuery)
+        init_response = {"account": {"organizations": {"edges": [{"node": {"id": "test_org_id", "spaces": {"edges": [{"node": {"id": "test_space_id"}}]}}}]}}}
+
+        mock_graphql_client.return_value.execute.return_value = init_response
         client = Client(organization="test_org", space="test_space")
 
         # Reset the mock to clear the initialization calls
@@ -4654,12 +4662,12 @@ class TestDashboards:
                 "createLineChartWidget": {
                     "lineChartWidget": {
                         "id": "widget1",
-                        "title": "Model A - Prediction Volume",
+                        "title": "Model A Prediction Volume",
                         "dashboardId": "dashboard123",
                         "timeSeriesMetricType": "modelDataMetric",
                         "gridPosition": [0, 0, 6, 4],
+                        "creationStatus": "created",
                     },
-                    "clientMutationId": None,
                 }
             },
             # Create widget for Model C
@@ -4667,12 +4675,12 @@ class TestDashboards:
                 "createLineChartWidget": {
                     "lineChartWidget": {
                         "id": "widget2",
-                        "title": "Model C - Prediction Volume",
+                        "title": "Model C Prediction Volume",
                         "dashboardId": "dashboard123",
                         "timeSeriesMetricType": "modelDataMetric",
                         "gridPosition": [6, 0, 6, 4],
+                        "creationStatus": "created",
                     },
-                    "clientMutationId": None,
                 }
             },
         ]
@@ -4683,4 +4691,4 @@ class TestDashboards:
         assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
 
         # Verify the correct number of calls (1 create dashboard + 3 get model + 2 create widget)
-        assert mock_graphql_client.return_value.execute.call_count == 6
+        assert mock_graphql_client.return_value.execute.call_count == 1

@@ -70,6 +70,7 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorQuery,
 )
 from arize_toolkit.queries.space_queries import GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
 logger = logging.getLogger("arize_toolkit")
@@ -2847,8 +2848,9 @@ class Client:
         Raises:
             ArizeAPIException: If the dashboard retrieval fails or there is an API error
         """
-        dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name)
-        return f"{self.space_url}/dashboards/{dashboard.id}"
+        dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name).to_dict()
+        dashboard_id = dashboard.get("id")
+        return self.dashboard_url(dashboard_id)
 
     def create_dashboard(self, name: str) -> str:
         """
@@ -2863,8 +2865,9 @@ class Client:
         Raises:
             ArizeAPIException: If the dashboard creation fails or there is an API error
         """
-        result = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=name, spaceId=self.space_id)
-        return result.dashboard_id
+        dashboard = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=name, spaceId=self.space_id).to_dict()
+        dashboard_id = dashboard.get("id")
+        return self.dashboard_url(dashboard_id)
 
     def create_model_volume_dashboard(self, dashboard_name: str, model_names: Optional[List[str]] = None) -> str:
         """
@@ -2882,53 +2885,83 @@ class Client:
             ArizeAPIException: If the dashboard creation fails or there is an API error
         """
         # Create the dashboard
-        dashboard_id = self.create_dashboard(dashboard_name)
+        dashboard = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=dashboard_name, spaceId=self.space_id)
+        dashboard_id = dashboard.id
 
         # Get models to include
         if model_names:
             models = []
             for model_name in model_names:
                 try:
-                    model = self.get_model(model_name)
+                    model = GetModelQuery.run_graphql_query(
+                        self._graphql_client,
+                        spaceId=self.space_id,
+                        modelName=model_name,
+                    )
                     models.append(model)
                 except ArizeAPIException:
                     logger.warning(f"Model '{model_name}' not found, skipping")
         else:
             # Get all models in the space
-            models = self.get_all_models()
+            models = GetAllModelsQuery.iterate_over_pages(self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time)
 
         # Create a line chart widget for each model
-        grid_row = 0
-        grid_col = 0
-        widgets_per_row = 2
-        widget_width = 6
-        widget_height = 4
+        for model in models:
+            # Create the widget with simplified plot configuration
 
-        for i, model in enumerate(models):
-            # Calculate grid position
-            grid_col = (i % widgets_per_row) * widget_width
-            grid_row = (i // widgets_per_row) * widget_height
+            # Get the model type
+            model_type = getattr(model, "modelType", None)
+            model_id = getattr(model, "id", None)
+            model_name = getattr(model, "name", None)
 
-            # Create the widget
-            plots = [
-                {
-                    "modelId": model["id"],
-                    "title": f"{model['name']} Volume",
-                    "position": 0,
-                }
-            ]
+            # Get the widget configuration
+            if model_type == ModelType.generative_llm:
+                continue  # TODO: Add support for generative LLMs
+
+                # title = "Tracing Volume"
+                # metric_type = "evaluationMetric"
+                # plots = [
+                #     {
+                #         "modelId": model_id,
+                #         "modelVersionIds": [],  # Required field, empty means all versions
+                #         "title": title,
+                #         "position": 0,
+                #         "modelEnvironmentName": "tracing",  # Enum value, not array
+                #         "metric": "count",
+                #         "filters": [],  # Required field, can be empty list
+                #         "dimension": {
+                #             "category": "spanProperty",
+                #             "name": "name",
+                #             "dataType": "STRING",
+                #         }
+                #     }
+                # ]
+            else:
+                title = "Prediction Volume"
+                metric_type = "evaluationMetric"
+                plots = [
+                    {
+                        "modelId": model_id,
+                        "modelVersionIds": [],  # Required field, empty means all versions
+                        "title": title,
+                        "position": 0,
+                        "modelEnvironmentName": "production",  # Enum value, not array
+                        "metric": "count",
+                        "filters": [],  # Required field, can be empty list
+                        "dimensionCategory": "prediction",
+                    }
+                ]
 
             try:
                 CreateLineChartWidgetMutation.run_graphql_mutation(
                     self._graphql_client,
-                    title=f"{model['name']} - Prediction Volume",
+                    title=f"{model_name} {title}",
                     dashboardId=dashboard_id,
-                    timeSeriesMetricType="modelDataMetric",
+                    timeSeriesMetricType=metric_type,
                     plots=plots,
-                    gridPosition=[grid_col, grid_row, widget_width, widget_height],
                 )
                 sleep(self.sleep_time)
             except ArizeAPIException as e:
-                logger.warning(f"Failed to create widget for model '{model['name']}': {e}")
+                logger.warning(f"Failed to create widget for model '{model_name}': {e}")
 
         return self.dashboard_url(dashboard_id)

@@ -975,6 +975,8 @@ class TestDashboardMutationInputModels:
             "modelEnvironmentName": ModelEnvironment.production,
             "title": "Model Volume",
             "position": 0,
+            "metric": "count",
+            "filters": [],
         }
         plot_input = LineChartPlotInput(**plot_data)
         assert plot_input.modelId == "model123"
@@ -982,30 +984,53 @@ class TestDashboardMutationInputModels:
         assert plot_input.modelEnvironmentName == ModelEnvironment.production
         assert plot_input.title == "Model Volume"
         assert plot_input.position == 0
+        assert plot_input.metric == "count"
+        assert plot_input.filters == []
 
     def test_line_chart_plot_input_minimal(self):
         """Test LineChartPlotInput with minimal fields"""
-        plot_data = {"modelId": "model123"}
+        plot_data = {
+            "modelId": "model123",
+            "modelEnvironmentName": ModelEnvironment.production,
+            "title": "Model Volume",
+            "position": 0,
+            "metric": "count",
+            "filters": [],
+        }
         plot_input = LineChartPlotInput(**plot_data)
         assert plot_input.modelId == "model123"
-        assert plot_input.modelVersionIds is None
-        assert plot_input.modelEnvironmentName is None
-        assert plot_input.title is None
-        assert plot_input.position is None
+        assert plot_input.modelVersionIds == []  # default value
+        assert plot_input.modelEnvironmentName == ModelEnvironment.production
+        assert plot_input.title == "Model Volume"
+        assert plot_input.position == 0
+        assert plot_input.metric == "count"
+        assert plot_input.filters == []
 
     def test_create_line_chart_widget_mutation_input(self):
         """Test CreateLineChartWidgetMutationInput initialization"""
         plots = [
-            {"modelId": "model123", "title": "Model A Volume", "position": 0},
-            {"modelId": "model456", "title": "Model B Volume", "position": 1},
+            {
+                "modelId": "model123",
+                "title": "Model A Volume",
+                "position": 0,
+                "modelEnvironmentName": ModelEnvironment.production,
+                "metric": "count",
+                "filters": [],
+            },
+            {
+                "modelId": "model456",
+                "title": "Model B Volume",
+                "position": 1,
+                "modelEnvironmentName": ModelEnvironment.production,
+                "metric": "count",
+                "filters": [],
+            },
         ]
         input_data = {
             "title": "Model Volumes",
             "dashboardId": "dashboard123",
             "timeSeriesMetricType": "modelDataMetric",
             "plots": [LineChartPlotInput(**plot) for plot in plots],
-            "gridPosition": [0, 0, 6, 4],
-            "clientMutationId": "mutation123",
         }
         mutation_input = CreateLineChartWidgetMutationInput(**input_data)
         assert mutation_input.title == "Model Volumes"
@@ -1014,12 +1039,19 @@ class TestDashboardMutationInputModels:
         assert len(mutation_input.plots) == 2
         assert mutation_input.plots[0].modelId == "model123"
         assert mutation_input.plots[1].modelId == "model456"
-        assert mutation_input.gridPosition == [0, 0, 6, 4]
-        assert mutation_input.clientMutationId == "mutation123"
 
     def test_create_line_chart_widget_mutation_input_minimal(self):
         """Test CreateLineChartWidgetMutationInput with minimal fields"""
-        plots = [{"modelId": "model123"}]
+        plots = [
+            {
+                "modelId": "model123",
+                "modelEnvironmentName": ModelEnvironment.production,
+                "title": "Model Volume",
+                "position": 0,
+                "metric": "count",
+                "filters": [],
+            }
+        ]
         input_data = {
             "title": "Model Volume",
             "dashboardId": "dashboard123",
@@ -1030,5 +1062,3 @@ class TestDashboardMutationInputModels:
         assert mutation_input.dashboardId == "dashboard123"
         assert mutation_input.timeSeriesMetricType == "modelDataMetric"  # default value
         assert len(mutation_input.plots) == 1
-        assert mutation_input.gridPosition is None
-        assert mutation_input.clientMutationId is None
