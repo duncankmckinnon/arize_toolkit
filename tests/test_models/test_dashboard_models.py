@@ -8,6 +8,8 @@ from arize_toolkit.models import (
     BarChartWidgetData,
     BarChartWidgetDataKeysAndValuesObject,
     BarChartWidgetDataValueObjectType,
+    CreateDashboardMutationInput,
+    CreateLineChartWidgetMutationInput,
     CustomMetric,
     Dashboard,
     DashboardBasis,
@@ -17,6 +19,7 @@ from arize_toolkit.models import (
     ExperimentChartPlot,
     ExperimentChartWidget,
     LineChartPlot,
+    LineChartPlotInput,
     LineChartWidget,
     LineChartWidgetAxisConfig,
     LineChartWidgetConfig,
@@ -921,3 +924,141 @@ class TestDashboardPerformanceSlice:
         assert performance_slice.performanceMetric == PerformanceMetric.precision
         assert performance_slice.metricValueColorIndex == 5
         assert performance_slice.metricValueKey is None
+
+    def test_dashboard_performance_slice_initialization(self):
+        """Test DashboardPerformanceSlice initialization"""
+        slice_data = {
+            "id": "slice1",
+            "evalMetricMin": 0.0,
+            "evalMetricMax": 1.0,
+            "performanceMetric": "accuracy",
+            "metricValue": "0.85",
+            "metricValueType": "number",
+            "metricValueColorIndex": 1,
+            "metricValueKey": "class_a",
+            "metricValueKeyType": "string",
+        }
+        dashboard_slice = DashboardPerformanceSlice(**slice_data)
+        assert dashboard_slice.id == "slice1"
+        assert dashboard_slice.evalMetricMin == 0.0
+        assert dashboard_slice.evalMetricMax == 1.0
+        assert dashboard_slice.performanceMetric == PerformanceMetric.accuracy
+        assert dashboard_slice.metricValue == "0.85"
+
+
+class TestDashboardMutationInputModels:
+    def test_create_dashboard_mutation_input(self):
+        """Test CreateDashboardMutationInput initialization"""
+        input_data = {
+            "name": "Test Dashboard",
+            "spaceId": "space123",
+            "clientMutationId": "mutation123",
+        }
+        mutation_input = CreateDashboardMutationInput(**input_data)
+        assert mutation_input.name == "Test Dashboard"
+        assert mutation_input.spaceId == "space123"
+        assert mutation_input.clientMutationId == "mutation123"
+
+    def test_create_dashboard_mutation_input_minimal(self):
+        """Test CreateDashboardMutationInput with minimal fields"""
+        input_data = {"name": "Test Dashboard", "spaceId": "space123"}
+        mutation_input = CreateDashboardMutationInput(**input_data)
+        assert mutation_input.name == "Test Dashboard"
+        assert mutation_input.spaceId == "space123"
+        assert mutation_input.clientMutationId is None
+
+    def test_line_chart_plot_input(self):
+        """Test LineChartPlotInput initialization"""
+        plot_data = {
+            "modelId": "model123",
+            "modelVersionIds": ["v1", "v2"],
+            "modelEnvironmentName": ModelEnvironment.production,
+            "title": "Model Volume",
+            "position": 0,
+            "metric": "count",
+            "filters": [],
+        }
+        plot_input = LineChartPlotInput(**plot_data)
+        assert plot_input.modelId == "model123"
+        assert plot_input.modelVersionIds == ["v1", "v2"]
+        assert plot_input.modelEnvironmentName == ModelEnvironment.production
+        assert plot_input.title == "Model Volume"
+        assert plot_input.position == 0
+        assert plot_input.metric == "count"
+        assert plot_input.filters == []
+
+    def test_line_chart_plot_input_minimal(self):
+        """Test LineChartPlotInput with minimal fields"""
+        plot_data = {
+            "modelId": "model123",
+            "modelEnvironmentName": ModelEnvironment.production,
+            "title": "Model Volume",
+            "position": 0,
+            "metric": "count",
+            "filters": [],
+        }
+        plot_input = LineChartPlotInput(**plot_data)
+        assert plot_input.modelId == "model123"
+        assert plot_input.modelVersionIds == []  # default value
+        assert plot_input.modelEnvironmentName == ModelEnvironment.production
+        assert plot_input.title == "Model Volume"
+        assert plot_input.position == 0
+        assert plot_input.metric == "count"
+        assert plot_input.filters == []
+
+    def test_create_line_chart_widget_mutation_input(self):
+        """Test CreateLineChartWidgetMutationInput initialization"""
+        plots = [
+            {
+                "modelId": "model123",
+                "title": "Model A Volume",
+                "position": 0,
+                "modelEnvironmentName": ModelEnvironment.production,
+                "metric": "count",
+                "filters": [],
+            },
+            {
+                "modelId": "model456",
+                "title": "Model B Volume",
+                "position": 1,
+                "modelEnvironmentName": ModelEnvironment.production,
+                "metric": "count",
+                "filters": [],
+            },
+        ]
+        input_data = {
+            "title": "Model Volumes",
+            "dashboardId": "dashboard123",
+            "timeSeriesMetricType": "modelDataMetric",
+            "plots": [LineChartPlotInput(**plot) for plot in plots],
+        }
+        mutation_input = CreateLineChartWidgetMutationInput(**input_data)
+        assert mutation_input.title == "Model Volumes"
+        assert mutation_input.dashboardId == "dashboard123"
+        assert mutation_input.timeSeriesMetricType == "modelDataMetric"
+        assert len(mutation_input.plots) == 2
+        assert mutation_input.plots[0].modelId == "model123"
+        assert mutation_input.plots[1].modelId == "model456"
+
+    def test_create_line_chart_widget_mutation_input_minimal(self):
+        """Test CreateLineChartWidgetMutationInput with minimal fields"""
+        plots = [
+            {
+                "modelId": "model123",
+                "modelEnvironmentName": ModelEnvironment.production,
+                "title": "Model Volume",
+                "position": 0,
+                "metric": "count",
+                "filters": [],
+            }
+        ]
+        input_data = {
+            "title": "Model Volume",
+            "dashboardId": "dashboard123",
+            "plots": [LineChartPlotInput(**plot) for plot in plots],
+        }
+        mutation_input = CreateLineChartWidgetMutationInput(**input_data)
+        assert mutation_input.title == "Model Volume"
+        assert mutation_input.dashboardId == "dashboard123"
+        assert mutation_input.timeSeriesMetricType == "modelDataMetric"  # default value
+        assert len(mutation_input.plots) == 1
