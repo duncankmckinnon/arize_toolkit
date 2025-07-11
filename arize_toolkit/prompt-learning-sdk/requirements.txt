@@ -1,0 +1,7 @@
+pandas
+numpy
+tiktoken
+openai
+phoenix-evals
+phoenix-client
+typing-extensions
