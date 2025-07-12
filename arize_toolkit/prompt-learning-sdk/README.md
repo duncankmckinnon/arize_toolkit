@@ -41,11 +41,13 @@ import pandas as pd
 from meta_prompt_optimizer import MetaPromptOptimizer
 
 # Create your dataset with feedback
-dataset = pd.DataFrame({
-    'query': ["What is AI?", "How does ML work?"],
-    'output': ["AI is artificial intelligence", "ML uses algorithms"],
-    'feedback': ["too brief", "needs more detail"]
-})
+dataset = pd.DataFrame(
+    {
+        "query": ["What is AI?", "How does ML work?"],
+        "output": ["AI is artificial intelligence", "ML uses algorithms"],
+        "feedback": ["too brief", "needs more detail"],
+    }
+)
 
 # Define your prompt
 prompt = "You are helpful. Answer: {query}"
@@ -54,8 +56,8 @@ prompt = "You are helpful. Answer: {query}"
 optimizer = MetaPromptOptimizer(
     prompt=prompt,
     dataset=dataset,
-    output_column='output',
-    feedback_columns=['feedback']
+    output_column="output",
+    feedback_columns=["feedback"],
 )
 
 # Optimize the prompt
@@ -75,36 +77,40 @@ from meta_prompt_optimizer import MetaPromptOptimizer
 # Set up OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+
 # Define custom evaluator
 def annotation_evaluator(dataset):
     dataset_copy = dataset.copy()
     annotations = []
-    
+
     for _, row in dataset_copy.iterrows():
         output = row["output"]
         query = row["query"]
-        
+
         # Generate annotation using LLM
         response = client.chat.completions.create(
             model="gpt-4",
-            messages=[{
-                "role": "user", 
-                "content": f"Evaluate this response: {output} for query: {query}"
-            }],
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Evaluate this response: {output} for query: {query}",
+                }
+            ],
             max_tokens=2000,
-            temperature=0.7
+            temperature=0.7,
         )
         annotations.append(response.choices[0].message.content)
-    
-    dataset_copy['annotation'] = annotations
-    return dataset_copy, ['annotation']
+
+    dataset_copy["annotation"] = annotations
+    return dataset_copy, ["annotation"]
+
 
 # Initialize optimizer with evaluator
 optimizer = MetaPromptOptimizer(
     prompt="You are helpful. Answer: {query}",
     dataset=dataset,
-    output_column='output',
-    evaluators=[annotation_evaluator]
+    output_column="output",
+    evaluators=[annotation_evaluator],
 )
 
 optimized_prompt, updated_dataset = optimizer.optimize()
@@ -128,6 +134,7 @@ MetaPromptOptimizer(
 ```
 
 **Parameters:**
+
 - `prompt`: The prompt to optimize. Can be:
   - Phoenix `PromptVersion` object
   - List of message dictionaries
@@ -145,9 +152,11 @@ MetaPromptOptimizer(
 Optimizes the prompt using meta-prompt techniques.
 
 **Parameters:**
+
 - `context_size_k`: Context window size in thousands of tokens (default: 128k)
 
 **Returns:**
+
 - `optimized_prompt`: Optimized prompt in same format as input
 - `updated_dataset`: Dataset with evaluator results added
 
@@ -159,10 +168,10 @@ Evaluators are functions that process the entire dataset and return feedback dat
 def evaluator(dataset: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     """
     Process entire dataset and return feedback columns.
-    
+
     Args:
         dataset: DataFrame with examples
-        
+
     Returns:
         Tuple of (updated_dataframe, list_of_column_names)
         - updated_dataframe: DataFrame with new feedback columns added
@@ -170,13 +179,13 @@ def evaluator(dataset: pd.DataFrame) -> Tuple[pd.DataFrame, List[str]]:
     """
     # Process the entire dataset
     dataset_copy = dataset.copy()
-    
+
     # Add your feedback columns to the dataset
-    dataset_copy['feedback_column_1'] = some_calculation(dataset_copy)
-    dataset_copy['feedback_column_2'] = another_calculation(dataset_copy)
-    
+    dataset_copy["feedback_column_1"] = some_calculation(dataset_copy)
+    dataset_copy["feedback_column_2"] = another_calculation(dataset_copy)
+
     # Return the updated dataset and list of column names to use
-    return dataset_copy, ['feedback_column_1', 'feedback_column_2']
+    return dataset_copy, ["feedback_column_1", "feedback_column_2"]
 ```
 
 ## Examples
@@ -189,17 +198,17 @@ from phoenix.client.types import PromptVersion
 prompt = PromptVersion(
     [
         {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "Answer: {query}"}
+        {"role": "user", "content": "Answer: {query}"},
     ],
     model_name="gpt-4",
-    model_provider="openai"
+    model_provider="openai",
 )
 
 optimizer = MetaPromptOptimizer(
     prompt=prompt,
     dataset=dataset,
-    output_column='output',
-    feedback_columns=['feedback']
+    output_column="output",
+    feedback_columns=["feedback"],
 )
 
 optimized_prompt, updated_dataset = optimizer.optimize()
@@ -210,22 +219,22 @@ optimized_prompt, updated_dataset = optimizer.optimize()
 ```python
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "Write about {topic}."}
+    {"role": "user", "content": "Write about {topic}."},
 ]
 
 optimizer = MetaPromptOptimizer(
     prompt=messages,
     dataset=dataset,
-    output_column='output',
-    feedback_columns=['quality_score']
+    output_column="output",
+    feedback_columns=["quality_score"],
 )
 
 optimized_messages, updated_dataset = optimizer.optimize()
 ```
 
-### Example 3: Multiple Evaluators 
+### Example 3: Multiple Evaluators
 
-You can use Phoenix evaluators here. 
+You can use Phoenix evaluators here.
 
 ```python
 def annotator(dataset):
@@ -234,24 +243,26 @@ def annotator(dataset):
         query = row["query"]
         annotation = client.chat.completions.create(
             model="gpt-4",
-            messages=[{"role": "user", "content": f"""Evaluate the following output: {output} and give me a short annotation on what the response is lacking, and how the prompt for the LLM that is generating this response can be improved.
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""Evaluate the following output: {output} and give me a short annotation on what the response is lacking, and how the prompt for the LLM that is generating this response can be improved.
                         Keep in mind that the prompt is global, and that it cannot be made more specific for each query.
-                        The annotation should be in the same language as the output. The input is: {query}"""}],
+                        The annotation should be in the same language as the output. The input is: {query}""",
+                }
+            ],
             max_tokens=2000,
-            temperature=0.7
+            temperature=0.7,
         )
         return annotation.choices[0].message.content
 
     dataset = dataset.copy()
     dataset["annotation"] = dataset.apply(make_annotation, axis=1)
     return dataset, ["annotation"]
-    
+
+
 def phoenix_toxicity_evaluator(dataset):
-    model = OpenAIModel(
-        model="gpt-4",
-        temperature=0.7,
-        max_tokens=2000
-    )
+    model = OpenAIModel(model="gpt-4", temperature=0.7, max_tokens=2000)
     rails = list(TOXICITY_PROMPT_RAILS_MAP.values())
     template = """You are examining written text content. Here is the text:
         [BEGIN DATA]
@@ -275,17 +286,21 @@ def phoenix_toxicity_evaluator(dataset):
         template=template,
         model=model,
         rails=rails,
-        provide_explanation=True, #optional to generate explanations for the value produced by the eval LLM
+        provide_explanation=True,  # optional to generate explanations for the value produced by the eval LLM
     )
-    toxic_classifications.rename(columns={"label": "toxicity_label", "explanation": "toxicity_explanation"}, inplace=True)
+    toxic_classifications.rename(
+        columns={"label": "toxicity_label", "explanation": "toxicity_explanation"},
+        inplace=True,
+    )
 
     return toxic_classifications, ["toxicity_label", "toxicity_explanation"]
+
 
 optimizer = MetaPromptOptimizer(
     prompt="Answer: {question}",
     dataset=dataset,
-    output_column='output',
-    evaluators=[annotator, phoenix_toxicity_evaluator]
+    output_column="output",
+    evaluators=[annotator, phoenix_toxicity_evaluator],
 )
 ```
 
@@ -294,31 +309,32 @@ optimizer = MetaPromptOptimizer(
 ```python
 # Create JSON file
 import json
+
 dataset_data = {
-    'query': ["help me", "what is this"],
-    'output': ["I can help", "This is a tool"],
-    'feedback': ["too vague", "good"]
+    "query": ["help me", "what is this"],
+    "output": ["I can help", "This is a tool"],
+    "feedback": ["too vague", "good"],
 }
 
-with open('dataset.json', 'w') as f:
+with open("dataset.json", "w") as f:
     json.dump(dataset_data, f)
 
 # Use JSON file
 optimizer = MetaPromptOptimizer(
     prompt="User says: {query}",
-    dataset='dataset.json',
-    output_column='output',
-    feedback_columns=['feedback']
+    dataset="dataset.json",
+    output_column="output",
+    feedback_columns=["feedback"],
 )
 ```
 
 ## How It Works
 
 1. **Dataset Processing**: Runs evaluators to generate feedback if provided
-2. **Token Counting**: Uses tiktoken to count tokens in dataset columns
-3. **Smart Batching**: Creates batches that fit within the specified context window
-4. **Meta-Prompt Generation**: Constructs meta-prompts with examples and feedback
-5. **LLM Optimization**: Uses LLM to generate improved prompt
+1. **Token Counting**: Uses tiktoken to count tokens in dataset columns
+1. **Smart Batching**: Creates batches that fit within the specified context window
+1. **Meta-Prompt Generation**: Constructs meta-prompts with examples and feedback
+1. **LLM Optimization**: Uses LLM to generate improved prompt
 
 ## Configuration
 
@@ -329,25 +345,23 @@ The optimizer uses GPT-4 by default for optimization. You can customize the mode
 ### Context Window Sizes
 
 Pick the context window that matches the model you chose. If your dataset is too big to fit in your model's context window, the optimizer will automatically split the data
-based on the context window you provide. 
+based on the context window you provide.
 
 | Models | Context Window (tokens) |
 | OpenAI GPT-4.1, Gemini 2.5 Pro/Flash, Llama 4 Maverick | 1,000,000 |
 | Anthropic Claude 4 (Opus 4, Sonnet 4), Claude 3.7/3.5 Sonnet, OpenAI o3/o4 | 200,000 |
-| OpenAI GPT-4o, Mistral Large 2, DeepSeek R1/V3 |	128,000	|
-| Claude 3.5	|100,000	|
-| Meta Llama 3.1	| 128,000 |
-| GPT-4 Turbo	| 128,000	|
-| OpenAI GPT-3.5 Turbo	| 16,000	|
-| GPT-3 |	2,048	|
+| OpenAI GPT-4o, Mistral Large 2, DeepSeek R1/V3 | 128,000 |
+| Claude 3.5 |100,000 |
+| Meta Llama 3.1 | 128,000 |
+| GPT-4 Turbo | 128,000 |
+| OpenAI GPT-3.5 Turbo | 16,000 |
+| GPT-3 | 2,048 |
 | Mistral 7B | 8,192 |
 
 ## Best Practices
 
 1. **Provide Diverse Examples**: Include a variety of inputs and outputs in your dataset
-2. **Use Meaningful Feedback**: Evaluator feedback should be specific and actionable
-3. **Monitor Token Usage**: Use appropriate context window sizes for your dataset
-4. **Validate Results**: Always check that optimized prompts maintain template variables
-5. **Iterate**: Run optimization multiple times with different feedback for better results
-
-
+1. **Use Meaningful Feedback**: Evaluator feedback should be specific and actionable
+1. **Monitor Token Usage**: Use appropriate context window sizes for your dataset
+1. **Validate Results**: Always check that optimized prompts maintain template variables
+1. **Iterate**: Run optimization multiple times with different feedback for better results
