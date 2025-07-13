@@ -2,6 +2,6 @@ pandas
 numpy
 tiktoken
 openai
-phoenix-evals
-phoenix-client
+arize-phoenix-evals
+arize-phoenix-client
 typing-extensions
