@@ -2,7 +2,7 @@
 Prompt Learning SDK for Arize Toolkit
 
 This module provides tools for automatically optimizing prompts using meta-prompt techniques.
-Requires the 'prompt' optional dependency to be installed.
+Requires the 'prompt_optimizer' optional dependency to be installed.
 """
 
 try:
@@ -15,4 +15,4 @@ try:
     ]
 except ImportError as e:
     # If optional dependencies are not installed, provide helpful error message
-    raise ImportError("The prompt learning functionality requires the 'prompt' optional dependency. " "Install it with: pip install arize_toolkit[prompt]") from e
+    raise ImportError("The prompt learning functionality requires the 'prompt_optimizer' optional dependency." "Install it with: pip install arize_toolkit[prompt_optimizer]") from e
