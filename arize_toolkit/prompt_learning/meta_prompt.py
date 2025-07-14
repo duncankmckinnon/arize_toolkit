@@ -2,11 +2,7 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-from .constants import (
-    START_DELIM,
-    END_DELIM,
-    META_PROMPT_TEMPLATE,
-)
+from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
 
 
 class MetaPrompt:

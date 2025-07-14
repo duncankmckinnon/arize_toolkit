@@ -3,9 +3,10 @@ import re
 from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-from .meta_prompt import MetaPrompt
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
+
+from .meta_prompt import MetaPrompt
 from .tiktoken_splitter import TiktokenSplitter
 
 
@@ -156,10 +157,7 @@ class MetaPromptOptimizer:
             # Use provided API key or fall back to environment variable
             api_key = self.openai_api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError(
-                    "OpenAI API key is required for optimization. "
-                    "Please provide it via the `openai_api_key` parameter or set the OPENAI_API_KEY environment variable."
-                )
+                raise ValueError("OpenAI API key is required for optimization. " "Please provide it via the `openai_api_key` parameter or set the OPENAI_API_KEY environment variable.")
 
             client = OpenAI(api_key=api_key)
             return client
