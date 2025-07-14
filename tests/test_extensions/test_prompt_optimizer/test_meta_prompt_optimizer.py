@@ -191,30 +191,29 @@ class TestMetaPromptOptimizer:
         variables = optimizer._detect_template_variables("No variables here")
         assert variables == []
 
-    @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.get_key_value")
-    def test_run_evaluators(self, mock_get_key, sample_dataset):
+    def test_run_evaluators(self, sample_dataset):
         """Test running evaluators on dataset."""
-        mock_get_key.return_value = MagicMock(get_secret_value=lambda: "test-api-key")
-
-        # Mock evaluator
-        def mock_evaluator(df):
-            feedback_df = pd.DataFrame({"evaluation": ["good", "excellent"]})
-            return feedback_df, ["evaluation"]
-
         from arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer import MetaPromptOptimizer
+
+        # Mock evaluator that returns matching column names
+        def mock_evaluator(df):
+            feedback_df = pd.DataFrame({"correct": ["good", "excellent"]})
+            return feedback_df, ["correct"]
 
         optimizer = MetaPromptOptimizer(
             prompt="Test",
             dataset=sample_dataset.copy(),
             output_column="answer",
+            feedback_columns=["correct"],
             evaluators=[mock_evaluator],
         )
 
         result_df = optimizer.run_evaluators()
 
-        assert "evaluation" in result_df.columns
-        assert result_df["evaluation"].tolist() == ["good", "excellent"]
-        assert "evaluation" in optimizer.feedback_columns
+        # Check that existing column was updated
+        assert result_df["correct"].tolist() == ["good", "excellent"]
+        # Check that no new columns were added
+        assert set(result_df.columns) == set(sample_dataset.columns)
 
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.OpenAIModel")
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.TiktokenSplitter")
@@ -372,13 +371,13 @@ class TestMetaPromptOptimizer:
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.TiktokenSplitter")
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.get_key_value")
     def test_optimize_with_evaluators(self, mock_get_key, mock_splitter, mock_openai_model, sample_dataset):
-        """Test optimize with evaluators."""
+        """Test optimize with evaluators called separately."""
         mock_get_key.return_value = MagicMock(get_secret_value=lambda: "test-api-key")
 
         # Mock evaluator
         def mock_evaluator(df):
-            feedback_df = pd.DataFrame({"auto_eval": ["good", "good"]})
-            return feedback_df, ["auto_eval"]
+            feedback_df = pd.DataFrame({"correct": ["good", "good"]})
+            return feedback_df, ["correct"]
 
         # Mock tiktoken splitter
         mock_splitter_instance = MagicMock()
@@ -396,14 +395,17 @@ class TestMetaPromptOptimizer:
             prompt="Answer: {question}",
             dataset=sample_dataset.copy(),
             output_column="answer",
+            feedback_columns=["correct"],
             evaluators=[mock_evaluator],
         )
 
-        optimized_prompt, dataset = optimizer.optimize()
+        # First run evaluators
+        dataset_with_feedback = optimizer.run_evaluators()
+        assert dataset_with_feedback["correct"].tolist() == ["good", "good"]
 
-        # Check evaluator was run
-        assert "auto_eval" in dataset.columns
-        assert "auto_eval" in optimizer.feedback_columns
+        # Then optimize (should not call evaluators again)
+        optimized_prompt = optimizer.optimize()
+        assert optimized_prompt == "Improved: {question}"
 
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.OpenAIModel")
     @patch("arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer.TiktokenSplitter")
