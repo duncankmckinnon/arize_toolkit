@@ -91,10 +91,8 @@ optimizer = MetaPromptOptimizer(
     output_column: str,
     feedback_columns: list[str] | None = None,
     evaluators: list[callable] | None = None,
-    input_columns: list[str] | None = None,
+    model_choice: str = "gpt-4",
     openai_api_key: str | None = None,
-    openai_model: str = "gpt-4o-mini",
-    context_size: int = 40000
 )
 ```
 
@@ -103,19 +101,32 @@ The main class for optimizing prompts based on historical performance data. It a
 **Parameters**
 
 - `prompt` – The prompt to optimize. Can be:
-  - A string template (e.g., "Answer the question: {question}")
-  - A list of message dictionaries (e.g., `[{"role": "system", "content": "..."}]`)
-  - A Phoenix `PromptVersion` object
+
+  A string template (e.g., "Answer the question: {question}")
+
+  A list of message dictionaries (e.g., `[{"role": "system", "content": "..."}]`)
+
+  A Phoenix `PromptVersion` object
+
 - `dataset` – Historical performance data. Can be:
-  - A pandas DataFrame with input, output, and feedback columns
-  - A path to a JSON file containing the data
+
+  A pandas DataFrame with input, output, and feedback columns
+
+  A path to a JSON file containing the data
+
 - `output_column` – Column name containing model outputs
+
 - `feedback_columns` *(optional)* – List of column names containing feedback/evaluation data
-- `evaluators` *(optional)* – List of functions to compute additional feedback
-- `input_columns` *(optional)* – List of column names for template variables. Auto-detected if not provided
-- `openai_api_key` *(optional)* – OpenAI API key. Required for optimization. If not provided, uses `OPENAI_API_KEY` environment variable
-- `openai_model` *(optional)* – Model to use for optimization. Defaults to "gpt-4o-mini"
-- `context_size` *(optional)* – Maximum tokens per optimization batch. Defaults to 40000
+
+- `evaluators` *(optional)* – List of Phoenix evaluators to run on the dataset
+
+- `model_choice` *(optional)* – OpenAI model to use for optimization. Defaults to "gpt-4"
+
+- `openai_api_key` *(optional)* – OpenAI API key.
+
+  Required for optimization runs with LLM to generate new prompts.
+
+  If not provided will attempt to use `OPENAI_API_KEY` environment variable
 
 **Returns**
 
@@ -150,16 +161,15 @@ optimizer = MetaPromptOptimizer(
 )
 
 # Generate optimized prompt
-optimized = optimizer.optimize()
-print(optimized)
+optimized_prompt, updated_dataset = optimizer.optimize()
+print(optimized_prompt)
 ```
 
 ### `optimize`
 
 ```python
-optimized_prompt: str | list[dict] | PromptVersion = optimizer.optimize(
-    max_examples: int | None = None,
-    show_progress: bool = True
+optimized_prompt, updated_dataset = optimizer.optimize(
+    context_size_k: int = 8000
 )
 ```
 
@@ -167,39 +177,36 @@ Runs the optimization process to generate an improved prompt based on the histor
 
 **Parameters**
 
-- `max_examples` *(optional)* – Maximum number of examples to use. Uses all if not specified
-- `show_progress` *(optional)* – Whether to show progress bars. Defaults to True
+- `context_size_k` *(optional)* – Maximum context size in thousands of tokens. Defaults to 8000
 
 **Returns**
 
-The optimized prompt in the same format as the input (string, list, or PromptVersion).
+A tuple containing:
+
+- The optimized prompt in the same format as the input (string, list, or PromptVersion)
+- Updated dataset with additional feedback columns from evaluators
 
 **Example**
 
 ```python
 # Basic optimization
-optimized = optimizer.optimize()
+optimized_prompt, dataset = optimizer.optimize()
 
-# Limit examples for faster processing
-optimized = optimizer.optimize(max_examples=100)
-
-# Quiet mode
-optimized = optimizer.optimize(show_progress=False)
+# With smaller context size
+optimized_prompt, dataset = optimizer.optimize(context_size_k=4000)
 ```
 
 ### `run_evaluators`
 
 ```python
-updated_dataset: pd.DataFrame = optimizer.run_evaluators(
-    dataset: pd.DataFrame | None = None
-)
+updated_dataset: pd.DataFrame = optimizer.run_evaluators()
 ```
 
 Runs the configured evaluators on the dataset to generate additional feedback columns.
 
 **Parameters**
 
-- `dataset` *(optional)* – DataFrame to evaluate. If None, uses the optimizer's internal dataset
+None
 
 **Returns**
 
@@ -239,7 +246,7 @@ ______________________________________________________________________
 
 ```python
 splitter = TiktokenSplitter(
-    model_name: str = "gpt-4"
+    model: str = "gpt-4o"
 )
 ```
 
@@ -247,24 +254,23 @@ A utility class for splitting large datasets into token-limited batches. Essenti
 
 **Parameters**
 
-- `model_name` *(optional)* – The model name for tokenization. Defaults to "gpt-4"
+- `model` *(optional)* – The model name for tokenization. Defaults to "gpt-4o"
 
 **Example**
 
 ```python
 from arize_toolkit.extensions.prompt_optimizer import TiktokenSplitter
 
-splitter = TiktokenSplitter(model_name="gpt-4o-mini")
+splitter = TiktokenSplitter(model="gpt-4o-mini")
 ```
 
 ### `get_batch_dataframes`
 
 ```python
 batch_dataframes: list[pd.DataFrame] = splitter.get_batch_dataframes(
-    dataframe: pd.DataFrame,
-    text_columns: list[str],
-    context_size: int,
-    show_progress: bool = True
+    df: pd.DataFrame,
+    columns: list[str],
+    context_size_tokens: int
 )
 ```
 
@@ -272,10 +278,9 @@ Splits a DataFrame into batches that fit within a token limit, returning a list 
 
 **Parameters**
 
-- `dataframe` – The DataFrame to split into batches
-- `text_columns` – Column names containing text to count tokens for
-- `context_size` – Maximum tokens per batch
-- `show_progress` *(optional)* – Whether to show progress bar. Defaults to True
+- `df` – The DataFrame to split into batches
+- `columns` – Column names containing text to count tokens for
+- `context_size_tokens` – Maximum tokens per batch
 
 **Returns**
 
@@ -294,7 +299,7 @@ df = pd.DataFrame(
 
 # Get batches that fit within token limit
 batches = splitter.get_batch_dataframes(
-    dataframe=df, text_columns=["prompt", "response"], context_size=1000
+    df=df, columns=["prompt", "response"], context_size_tokens=1000
 )
 
 # Process each batch DataFrame
@@ -352,7 +357,7 @@ optimizer = MetaPromptOptimizer(
     feedback_columns=["rating", "feedback"],
 )
 
-optimized_v2 = optimizer.optimize()
+optimized_v2, updated_dataset = optimizer.optimize()
 ```
 
 ### Handling Large Datasets
@@ -365,11 +370,11 @@ optimizer = MetaPromptOptimizer(
     prompt=template,
     dataset=large_df,  # e.g., 10,000 rows
     output_column="output",
-    context_size=20000,  # Smaller context for more batches
+    model_choice="gpt-4",
 )
 
-# Progress bars show batch processing
-optimized = optimizer.optimize()
+# Specify smaller context size for more batches
+optimized_prompt, dataset = optimizer.optimize(context_size_k=4000)
 ```
 
 ______________________________________________________________________
@@ -379,7 +384,7 @@ ______________________________________________________________________
 1. **Data Quality**: Ensure your historical data has meaningful feedback signals
 1. **Feedback Diversity**: Use multiple feedback columns for better optimization
 1. **Template Variables**: Keep variable names consistent between prompt and data
-1. **Batch Size**: Adjust `context_size` based on your model's limits
+1. **Context Size**: Adjust `context_size_k` based on your model's limits
 1. **Iteration**: Run optimization multiple times with refined data for best results
 
 ______________________________________________________________________
@@ -400,9 +405,8 @@ except Exception as e:
 # prompt: "Answer {question}" requires a "question" column in dataset
 
 # Token Limit Exceeded
-# Reduce context_size or max_examples:
-optimizer = MetaPromptOptimizer(..., context_size=10000, ...)
-result = optimizer.optimize(max_examples=50)
+# Reduce context_size_k:
+optimized_prompt, dataset = optimizer.optimize(context_size_k=2000)
 ```
 
 ______________________________________________________________________
@@ -450,11 +454,11 @@ optimizer = MetaPromptOptimizer(
     dataset=support_data,
     output_column="agent_response",
     feedback_columns=["customer_satisfaction", "resolution_time", "resolved"],
-    openai_model="gpt-4o-mini",
+    model_choice="gpt-4",
 )
 
 # Generate optimized prompt
-optimized_prompt = optimizer.optimize()
+optimized_prompt, updated_dataset = optimizer.optimize()
 
 print("Original prompt:")
 print(current_prompt)
