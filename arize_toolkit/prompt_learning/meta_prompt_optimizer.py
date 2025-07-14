@@ -3,10 +3,10 @@ import re
 from typing import Dict, List, Optional, Tuple, Union
 
 import pandas as pd
-from meta_prompt import MetaPrompt
+from .meta_prompt import MetaPrompt
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
-from tiktoken_splitter import TiktokenSplitter
+from .tiktoken_splitter import TiktokenSplitter
 
 
 class MetaPromptOptimizer:
@@ -17,7 +17,8 @@ class MetaPromptOptimizer:
         output_column: str,
         feedback_columns: Optional[List[str]] = None,
         evaluators: Optional[List] = None,
-        model=OpenAIModel,
+        model_choice: str = "gpt-4",
+        openai_api_key: Optional[str] = None,
     ):
         """
         Initialize the MetaPromptOptimizer
@@ -28,12 +29,16 @@ class MetaPromptOptimizer:
             output_column: Name of the column containing LLM outputs
             feedback_columns: List of column names containing existing feedback
             evaluators: List of Phoenix evaluators to run
+            model_choice: OpenAI model to use for optimization (default: "gpt-4")
+            openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
         """
         self.prompt = prompt
         self.dataset = self._load_dataset(dataset)
         self.feedback_columns = feedback_columns or []
         self.evaluators = evaluators or []
         self.output_column = output_column
+        self.model_choice = model_choice
+        self.openai_api_key = openai_api_key
 
         # Validate inputs
         self._validate_inputs()
@@ -148,10 +153,13 @@ class MetaPromptOptimizer:
         from openai import OpenAI
 
         try:
-            # Always use OpenAI GPT-4 for optimization
-            api_key = os.getenv("OPENAI_API_KEY")
+            # Use provided API key or fall back to environment variable
+            api_key = self.openai_api_key or os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable not set. Please set your OpenAI API key.")
+                raise ValueError(
+                    "OpenAI API key is required for optimization. "
+                    "Please provide it via the `openai_api_key` parameter or set the OPENAI_API_KEY environment variable."
+                )
 
             client = OpenAI(api_key=api_key)
             return client
@@ -175,12 +183,11 @@ class MetaPromptOptimizer:
         prompt_content = self._extract_prompt_content()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
-        print("template_variables", self.template_variables)
         # Initialize LLM model
         model = self._initialize_llm_model()
 
         # Initialize tiktoken splitter
-        splitter = TiktokenSplitter(model="gpt-4")
+        splitter = TiktokenSplitter(model=self.model_choice)
 
         # Determine which columns to include in token counting
         # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
@@ -208,9 +215,7 @@ class MetaPromptOptimizer:
                     output_column=self.output_column,
                 )
 
-                # print("meta_prompt_content", meta_prompt_content)
-
-                model = OpenAIModel(model="gpt-4", temperature=0.7, max_tokens=2000)
+                model = OpenAIModel(model=self.model_choice)
 
                 response = model(meta_prompt_content)
 

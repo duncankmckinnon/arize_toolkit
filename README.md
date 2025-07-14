@@ -35,11 +35,22 @@ Here's a quick overview of the main features in the current release:
 - Work with LLM features like prompts and annotations
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
+- **Prompt Learning SDK** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
 
 ## Installation
 
 ```bash
 pip install arize_toolkit
+```
+
+### Optional Dependencies
+
+#### Prompt Learning SDK
+
+For prompt optimization and meta-prompt techniques, install with the `prompt` optional dependency:
+
+```bash
+pip install arize_toolkit[prompt]
 ```
 
 ## Client Setup

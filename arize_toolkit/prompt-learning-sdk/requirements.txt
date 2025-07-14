@@ -1,7 +1,0 @@
-pandas
-numpy
-tiktoken
-openai
-arize-phoenix-evals
-arize-phoenix-client
-typing-extensions

@@ -2,41 +2,16 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-START_DELIM = "{"
-END_DELIM = "}"
+from .constants import (
+    START_DELIM,
+    END_DELIM,
+    META_PROMPT_TEMPLATE,
+)
 
 
 class MetaPrompt:
     def __init__(self) -> None:
-        self.meta_prompt_messages = """
-You are an expert in prompt optimization. Given the original baseline prompt and the following associated metadata (such as model inputs, outputs, evaluation labels and explanations),
-generate a revised version of the original prompt that would likely improve results with respect to the evaluation labels.
-Your goal is to align the prompt with the feedback and evaluation criteria.
-
-BELOW IS THE ORIGINAL BASELINE PROMPT
-************* start prompt *************
-
-
-{baseline_prompt}
-************* end prompt *************
-
-BELOW ARE THE EXAMPLES USING THE ABOVE PROMPT
-************* start example data *************
-
-
-{examples}
-************* end example data *************
-
-FINAL INSTRUCTIONS
-Iterate on the original prompt (above) with a new prompt that will improve the results, based on the examples and feedback above.
-
-A common best practice in prompt optimization is to add guidelines and the most helpful few shot examples.
-
-Note: Make sure to include the variables from the original prompt, which are wrapped in either single brackets or double brackets (e.g.
-{var}). If you fail to include these variables, the LLM will not be able to access the required data.
-
-YOUR NEW PROMPT:
-"""
+        self.meta_prompt_messages = META_PROMPT_TEMPLATE
 
     def construct_content(
         self,
