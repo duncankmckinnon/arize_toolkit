@@ -1,76 +1,51 @@
+import pandas as pd
+from typing import List, Union, Optional, Tuple, Dict
+
+from meta_prompt import MetaPrompt
+from phoenix.evals.models import OpenAIModel
+from phoenix.client.types import PromptVersion
+from tiktoken_splitter import TiktokenSplitter
 import copy
 import re
-from typing import Dict, List, Optional, Sequence, Tuple, Union
-
-import pandas as pd
-from phoenix.client.types import PromptVersion
-from phoenix.evals.models import OpenAIModel
-
-from arize_toolkit.extensions.prompt_optimizer.meta_prompt import MetaPrompt
-from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
-from arize_toolkit.utils import get_key_value
 
 
 class MetaPromptOptimizer:
-    """
-    MetaPromptOptimizer is a class that optimizes a prompt using the meta-prompt approach.
-
-    Args:
-        prompt: Either a PromptVersion object or list of messages or a string representing the user prompt
-        dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
-        output_column: Name of the column containing LLM outputs from the dataset
-        feedback_columns: List of column names containing existing feedback from the dataset
-        evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
-        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4o")
-        openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
-
-    Methods:
-        optimize: Optimize the prompt using a meta-prompt approach and return an optimized prompt object
-
-    Example:
-    ```python
-        import pandas as pd
-        import os
-        from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
-
-        os.environ["OPENAI_API_KEY"] = "your-api-key"
-
-        optimizer = MetaPromptOptimizer(
-            prompt="You are a helpful assistant. Answer this question: {question}",
-            dataset=pd.DataFrame({"question": ["What is the capital of France?", ...], "answer": ["Paris", ...], "feedback": ["correct", ...]}),
-            output_column="answer",
-            feedback_columns=["feedback"],
-        )
-        optimized_prompt, dataset = optimizer.optimize()
-        print(optimized_prompt.to_dict())
-    ```
-    """
-
     def __init__(
-        self,
-        prompt: Union[PromptVersion, str, List[Dict[str, str]]],
-        dataset: Union[pd.DataFrame, str],
-        output_column: str,
-        feedback_columns: Optional[List[str]] = None,
+        self, 
+        prompt: Union[PromptVersion, str, List[Dict[str, str]]], 
+        dataset: Union[pd.DataFrame, str], 
+        output_column: str, 
+        feedback_columns: Optional[List[str]] = None, 
         evaluators: Optional[List] = None,
-        model_choice: str = "gpt-4",
-        openai_api_key: Optional[str] = None,
+        model = OpenAIModel,
+        model_choice = "gpt-4.1-2025-04-14",
+        loop_idx = None
     ):
+        """
+        Initialize the MetaPromptOptimizer
+        
+        Args:
+            prompt: Either an Arize Prompt object or list of messages
+            dataset: DataFrame or path to JSON file containing the dataset
+            output_column: Name of the column containing LLM outputs
+            feedback_columns: List of column names containing existing feedback (must exist in dataset)
+            evaluators: List of Phoenix evaluators to run (will update existing feedback columns)
+        """
         self.prompt = prompt
         self.dataset = self._load_dataset(dataset)
         self.feedback_columns = feedback_columns or []
         self.evaluators = evaluators or []
         self.output_column = output_column
         self.model_choice = model_choice
-        self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
-
+        self.loop_idx = loop_idx
+        
         # Validate inputs
         self._validate_inputs()
-
+        
         # Initialize components
         self.meta_prompter = MetaPrompt()
         self.optimization_history = []
-
+        
     def _load_dataset(self, dataset: Union[pd.DataFrame, str]) -> pd.DataFrame:
         """Load dataset from DataFrame or JSON file"""
         if isinstance(dataset, pd.DataFrame):
@@ -81,25 +56,28 @@ class MetaPromptOptimizer:
                 return pd.read_json(dataset)
             except Exception as e:
                 raise ValueError(f"Failed to load dataset from {dataset}: {e}")
-
+        else:
+            raise ValueError("Dataset must be a DataFrame or path to JSON file")
+    
     def _validate_inputs(self):
         """Validate that we have the necessary inputs for optimization"""
         # Check if we have either feedback columns or evaluators
         if not self.feedback_columns and not self.evaluators:
-            raise ValueError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
-
+            raise ValueError(
+                "Either feedback_columns or evaluators must be provided. "
+                "Need some feedback for MetaPrompt optimization."
+            )
+        
         # Validate dataset has required columns
         required_columns = [self.output_column]
         if self.feedback_columns:
             required_columns.extend(self.feedback_columns)
-
+        
         missing_columns = [col for col in required_columns if col not in self.dataset.columns]
         if missing_columns:
             raise ValueError(f"Dataset missing required columns: {missing_columns}")
-
-    def _extract_prompt_messages(
-        self,
-    ) -> Sequence:
+    
+    def _extract_prompt_messages(self) -> List[Dict[str, str]]:
         """Extract messages from prompt object or list"""
         if isinstance(self.prompt, PromptVersion):
             # Extract messages from PromptVersion template
@@ -110,54 +88,56 @@ class MetaPromptOptimizer:
                 raise ValueError("Only chat templates are supported")
         elif isinstance(self.prompt, list):
             return self.prompt
-        elif isinstance(self.prompt, str):  # ADD FUNCTIONALITY FOR USER OR SYSTEM PROMPT
+        elif isinstance(self.prompt, str): ## ADD FUNCTIONALITY FOR USER OR SYSTEM PROMPT
             return [{"role": "user", "content": self.prompt}]
         else:
             raise ValueError("Prompt must be either a PromptVersion object or list of messages")
-
+    
     def _extract_prompt_content(self) -> str:
         """Extract the main prompt content from messages"""
         messages = self._extract_prompt_messages()
-
+        
         # Look for system or developer message first
         for message in messages:
             if message.get("role") in ["user"]:
                 return message.get("content", "")
-
+        
         # Fall back to first message
         if messages:
             return messages[0].get("content", "")
-
+        
         raise ValueError("No valid prompt content found in messages. CURRENTLY ONLY CHECKING FOR USER PROMPT")
 
     def _detect_template_variables(self, prompt_content: str) -> list[str]:
         _TEMPLATE_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}")
         """Return unique {placeholders} that look like template vars."""
         return list({m.group(1) for m in _TEMPLATE_RE.finditer(prompt_content)})
-
+    
     def run_evaluators(self) -> pd.DataFrame:
         """
-        Run evaluators on the dataset and add results to feedback columns
-
+        Run evaluators on the dataset and update existing feedback columns with results
+        
         Returns:
-            DataFrame with evaluator results added
+            DataFrame with evaluator results updated in existing feedback columns
         """
         if not self.evaluators:
             return self.dataset
-
+            
         print(f"🔍 Running {len(self.evaluators)} evaluator(s)...")
         for i, evaluator in enumerate(self.evaluators):
             try:
                 feedback_data, column_names = evaluator(self.dataset)
                 for column_name in column_names:
-                    self.dataset[column_name] = feedback_data[column_name]
-                    self.feedback_columns.append(column_name)
-                print(f"   ✅ Evaluator {i + 1}: {column_name}")
+                    if column_name in self.feedback_columns:
+                        self.dataset[column_name] = feedback_data[column_name]
+                        print(f"   ✅ Evaluator {i+1}: Updated column '{column_name}'")
+                    else:
+                        print(f"   ⚠️  Evaluator {i+1}: Column '{column_name}' not in feedback_columns, skipping")
             except Exception as e:
-                print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
-
+                print(f"   ❌ Evaluator {i+1} failed: {e}")
+        
         return self.dataset
-
+    
     def _create_dummy_dataframe(self) -> pd.DataFrame:
         """Create dummy DataFrame for llm_generate to preserve template variables"""
         # Create a dummy df to outsmart the mapping done in phoenix
@@ -167,45 +147,68 @@ class MetaPromptOptimizer:
         }
         for var in self.template_variables:
             dummy_data[var] = ["{" + var + "}"]
-
+        
         return pd.DataFrame(dummy_data)
-
-    def optimize(self, context_size_k: int = 8000) -> Tuple[Union[PromptVersion, Sequence], pd.DataFrame]:
+    
+    def _initialize_llm_model(self):
+        """Initialize OpenAI client for generation"""
+        import os
+        from openai import OpenAI
+        
+        try:
+            # Always use OpenAI GPT-4 for optimization
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY environment variable not set. Please set your OpenAI API key.")
+            
+            client = OpenAI(api_key=api_key)
+            return client
+        except Exception as e:
+            raise ValueError(f"Failed to initialize OpenAI client: {e}")
+    
+    def optimize(self, context_size_k: int = 128000) -> Tuple[Union[PromptVersion, List[Dict[str, str]]], pd.DataFrame]:
         """
         Optimize the prompt using the meta-prompt approach
-
+        
         Args:
-            context_size_k: Context window size in thousands of tokens (default: 128k)
-
+            context_size_k: Context window size in thousands of tokens (default: 128000)
+            
         Returns:
             Tuple of (optimized_prompt, dataset_with_feedback)
+            
+        Note:
+            This method runs optimization on the dataset with existing feedback columns.
+            To run evaluators and update feedback columns, call run_evaluators() separately.
         """
-        # Run evaluators if provided
-        if self.evaluators:
-            self.dataset = self.run_evaluators()
         # Extract prompt content
         prompt_content = self._extract_prompt_content()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
-
+        # Initialize LLM model
+        model = self._initialize_llm_model()
+        
         # Initialize tiktoken splitter
-        splitter = TiktokenSplitter(model=self.model_choice)
-
+        splitter = TiktokenSplitter(model="gpt-4o")
+        
         # Determine which columns to include in token counting
         # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
         columns_to_count = list(self.dataset.columns)
-
+        
         # Create batches based on token count
-        context_size_tokens = context_size_k
-        batch_dataframes = splitter.get_batch_dataframes(self.dataset, columns_to_count, context_size_tokens)
 
+        batch_dataframes = splitter.get_batch_dataframes(
+            self.dataset, 
+            columns_to_count, 
+            context_size_k
+        )
+        
         print(f"📊 Processing {len(self.dataset)} examples in {len(batch_dataframes)} batches")
-
+        
         # Process dataset in batches
         optimized_prompt_content = prompt_content
-
+        
         for i, batch in enumerate(batch_dataframes):
-
+            
             try:
 
                 # Construct meta-prompt content
@@ -217,69 +220,79 @@ class MetaPromptOptimizer:
                     output_column=self.output_column,
                 )
 
+                with open(f"meta_prompt_content_{self.loop_idx}.txt", 'w') as file:
+                    file.write(meta_prompt_content)
+
                 model = OpenAIModel(
                     model=self.model_choice,
-                    api_key=self.openai_api_key.get_secret_value(),
+                    temperature=0.7,
+                    max_tokens=2000
                 )
+
+                import tiktoken
+
+                tiktoken_encoder = tiktoken.encoding_for_model("gpt-4o")
+                prompt_tokens = len(tiktoken_encoder.encode(meta_prompt_content))
+                print(f"prompt_tokens: {prompt_tokens}")
 
                 response = model(meta_prompt_content)
 
                 potential_new_prompt = response
-
+                
                 # Validate that new prompt has same template variables
-
+                
                 print(f"   ✅ Batch {i + 1}/{len(batch_dataframes)}: Optimized")
                 optimized_prompt_content = potential_new_prompt
-
+                    
             except Exception as e:
                 print(f"   ❌ Batch {i + 1}/{len(batch_dataframes)}: Failed - {e}")
                 continue
-
+        
         # Create optimized prompt object
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
-        return optimized_prompt, self.dataset
-
-    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence]:
-        """Create optimized prompt in the same format as input"""
-
+        return optimized_prompt
+    
+    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, List[Dict[str, str]]]:
+        """Create optimized prompt in the same format as input"""    
+          
         if isinstance(self.prompt, PromptVersion):
             # Create new Prompt object with optimized content
             original_messages = self._extract_prompt_messages()
             optimized_messages = copy.deepcopy(original_messages)
-
+            
             # Replace the main content (system or first message)
             for i, message in enumerate(optimized_messages):
-                if message.get("role") in ["user"]:  # ADD FUNCTIONALITY FOR SYSTEM PROMPT
+                if message.get("role") in ["user"]: ## ADD FUNCTIONALITY FOR SYSTEM PROMPT
                     optimized_messages[i]["content"] = optimized_content
                     break
             else:
                 print("No user prompt found in the original prompt")
-
+            
             # Create a new PromptVersion with optimized content
             return PromptVersion(
                 optimized_messages,
                 model_name=self.prompt._model_name,
                 model_provider=self.prompt._model_provider,
-                description=f"Optimized version of {getattr(self.prompt, 'name', 'prompt')}",
+                description=f"Optimized version of {getattr(self.prompt, 'name', 'prompt')}"
             )
 
         elif isinstance(self.prompt, list):
             # Return optimized messages list
             original_messages = self._extract_prompt_messages()
             optimized_messages = copy.deepcopy(original_messages)
-
+            
             # Replace the main content
             for i, message in enumerate(optimized_messages):
-                if message.get("role") in ["user"]:  # ADD FUNCTIONALITY FOR SYSTEM PROMPT
+                if message.get("role") in ["user"]: ## ADD FUNCTIONALITY FOR SYSTEM PROMPT
                     optimized_messages[i]["content"] = optimized_content
                     break
             else:
                 print("No user prompt found in the original prompt")
-
+            
             return optimized_messages
-
+        
         elif isinstance(self.prompt, str):
             return optimized_content
-
+        
         else:
             raise ValueError("Prompt must be either a PromptVersion object or list of messages or string")
