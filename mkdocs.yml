@@ -33,6 +33,9 @@ nav:
     - Dashboard Tools: dashboard_tools.md
     - Utility Tools: utility_tools.md
 
+  - Extensions:
+    - Prompt Optimization: extensions/prompt_optimization.md
+
   - For Developers:
     - Development: developers/development.md
     - Integration Tests: developers/integration_test.md

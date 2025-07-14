@@ -14,7 +14,27 @@ import tiktoken
 
 
 class TiktokenSplitter:
-    """Split dataframes using tiktoken for accurate token counting."""
+    """Split dataframes using tiktoken for accurate token counting.
+
+    Args:
+        model: The model to use for tokenization (default: gpt-4o)
+
+    Methods:
+        get_batch_dataframes: Generate batches of dataframes that fit within the context window
+
+    Example:
+    ```python
+    from arize_toolkit.extensions.prompt_optimizer import TiktokenSplitter
+
+    splitter = TiktokenSplitter()
+    batches = splitter.get_batch_dataframes(
+        df=pd.DataFrame({"text": ["Hello, world!", "This is a test", "Another example"]}),
+        columns=["text"],
+        context_size_tokens=10,
+    )
+    print(batches)
+    ```
+    """
 
     def __init__(self, model: str = "gpt-4o"):
         """
@@ -23,10 +43,9 @@ class TiktokenSplitter:
         Args:
             model: The model to use for tokenization (default: gpt-4o)
         """
-        self.model = model
-        self.tiktoken_encoder = tiktoken.encoding_for_model(self.model)
+        self.tiktoken_encoder = tiktoken.encoding_for_model(model)
 
-    def count_tokens(self, text: str) -> int:
+    def _count_tokens(self, text: str) -> int:
         """Count tokens in text using tiktoken."""
         if pd.isna(text) or text == "":
             return 0
@@ -34,7 +53,7 @@ class TiktokenSplitter:
         text_str = str(text)
         return len(self.tiktoken_encoder.encode(text_str))
 
-    def count_row_tokens(self, df: pd.DataFrame, columns: List[str], row_idx: int) -> int:
+    def _count_row_tokens(self, df: pd.DataFrame, columns: List[str], row_idx: int) -> int:
         """Count total tokens for a specific row across selected columns."""
         row = df.iloc[row_idx]
         total_tokens = 0
@@ -42,11 +61,17 @@ class TiktokenSplitter:
         for col in columns:
             if col in df.columns:
                 cell_value = row[col]
-                total_tokens += self.count_tokens(str(cell_value))
+                total_tokens += self._count_tokens(str(cell_value))
 
         return total_tokens
 
-    def create_batches(self, df: pd.DataFrame, columns: List[str], context_size_tokens: int, show_progress: bool = True) -> List[Tuple[int, int]]:
+    def _create_batches(
+        self,
+        df: pd.DataFrame,
+        columns: List[str],
+        context_size_tokens: int,
+        show_progress: bool = True,
+    ) -> List[Tuple[int, int]]:
         """
         Create batches of dataframe rows that fit within the context window.
 
@@ -69,7 +94,7 @@ class TiktokenSplitter:
 
         row_tokens = []
         for i in range(len(df)):
-            tokens = self.count_row_tokens(df, columns, i)
+            tokens = self._count_row_tokens(df, columns, i)
             row_tokens.append(tokens)
 
         batches = []
@@ -103,7 +128,7 @@ class TiktokenSplitter:
         Returns:
             List of dataframe batches
         """
-        batches = self.create_batches(df, columns, context_size_tokens)
+        batches = self._create_batches(df, columns, context_size_tokens)
 
         batch_dataframes = []
         for start, end in batches:
