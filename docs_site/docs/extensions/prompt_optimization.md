@@ -104,14 +104,17 @@ The main class for optimizing prompts based on historical performance data. It a
 
 - `prompt` – The prompt to optimize. Can be:
 
-  - A string template (e.g., "Answer the question: {question}")
-  - A list of message dictionaries (e.g., `[{"role": "system", "content": "..."}]`)
-  - A Phoenix `PromptVersion` object
+  A string template (e.g., "Answer the question: {question}")
+
+  A list of message dictionaries (e.g., `[{"role": "system", "content": "..."}]`)
+
+  A Phoenix `PromptVersion` object
 
 - `dataset` – Historical performance data. Can be:
 
-  - A pandas DataFrame with input, output, and feedback columns
-  - A path to a JSON file containing the data
+  A pandas DataFrame with input, output, and feedback columns
+
+  A path to a JSON file containing the data
 
 - `output_column` – Column name containing model outputs
 
@@ -123,7 +126,7 @@ The main class for optimizing prompts based on historical performance data. It a
 
 - `openai_api_key` *(optional)* – OpenAI API key. Required for optimization. If not provided
 
-  - uses `OPENAI_API_KEY` environment variable
+  uses `OPENAI_API_KEY` environment variable
 
 - `openai_model` *(optional)* – Model to use for optimization. Defaults to "gpt-4o-mini"
 
