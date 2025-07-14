@@ -15,10 +15,13 @@ This extension is particularly useful for:
 
 ## Key Components
 
-| Component | Purpose |
-|-----------|---------|
-| [`MetaPromptOptimizer`](#metapromptoptimizer) | Main class for prompt optimization workflow |
-| [`TiktokenSplitter`](#tiktokensplitter) | Utility for token counting and dataset batching |
+| Component | Function | Purpose |
+|-----------|----------|---------|
+| [`MetaPromptOptimizer`](#metapromptoptimizer) | | Main class for prompt optimization workflow |
+| | [`optimize`](#optimize) | Generate optimized prompt from historical data |
+| | [`run_evaluators`](#run_evaluators) | Run evaluators to add feedback columns |
+| [`TiktokenSplitter`](#tiktokensplitter) | | Utility for splitting datasets into token-limited batches |
+| | [`get_batch_dataframes`](#get_batch_dataframes) | Split DataFrame into token-limited batches |
 
 **Note:** This extension requires additional dependencies. Install with:
 
@@ -37,18 +40,41 @@ The prompt optimization extension has optional dependencies that must be install
 pip install arize_toolkit[prompt_optimizer]
 ```
 
-This installs the following dependencies:
-
-- `tiktoken` - For token counting and batching
-- `arize-phoenix-evals` - For evaluation capabilities
-- `arize-phoenix-client` - For Phoenix integration
-
-Once installed, import the extension:
+Once installed, import the extension like this:
 
 ```python
-from arize_toolkit.extensions.prompt_optimizer import (
-    MetaPromptOptimizer,
-    TiktokenSplitter,
+from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+```
+
+### API Key Configuration
+
+The MetaPromptOptimizer requires an OpenAI API key. You can provide it in two ways:
+
+**Method 1: Environment Variable (Recommended)**
+Either set the environment variable in your notebook or project directly (as shown), or provide it in a docker `env` configuration or local `.env` file. As long as the name is `OPENAI_API_KEY`, it will be picked up automatically.
+
+```python
+import os
+
+# Set the environment variable
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+
+# The optimizer will automatically use the environment variable
+optimizer = MetaPromptOptimizer(
+    prompt="Answer: {question}", dataset=data, output_column="answer"
+)
+```
+
+**Method 2: Direct Parameter**
+You can also pass in the key directly within the function.
+
+```python
+# Pass the API key directly
+optimizer = MetaPromptOptimizer(
+    prompt="Answer: {question}",
+    dataset=data,
+    output_column="answer",
+    openai_api_key="your-api-key-here",
 )
 ```
 
@@ -87,7 +113,7 @@ The main class for optimizing prompts based on historical performance data. It a
 - `feedback_columns` *(optional)* – List of column names containing feedback/evaluation data
 - `evaluators` *(optional)* – List of functions to compute additional feedback
 - `input_columns` *(optional)* – List of column names for template variables. Auto-detected if not provided
-- `openai_api_key` *(optional)* – OpenAI API key. Uses environment variable if not provided
+- `openai_api_key` *(optional)* – OpenAI API key. Required for optimization. If not provided, uses `OPENAI_API_KEY` environment variable
 - `openai_model` *(optional)* – Model to use for optimization. Defaults to "gpt-4o-mini"
 - `context_size` *(optional)* – Maximum tokens per optimization batch. Defaults to 40000
 
@@ -98,8 +124,12 @@ A `MetaPromptOptimizer` instance ready to optimize prompts.
 **Example**
 
 ```python
+import os
 import pandas as pd
 from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+
+# Set OpenAI API key (if not already set)
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 # Load historical data
 data = pd.DataFrame(
@@ -157,6 +187,50 @@ optimized = optimizer.optimize(max_examples=100)
 optimized = optimizer.optimize(show_progress=False)
 ```
 
+### `run_evaluators`
+
+```python
+updated_dataset: pd.DataFrame = optimizer.run_evaluators(
+    dataset: pd.DataFrame | None = None
+)
+```
+
+Runs the configured evaluators on the dataset to generate additional feedback columns.
+
+**Parameters**
+
+- `dataset` *(optional)* – DataFrame to evaluate. If None, uses the optimizer's internal dataset
+
+**Returns**
+
+DataFrame with additional feedback columns added by the evaluators.
+
+**Example**
+
+```python
+# Define evaluators
+def length_evaluator(row):
+    return {"response_length": len(row["answer"])}
+
+
+def quality_evaluator(row):
+    score = 1.0 if row["answer"].lower() in row["question"].lower() else 0.5
+    return {"relevance_score": score}
+
+
+# Create optimizer with evaluators
+optimizer = MetaPromptOptimizer(
+    prompt="Answer: {question}",
+    dataset=data,
+    output_column="answer",
+    evaluators=[length_evaluator, quality_evaluator],
+)
+
+# Run evaluators to add feedback columns
+evaluated_data = optimizer.run_evaluators()
+print(evaluated_data.columns)  # Includes 'response_length' and 'relevance_score'
+```
+
 ______________________________________________________________________
 
 ## `TiktokenSplitter`
@@ -169,7 +243,7 @@ splitter = TiktokenSplitter(
 )
 ```
 
-A utility class for counting tokens and creating batches that fit within context limits. Essential for processing large datasets.
+A utility class for splitting large datasets into token-limited batches. Essential for processing datasets that exceed model context limits.
 
 **Parameters**
 
@@ -183,33 +257,10 @@ from arize_toolkit.extensions.prompt_optimizer import TiktokenSplitter
 splitter = TiktokenSplitter(model_name="gpt-4o-mini")
 ```
 
-### `count_tokens`
+### `get_batch_dataframes`
 
 ```python
-token_count: int = splitter.count_tokens(text: str)
-```
-
-Counts the number of tokens in a text string.
-
-**Parameters**
-
-- `text` – The text to tokenize
-
-**Returns**
-
-The number of tokens in the text.
-
-**Example**
-
-```python
-count = splitter.count_tokens("Hello, world!")
-print(f"Token count: {count}")  # Token count: 4
-```
-
-### `create_batches`
-
-```python
-batches: list[tuple[int, int]] = splitter.create_batches(
+batch_dataframes: list[pd.DataFrame] = splitter.get_batch_dataframes(
     dataframe: pd.DataFrame,
     text_columns: list[str],
     context_size: int,
@@ -217,18 +268,18 @@ batches: list[tuple[int, int]] = splitter.create_batches(
 )
 ```
 
-Creates batches of dataframe rows that fit within a token limit.
+Splits a DataFrame into batches that fit within a token limit, returning a list of DataFrame chunks.
 
 **Parameters**
 
-- `dataframe` – The DataFrame to batch
+- `dataframe` – The DataFrame to split into batches
 - `text_columns` – Column names containing text to count tokens for
 - `context_size` – Maximum tokens per batch
 - `show_progress` *(optional)* – Whether to show progress bar. Defaults to True
 
 **Returns**
 
-A list of tuples (start_idx, end_idx) representing row ranges for each batch.
+A list of DataFrame chunks, each containing rows that fit within the context size.
 
 **Example**
 
@@ -237,17 +288,20 @@ df = pd.DataFrame(
     {
         "prompt": ["Short text", "Medium length text here", "Very long text..."],
         "response": ["Yes", "Detailed response...", "Extended answer..."],
+        "feedback": ["good", "excellent", "needs improvement"],
     }
 )
 
-batches = splitter.create_batches(
+# Get batches that fit within token limit
+batches = splitter.get_batch_dataframes(
     dataframe=df, text_columns=["prompt", "response"], context_size=1000
 )
 
-# Process each batch
-for start, end in batches:
-    batch_df = df.iloc[start : end + 1]
-    # Process batch...
+# Process each batch DataFrame
+for i, batch_df in enumerate(batches):
+    print(f"Batch {i}: {len(batch_df)} rows")
+    # Each batch_df is a DataFrame with all original columns
+    process_batch(batch_df)
 ```
 
 ______________________________________________________________________
@@ -358,8 +412,13 @@ ______________________________________________________________________
 Here's a full workflow for optimizing a customer support prompt:
 
 ```python
+import os
 import pandas as pd
 from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+
+# Configure OpenAI API key
+# Option 1: Environment variable (recommended for production)
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 # Historical support interactions
 support_data = pd.DataFrame(
