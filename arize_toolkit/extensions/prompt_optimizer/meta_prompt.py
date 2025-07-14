@@ -2,12 +2,11 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
+from arize_toolkit.extensions.prompt_optimizer.constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
 
 
 class MetaPrompt:
-    def __init__(self) -> None:
-        self.meta_prompt_messages = META_PROMPT_TEMPLATE
+    meta_prompt_messages = META_PROMPT_TEMPLATE
 
     def construct_content(
         self,
@@ -24,12 +23,17 @@ class MetaPrompt:
         # need to populate the template customer is optimizing with template variables
         # add the output from the LLM, add the feedback (will be from evaluator or annotator)
         for ind, row in batch_df.iterrows():
+            row_dict = row.to_dict()
             populated_template = self.format_template_with_vars(
                 prompt_to_optimize_content,
                 template_variables,
-                {temp_var: row[temp_var] for temp_var in template_variables},
+                {temp_var: row_dict[temp_var] for temp_var in template_variables},
             )
-            output_value = row[output_column].replace(START_DELIM, " ").replace(END_DELIM, " ") if row[output_column] is not None else "None"
+            output_value = row_dict[output_column]
+            if output_value is not None and isinstance(output_value, str):
+                output_value = output_value.replace(START_DELIM, " ").replace(END_DELIM, " ")
+            else:
+                output_value = "None"
             current_example = f"""\n
                 Example {str(ind)}
 
@@ -41,7 +45,7 @@ class MetaPrompt:
             """
 
             for feedback_column in feedback_columns:
-                feedback_value = row[feedback_column]
+                feedback_value = row_dict[feedback_column]
                 if feedback_value is not None:
                     # Cast to string to handle integers and other types
                     feedback_value = str(feedback_value)

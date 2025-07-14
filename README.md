@@ -15,7 +15,36 @@
 
 </div>
 
-Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
+## 📚 Documentation
+
+### Quick Links
+
+- [**Home**](https://duncankmckinnon.github.io/arize_toolkit) - Main documentation page
+- [**Quickstart Guide**](https://duncankmckinnon.github.io/arize_toolkit/quickstart) - Get started quickly with Arize Toolkit
+
+### Tools Documentation
+
+| Tool Category | Description |
+|--------------|-------------|
+| [**Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage models, retrieve performance metrics and inference volumes |
+| [**Monitor Tools**](https://duncankmckinnon.github.io/arize_toolkit/monitor_tools) | Create, copy, and manage monitors and alerting |
+| [**Custom Metrics Tools**](https://duncankmckinnon.github.io/arize_toolkit/custom_metrics_tools) | Create and manage custom metrics |
+| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, and LLM features |
+| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and models |
+| [**Data Import Tools**](https://duncankmckinnon.github.io/arize_toolkit/data_import_tools) | Import data from cloud storage and databases |
+| [**Dashboard Tools**](https://duncankmckinnon.github.io/arize_toolkit/dashboard_tools) | Create and manage dashboards |
+| [**Utility Tools**](https://duncankmckinnon.github.io/arize_toolkit/utility_tools) | Client configuration and utility functions |
+
+### Extensions
+
+| Extension | Description |
+|-----------|-------------|
+| [**Prompt Optimization**](https://duncankmckinnon.github.io/arize_toolkit/extensions/prompt_optimization) | Automated prompt improvement based on historical performance |
+
+### For Developers
+
+- [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
+- [**Integration Tests**](https://duncankmckinnon.github.io/arize_toolkit/developers/integration_test) - Running integration tests
 
 ## Disclaimer
 
@@ -35,7 +64,7 @@ Here's a quick overview of the main features in the current release:
 - Work with LLM features like prompts and annotations
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
-- **Prompt Learning SDK** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
+- **Prompt Optimization Extension** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
 
 ## Installation
 
@@ -45,12 +74,12 @@ pip install arize_toolkit
 
 ### Optional Dependencies
 
-#### Prompt Learning SDK
+#### Prompt Optimization Extension
 
-For prompt optimization and meta-prompt techniques, install with the `prompt` optional dependency:
+For automated prompt optimization using meta-prompt techniques, install with the `prompt_optimizer` extras:
 
 ```bash
-pip install arize_toolkit[prompt]
+pip install arize_toolkit[prompt_optimizer]
 ```
 
 ## Client Setup

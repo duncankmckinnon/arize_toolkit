@@ -1,11 +1,12 @@
 import inspect
+import os
 import re
 from datetime import datetime, timezone
 from enum import Enum
 from functools import singledispatch
-from typing import Any, Mapping, Sequence, Type, Union, get_args, get_origin
+from typing import Any, Mapping, Optional, Sequence, Type, Union, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, SecretStr
 
 from arize_toolkit.constants import MAX_RECURSION_DEPTH
 
@@ -80,7 +81,7 @@ class GraphQLModel(Dictable):
 
     @classmethod
     def to_graphql_fields(cls) -> str:
-        def _get_field_string(model_class: Type[BaseModel], depth: int = 0, visited: set = None) -> str:
+        def _get_field_string(model_class: Type[BaseModel], depth: int = 0, visited: Optional[set] = None) -> str:
             if visited is None:
                 visited = set()
 
@@ -385,22 +386,22 @@ class DatetimeParser:
         return value
 
     @parse.register(str)
-    def _(value: str) -> datetime:
+    def _(value: str) -> datetime:  # type: ignore
         for pattern in DatetimeParser.patterns:
             if pattern.matches(value):
                 return pattern.parse(value)
         raise ValueError(f"Invalid datetime string, could not parse: {value}")
 
     @parse.register(datetime)
-    def _(value: datetime) -> datetime:
+    def _(value: datetime) -> datetime:  # type: ignore
         return value
 
     @parse.register(int)
-    def _(value: int) -> datetime:
+    def _(value: int) -> datetime:  # type: ignore
         return datetime.fromtimestamp(value, tz=timezone.utc)
 
     @parse.register(float)
-    def _(value: float) -> datetime:
+    def _(value: float) -> datetime:  # type: ignore
         return datetime.fromtimestamp(value, tz=timezone.utc)
 
     @classmethod
@@ -462,5 +463,13 @@ class FormattedPrompt(Mapping[str, Any]):
             return self.messages
         return self.kwargs[key]
 
-    def __str__(self) -> str:
+    def __str__(self) -> Any:
         return self.messages
+
+
+def get_key_value(env_name: str, key: Optional[str] = None) -> SecretStr:
+    if key is None:
+        if os.getenv(env_name) is None:
+            raise ValueError(f"Environment variable {env_name} is not set")
+        key = str(os.getenv(env_name))
+    return SecretStr(key)

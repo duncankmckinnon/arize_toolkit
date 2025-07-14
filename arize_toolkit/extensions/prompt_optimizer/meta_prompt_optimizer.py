@@ -1,16 +1,51 @@
 import copy
 import re
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
 
-from .meta_prompt import MetaPrompt
-from .tiktoken_splitter import TiktokenSplitter
+from arize_toolkit.extensions.prompt_optimizer.meta_prompt import MetaPrompt
+from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
+from arize_toolkit.utils import get_key_value
 
 
 class MetaPromptOptimizer:
+    """
+    MetaPromptOptimizer is a class that optimizes a prompt using the meta-prompt approach.
+
+    Args:
+        prompt: Either a PromptVersion object or list of messages or a string representing the user prompt
+        dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
+        output_column: Name of the column containing LLM outputs from the dataset
+        feedback_columns: List of column names containing existing feedback from the dataset
+        evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
+        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4o")
+        openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
+
+    Methods:
+        optimize: Optimize the prompt using a meta-prompt approach and return an optimized prompt object
+
+    Example:
+    ```python
+        import pandas as pd
+        import os
+        from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+
+        os.environ["OPENAI_API_KEY"] = "your-api-key"
+
+        optimizer = MetaPromptOptimizer(
+            prompt="You are a helpful assistant. Answer this question: {question}",
+            dataset=pd.DataFrame({"question": ["What is the capital of France?", ...], "answer": ["Paris", ...], "feedback": ["correct", ...]}),
+            output_column="answer",
+            feedback_columns=["feedback"],
+        )
+        optimized_prompt, dataset = optimizer.optimize()
+        print(optimized_prompt.to_dict())
+    ```
+    """
+
     def __init__(
         self,
         prompt: Union[PromptVersion, str, List[Dict[str, str]]],
@@ -21,25 +56,13 @@ class MetaPromptOptimizer:
         model_choice: str = "gpt-4",
         openai_api_key: Optional[str] = None,
     ):
-        """
-        Initialize the MetaPromptOptimizer
-
-        Args:
-            prompt: Either an Arize Prompt object or list of messages
-            dataset: DataFrame or path to JSON file containing the dataset
-            output_column: Name of the column containing LLM outputs
-            feedback_columns: List of column names containing existing feedback
-            evaluators: List of Phoenix evaluators to run
-            model_choice: OpenAI model to use for optimization (default: "gpt-4")
-            openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
-        """
         self.prompt = prompt
         self.dataset = self._load_dataset(dataset)
         self.feedback_columns = feedback_columns or []
         self.evaluators = evaluators or []
         self.output_column = output_column
         self.model_choice = model_choice
-        self.openai_api_key = openai_api_key
+        self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
 
         # Validate inputs
         self._validate_inputs()
@@ -58,8 +81,6 @@ class MetaPromptOptimizer:
                 return pd.read_json(dataset)
             except Exception as e:
                 raise ValueError(f"Failed to load dataset from {dataset}: {e}")
-        else:
-            raise ValueError("Dataset must be a DataFrame or path to JSON file")
 
     def _validate_inputs(self):
         """Validate that we have the necessary inputs for optimization"""
@@ -76,7 +97,9 @@ class MetaPromptOptimizer:
         if missing_columns:
             raise ValueError(f"Dataset missing required columns: {missing_columns}")
 
-    def _extract_prompt_messages(self) -> List[Dict[str, str]]:
+    def _extract_prompt_messages(
+        self,
+    ) -> Sequence:
         """Extract messages from prompt object or list"""
         if isinstance(self.prompt, PromptVersion):
             # Extract messages from PromptVersion template
@@ -147,24 +170,7 @@ class MetaPromptOptimizer:
 
         return pd.DataFrame(dummy_data)
 
-    def _initialize_llm_model(self):
-        """Initialize OpenAI client for generation"""
-        import os
-
-        from openai import OpenAI
-
-        try:
-            # Use provided API key or fall back to environment variable
-            api_key = self.openai_api_key or os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OpenAI API key is required for optimization. " "Please provide it via the `openai_api_key` parameter or set the OPENAI_API_KEY environment variable.")
-
-            client = OpenAI(api_key=api_key)
-            return client
-        except Exception as e:
-            raise ValueError(f"Failed to initialize OpenAI client: {e}")
-
-    def optimize(self, context_size_k: int = 8000) -> Tuple[Union[PromptVersion, List[Dict[str, str]]], pd.DataFrame]:
+    def optimize(self, context_size_k: int = 8000) -> Tuple[Union[PromptVersion, Sequence], pd.DataFrame]:
         """
         Optimize the prompt using the meta-prompt approach
 
@@ -181,8 +187,6 @@ class MetaPromptOptimizer:
         prompt_content = self._extract_prompt_content()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
-        # Initialize LLM model
-        model = self._initialize_llm_model()
 
         # Initialize tiktoken splitter
         splitter = TiktokenSplitter(model=self.model_choice)
@@ -213,7 +217,10 @@ class MetaPromptOptimizer:
                     output_column=self.output_column,
                 )
 
-                model = OpenAIModel(model=self.model_choice)
+                model = OpenAIModel(
+                    model=self.model_choice,
+                    api_key=self.openai_api_key.get_secret_value(),
+                )
 
                 response = model(meta_prompt_content)
 
@@ -232,7 +239,7 @@ class MetaPromptOptimizer:
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
         return optimized_prompt, self.dataset
 
-    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, List[Dict[str, str]]]:
+    def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence]:
         """Create optimized prompt in the same format as input"""
 
         if isinstance(self.prompt, PromptVersion):
@@ -250,7 +257,10 @@ class MetaPromptOptimizer:
 
             # Create a new PromptVersion with optimized content
             return PromptVersion(
-                optimized_messages, model_name=self.prompt._model_name, model_provider=self.prompt._model_provider, description=f"Optimized version of {getattr(self.prompt, 'name', 'prompt')}"
+                optimized_messages,
+                model_name=self.prompt._model_name,
+                model_provider=self.prompt._model_provider,
+                description=f"Optimized version of {getattr(self.prompt, 'name', 'prompt')}",
             )
 
         elif isinstance(self.prompt, list):

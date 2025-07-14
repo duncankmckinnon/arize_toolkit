@@ -27,6 +27,10 @@ To get started with the toolkit, check out the [Quickstart Guide 🚀 ](quicksta
 - [Dashboard Tools](dashboard_tools.md) - Documentation for dashboard tools
 - [Utility Tools](utility_tools.md) - Documentation for client configuration and utility functions
 
+## Extensions
+
+- [Prompt Optimization](extensions/prompt_optimization.md) - Automated prompt improvement based on historical performance
+
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.
