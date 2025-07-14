@@ -5,11 +5,8 @@ Tiktoken-based Dataframe Splitter
 Uses tiktoken for accurate token counting to split dataframes into batches
 that fit within LLM context windows.
 """
+from typing import List, Tuple
 
-import time
-from typing import Dict, List, Tuple
-
-import numpy as np
 import pandas as pd
 
 # Import tiktoken
@@ -28,7 +25,6 @@ class TiktokenSplitter:
         """
         self.model = model
         self.tiktoken_encoder = tiktoken.encoding_for_model(self.model)
-        print(f"🔧 Initialized TiktokenSplitter with model: {self.model}")
 
     def count_tokens(self, text: str) -> int:
         """Count tokens in text using tiktoken."""
@@ -111,7 +107,7 @@ class TiktokenSplitter:
 
         batch_dataframes = []
         for start, end in batches:
-            batch_df = df.iloc[start : end + 1].copy()
+            batch_df = df.iloc[start : (end + 1)].copy()  # noqa
             batch_dataframes.append(batch_df)
 
         return batch_dataframes

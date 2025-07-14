@@ -2,7 +2,7 @@ from typing import List, Mapping, Union
 
 import pandas as pd
 
-from .constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
+from arize_toolkit.prompt_learning.constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
 
 
 class MetaPrompt:

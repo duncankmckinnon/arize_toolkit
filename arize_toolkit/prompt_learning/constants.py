@@ -1,6 +1,5 @@
-"""
-Constants for the prompt-learning-sdk module.
-"""
+# Constants for the prompt-learning-sdk module.
+
 
 # Delimiters for template variables
 START_DELIM = "{"

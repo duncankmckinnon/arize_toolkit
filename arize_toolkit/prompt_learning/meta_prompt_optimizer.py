@@ -6,8 +6,8 @@ import pandas as pd
 from phoenix.client.types import PromptVersion
 from phoenix.evals.models import OpenAIModel
 
-from .meta_prompt import MetaPrompt
-from .tiktoken_splitter import TiktokenSplitter
+from arize_toolkit.prompt_learning.meta_prompt import MetaPrompt
+from arize_toolkit.prompt_learning.tiktoken_splitter import TiktokenSplitter
 
 
 class MetaPromptOptimizer:
@@ -147,23 +147,6 @@ class MetaPromptOptimizer:
 
         return pd.DataFrame(dummy_data)
 
-    def _initialize_llm_model(self):
-        """Initialize OpenAI client for generation"""
-        import os
-
-        from openai import OpenAI
-
-        try:
-            # Use provided API key or fall back to environment variable
-            api_key = self.openai_api_key or os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OpenAI API key is required for optimization. " "Please provide it via the `openai_api_key` parameter or set the OPENAI_API_KEY environment variable.")
-
-            client = OpenAI(api_key=api_key)
-            return client
-        except Exception as e:
-            raise ValueError(f"Failed to initialize OpenAI client: {e}")
-
     def optimize(self, context_size_k: int = 8000) -> Tuple[Union[PromptVersion, List[Dict[str, str]]], pd.DataFrame]:
         """
         Optimize the prompt using the meta-prompt approach
@@ -181,8 +164,6 @@ class MetaPromptOptimizer:
         prompt_content = self._extract_prompt_content()
         # Auto-detect template variables
         self.template_variables = self._detect_template_variables(prompt_content)
-        # Initialize LLM model
-        model = self._initialize_llm_model()
 
         # Initialize tiktoken splitter
         splitter = TiktokenSplitter(model=self.model_choice)
@@ -213,7 +194,7 @@ class MetaPromptOptimizer:
                     output_column=self.output_column,
                 )
 
-                model = OpenAIModel(model=self.model_choice)
+                model = OpenAIModel(model=self.model_choice, api_key=self.openai_api_key)
 
                 response = model(meta_prompt_content)
 
