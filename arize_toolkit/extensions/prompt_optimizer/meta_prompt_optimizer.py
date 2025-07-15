@@ -1,6 +1,6 @@
 import copy
 import re
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 from phoenix.client.types import PromptVersion
@@ -17,15 +17,27 @@ class MetaPromptOptimizer:
 
     Args:
         prompt: Either a PromptVersion object or list of messages or a string representing the user prompt
-        dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
-        output_column: Name of the column containing LLM outputs from the dataset
-        feedback_columns: List of column names containing existing feedback from the dataset
-        evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
-        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4o")
+        model_choice: OpenAI model to use for optimization - currently only supports OpenAI models (default: "gpt-4")
         openai_api_key: OpenAI API key for optimization. Can also be set via OPENAI_API_KEY environment variable.
 
     Methods:
+        run_evaluators: Run evaluators on the dataset and add results to feedback columns
+            Args:
+                dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
+                evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
+                feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
+            Returns:
+                Tuple of (dataset, feedback_columns)
         optimize: Optimize the prompt using a meta-prompt approach and return an optimized prompt object
+            Args:
+                dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
+                output_column: Name of the column containing LLM outputs from the dataset
+                evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
+                feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
+                context_size_k: Context window size in thousands of tokens (default: 8k)
+                evaluate: Whether to run evaluators on the dataset (default: True)
+            Returns:
+                optimized_prompt: Optimized prompt object
 
     Example:
     ```python
@@ -37,11 +49,20 @@ class MetaPromptOptimizer:
 
         optimizer = MetaPromptOptimizer(
             prompt="You are a helpful assistant. Answer this question: {question}",
-            dataset=pd.DataFrame({"question": ["What is the capital of France?", ...], "answer": ["Paris", ...], "feedback": ["correct", ...]}),
+            model_choice="gpt-4",
+        )
+
+        dataset = pd.DataFrame({
+            "question": ["What is the capital of France?", ...],
+            "answer": ["Paris", ...],
+            "feedback": ["correct", ...]
+        })
+
+        optimized_prompt = optimizer.optimize(
+            dataset=dataset,
             output_column="answer",
             feedback_columns=["feedback"],
         )
-        optimized_prompt, dataset = optimizer.optimize()
         print(optimized_prompt.to_dict())
     ```
     """
@@ -49,23 +70,12 @@ class MetaPromptOptimizer:
     def __init__(
         self,
         prompt: Union[PromptVersion, str, List[Dict[str, str]]],
-        dataset: Union[pd.DataFrame, str],
-        output_column: str,
-        feedback_columns: Optional[List[str]] = None,
-        evaluators: Optional[List] = None,
         model_choice: str = "gpt-4",
         openai_api_key: Optional[str] = None,
     ):
         self.prompt = prompt
-        self.dataset = self._load_dataset(dataset)
-        self.feedback_columns = feedback_columns or []
-        self.evaluators = evaluators or []
-        self.output_column = output_column
         self.model_choice = model_choice
         self.openai_api_key = get_key_value("OPENAI_API_KEY", openai_api_key)
-
-        # Validate inputs
-        self._validate_inputs()
 
         # Initialize components
         self.meta_prompter = MetaPrompt()
@@ -82,18 +92,29 @@ class MetaPromptOptimizer:
             except Exception as e:
                 raise ValueError(f"Failed to load dataset from {dataset}: {e}")
 
-    def _validate_inputs(self):
+    def _validate_inputs(
+        self,
+        dataset: pd.DataFrame,
+        feedback_columns: List[str] = [],
+        evaluators: List[Callable] = [],
+        output_column: Optional[str] = None,
+        output_required: bool = False,
+    ):
         """Validate that we have the necessary inputs for optimization"""
         # Check if we have either feedback columns or evaluators
-        if not self.feedback_columns and not self.evaluators:
+        if not feedback_columns and not evaluators:
             raise ValueError("Either feedback_columns or evaluators must be provided. " "Need some feedback for MetaPrompt optimization.")
 
         # Validate dataset has required columns
-        required_columns = [self.output_column]
-        if self.feedback_columns:
-            required_columns.extend(self.feedback_columns)
+        required_columns = []
+        if output_required:
+            if output_column is None:
+                raise ValueError("output_column must be provided")
+            required_columns.append(output_column)
+        if feedback_columns:
+            required_columns.extend(feedback_columns)
 
-        missing_columns = [col for col in required_columns if col not in self.dataset.columns]
+        missing_columns = [col for col in required_columns if col not in dataset.columns]
         if missing_columns:
             raise ValueError(f"Dataset missing required columns: {missing_columns}")
 
@@ -135,28 +156,33 @@ class MetaPromptOptimizer:
         """Return unique {placeholders} that look like template vars."""
         return list({m.group(1) for m in _TEMPLATE_RE.finditer(prompt_content)})
 
-    def run_evaluators(self) -> pd.DataFrame:
+    def run_evaluators(
+        self,
+        dataset: Union[pd.DataFrame, str],
+        evaluators: List[Callable],
+        feedback_columns: List[str] = [],
+    ) -> Tuple[pd.DataFrame, List[str]]:
         """
         Run evaluators on the dataset and add results to feedback columns
 
         Returns:
             DataFrame with evaluator results added
         """
-        if not self.evaluators:
-            return self.dataset
+        dataset = self._load_dataset(dataset)
+        self._validate_inputs(dataset, feedback_columns, evaluators)
 
-        print(f"🔍 Running {len(self.evaluators)} evaluator(s)...")
-        for i, evaluator in enumerate(self.evaluators):
+        print(f"🔍 Running {len(evaluators)} evaluator(s)...")
+        for i, evaluator in enumerate(evaluators):
             try:
-                feedback_data, column_names = evaluator(self.dataset)
+                feedback_data, column_names = evaluator(dataset)
                 for column_name in column_names:
-                    self.dataset[column_name] = feedback_data[column_name]
-                    self.feedback_columns.append(column_name)
+                    dataset[column_name] = feedback_data[column_name]
+                    feedback_columns.append(column_name)
                 print(f"   ✅ Evaluator {i + 1}: {column_name}")
             except Exception as e:
                 print(f"   ⚠️  Evaluator {i + 1} failed: {e}")
 
-        return self.dataset
+        return dataset, feedback_columns
 
     def _create_dummy_dataframe(self) -> pd.DataFrame:
         """Create dummy DataFrame for llm_generate to preserve template variables"""
@@ -170,19 +196,33 @@ class MetaPromptOptimizer:
 
         return pd.DataFrame(dummy_data)
 
-    def optimize(self, context_size_k: int = 8000) -> Tuple[Union[PromptVersion, Sequence], pd.DataFrame]:
+    def optimize(
+        self,
+        dataset: Union[pd.DataFrame, str],
+        output_column: str,
+        evaluators: List[Callable] = [],
+        feedback_columns: List[str] = [],
+        context_size_k: int = 8000,
+    ) -> Union[PromptVersion, Sequence]:
         """
         Optimize the prompt using the meta-prompt approach
 
         Args:
-            context_size_k: Context window size in thousands of tokens (default: 128k)
+            dataset: DataFrame or path to JSON file containing the dataset of requests, responses, and feedback to use for optimization
+            output_column: Name of the column containing LLM outputs from the dataset
+            feedback_columns: List of column names containing existing feedback from the dataset (required if not using new evaluations)
+            evaluators: List of Phoenix evaluators to run on the dataset - see https://arize.com/docs/phoenix/evaluation/how-to-evals (default: [])
+            context_size_k: Context window size in thousands of tokens (default: 8k)
 
         Returns:
-            Tuple of (optimized_prompt, dataset_with_feedback)
+            Optimized prompt in the same format as the input prompt
         """
         # Run evaluators if provided
-        if self.evaluators:
-            self.dataset = self.run_evaluators()
+        dataset = self._load_dataset(dataset)
+        self._validate_inputs(dataset, feedback_columns, evaluators, output_column, output_required=True)
+        if evaluators:
+            dataset, feedback_columns = self.run_evaluators(dataset, evaluators, feedback_columns)
+
         # Extract prompt content
         prompt_content = self._extract_prompt_content()
         # Auto-detect template variables
@@ -193,13 +233,13 @@ class MetaPromptOptimizer:
 
         # Determine which columns to include in token counting
         # columns_to_count = self.template_variables + self.feedback_columns + [self.output_column]
-        columns_to_count = list(self.dataset.columns)
+        columns_to_count = list(dataset.columns)
 
         # Create batches based on token count
         context_size_tokens = context_size_k
-        batch_dataframes = splitter.get_batch_dataframes(self.dataset, columns_to_count, context_size_tokens)
+        batch_dataframes = splitter.get_batch_dataframes(dataset, columns_to_count, context_size_tokens)
 
-        print(f"📊 Processing {len(self.dataset)} examples in {len(batch_dataframes)} batches")
+        print(f"📊 Processing {len(dataset)} examples in {len(batch_dataframes)} batches")
 
         # Process dataset in batches
         optimized_prompt_content = prompt_content
@@ -213,8 +253,8 @@ class MetaPromptOptimizer:
                     batch_df=batch,
                     prompt_to_optimize_content=optimized_prompt_content,
                     template_variables=self.template_variables,
-                    feedback_columns=self.feedback_columns,
-                    output_column=self.output_column,
+                    feedback_columns=feedback_columns,
+                    output_column=output_column,
                 )
 
                 model = OpenAIModel(
@@ -237,7 +277,7 @@ class MetaPromptOptimizer:
 
         # Create optimized prompt object
         optimized_prompt = self._create_optimized_prompt(optimized_prompt_content)
-        return optimized_prompt, self.dataset
+        return optimized_prompt
 
     def _create_optimized_prompt(self, optimized_content: str) -> Union[PromptVersion, Sequence]:
         """Create optimized prompt in the same format as input"""

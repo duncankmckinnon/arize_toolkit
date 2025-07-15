@@ -61,7 +61,7 @@ os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 # The optimizer will automatically use the environment variable
 optimizer = MetaPromptOptimizer(
-    prompt="Answer: {question}", dataset=data, output_column="answer"
+    prompt="Answer: {question}",
 )
 ```
 
@@ -72,8 +72,6 @@ You can also pass in the key directly within the function.
 # Pass the API key directly
 optimizer = MetaPromptOptimizer(
     prompt="Answer: {question}",
-    dataset=data,
-    output_column="answer",
     openai_api_key="your-api-key-here",
 )
 ```
@@ -86,51 +84,27 @@ ______________________________________________________________________
 
 ```python
 optimizer = MetaPromptOptimizer(
-    prompt: str | list[dict] | PromptVersion,
-    dataset: pd.DataFrame | str,
-    output_column: str,
-    feedback_columns: list[str] | None = None,
-    evaluators: list[callable] | None = None,
+    prompt: Union[PromptVersion, str, List[Dict[str, str]]],
     model_choice: str = "gpt-4",
-    openai_api_key: str | None = None,
+    openai_api_key: Optional[str] = None,
 )
 ```
-
-The main class for optimizing prompts based on historical performance data. It analyzes past interactions and generates improved prompt templates.
 
 **Parameters**
 
 - `prompt` – The prompt to optimize. Can be:
 
-  A string template (e.g., "Answer the question: {question}")
+  A string prompt template with `{variable}` placeholders
 
-  A list of message dictionaries (e.g., `[{"role": "system", "content": "..."}]`)
+  A list of message dictionaries for chat-based prompts
 
   A Phoenix `PromptVersion` object
-
-- `dataset` – Historical performance data. Can be:
-
-  A pandas DataFrame with input, output, and feedback columns
-
-  A path to a JSON file containing the data
-
-- `output_column` – Column name containing model outputs
-
-- `feedback_columns` *(optional)* – List of column names containing feedback/evaluation data
-
-- `evaluators` *(optional)* – List of Phoenix evaluators to run on the dataset
 
 - `model_choice` *(optional)* – OpenAI model to use for optimization. Defaults to "gpt-4"
 
 - `openai_api_key` *(optional)* – OpenAI API key.
 
-  Required for optimization runs with LLM to generate new prompts.
-
-  If not provided will attempt to use `OPENAI_API_KEY` environment variable
-
-**Returns**
-
-A `MetaPromptOptimizer` instance ready to optimize prompts.
+  If not provided, uses `OPENAI_API_KEY` environment variable
 
 **Example**
 
@@ -155,87 +129,134 @@ data = pd.DataFrame(
 # Create optimizer
 optimizer = MetaPromptOptimizer(
     prompt="Answer the question: {question}",
+    model_choice="gpt-4",
+)
+
+# Generate optimized prompt
+optimized_prompt = optimizer.optimize(
     dataset=data,
     output_column="answer",
     feedback_columns=["accuracy", "relevance"],
 )
-
-# Generate optimized prompt
-optimized_prompt, updated_dataset = optimizer.optimize()
 print(optimized_prompt)
-```
-
-### `optimize`
-
-```python
-optimized_prompt, updated_dataset = optimizer.optimize(
-    context_size_k: int = 8000
-)
-```
-
-Runs the optimization process to generate an improved prompt based on the historical data.
-
-**Parameters**
-
-- `context_size_k` *(optional)* – Maximum context size in thousands of tokens. Defaults to 8000
-
-**Returns**
-
-A tuple containing:
-
-- The optimized prompt in the same format as the input (string, list, or PromptVersion)
-- Updated dataset with additional feedback columns from evaluators
-
-**Example**
-
-```python
-# Basic optimization
-optimized_prompt, dataset = optimizer.optimize()
-
-# With smaller context size
-optimized_prompt, dataset = optimizer.optimize(context_size_k=4000)
 ```
 
 ### `run_evaluators`
 
 ```python
-updated_dataset: pd.DataFrame = optimizer.run_evaluators()
+evaluated_dataset, feedback_columns = optimizer.run_evaluators(
+    dataset: Union[pd.DataFrame, str],
+    evaluators: List[Callable],
+    feedback_columns: List[str] = [],
+)
 ```
 
-Runs the configured evaluators on the dataset to generate additional feedback columns.
+Runs evaluators on the dataset to generate or augment feedback columns. This can be used as a separate preprocessing step before optimization.
 
 **Parameters**
 
-None
+- `dataset` – The dataset to evaluate. Can be:
+
+  A pandas DataFrame
+
+  A path to a JSON file
+
+- `evaluators` – List of Phoenix evaluators to run on the dataset
+
+- `feedback_columns` *(optional)* – List of existing feedback column names to preserve
 
 **Returns**
 
-DataFrame with additional feedback columns added by the evaluators.
+- A tuple containing:
+
+  The dataset with new evaluation columns added
+
+  Complete list of all feedback columns (existing + new)
 
 **Example**
 
 ```python
-# Define evaluators
-def length_evaluator(row):
-    return {"response_length": len(row["answer"])}
+from phoenix.evals import llm_classify
 
-
-def quality_evaluator(row):
-    score = 1.0 if row["answer"].lower() in row["question"].lower() else 0.5
-    return {"relevance_score": score}
-
-
-# Create optimizer with evaluators
-optimizer = MetaPromptOptimizer(
-    prompt="Answer: {question}",
-    dataset=data,
-    output_column="answer",
-    evaluators=[length_evaluator, quality_evaluator],
+# Define evaluator
+evaluator = llm_classify(
+    template=RAG_RELEVANCY_PROMPT_TEMPLATE,
+    model=model,
+    rails=["relevant", "irrelevant"],
 )
 
-# Run evaluators to add feedback columns
-evaluated_data = optimizer.run_evaluators()
-print(evaluated_data.columns)  # Includes 'response_length' and 'relevance_score'
+# Run evaluation
+evaluated_data, all_feedback_cols = optimizer.run_evaluators(
+    dataset=data,
+    evaluators=[evaluator],
+    feedback_columns=[
+        "existing_score"
+    ],  # Preserve existing annotation and feedback columns
+)
+```
+
+### `optimize`
+
+```python
+optimized_prompt = optimizer.optimize(
+    dataset: Union[pd.DataFrame, str],
+    output_column: str,
+    evaluators: List[Callable] = [],
+    feedback_columns: List[str] = [],
+    context_size_k: int = 8000,
+)
+```
+
+Runs the optimization process to generate an improved prompt based on historical data and feedback.
+
+**Parameters**
+
+- `dataset` – Historical performance data. Can be:
+
+  A pandas DataFrame with input, output, and feedback columns
+
+  A path to a JSON file containing the data
+
+- `output_column` – Column name containing model outputs
+
+- `evaluators` *(optional)* – List of Phoenix evaluators to run before optimization.
+
+  If provided, these will be executed automatically as part of the optimization process
+
+- `feedback_columns` *(optional)* – List of existing feedback/evaluation column names in the dataset.
+
+  Required if not using evaluators
+
+- `context_size_k` *(optional)* – Maximum context size in thousands of tokens. Defaults to 8000
+
+**Returns**
+
+The optimized prompt in the same format as the input (string, list, or PromptVersion)
+
+**Example**
+
+```python
+# Optimization with existing feedback
+optimized_prompt = optimizer.optimize(
+    dataset=data,
+    output_column="answer",
+    feedback_columns=["accuracy", "relevance"],
+)
+
+# Optimization with evaluators
+optimized_prompt = optimizer.optimize(
+    dataset=data,
+    output_column="answer",
+    evaluators=[relevance_evaluator, quality_evaluator],
+)
+
+# With custom context size
+optimized_prompt = optimizer.optimize(
+    dataset=data,
+    output_column="answer",
+    feedback_columns=["score"],
+    context_size_k=4000,
+)
 ```
 
 ______________________________________________________________________
@@ -246,7 +267,7 @@ ______________________________________________________________________
 
 ```python
 splitter = TiktokenSplitter(
-    model: str = "gpt-4o"
+    model: str = "gpt-4"
 )
 ```
 
@@ -254,14 +275,14 @@ A utility class for splitting large datasets into token-limited batches. Essenti
 
 **Parameters**
 
-- `model` *(optional)* – The model name for tokenization. Defaults to "gpt-4o"
+- `model` *(optional)* – The model name for tokenization. Defaults to "gpt-4"
 
 **Example**
 
 ```python
 from arize_toolkit.extensions.prompt_optimizer import TiktokenSplitter
 
-splitter = TiktokenSplitter(model="gpt-4o-mini")
+splitter = TiktokenSplitter(model="gpt-4.1")
 ```
 
 ### `get_batch_dataframes`
@@ -313,22 +334,63 @@ ______________________________________________________________________
 
 ## Advanced Usage
 
-### Using Custom Evaluators
+### Running Evaluations Separately
 
-You can provide custom evaluation functions to compute additional feedback:
+The `MetaPromptOptimizer` allows you to run evaluations either as part of the optimization process or as a separate step. This flexibility is useful when you want to:
+
+1. Pre-process your dataset with evaluations before optimization
+1. Add additional evaluations to an existing dataset
+1. Inspect evaluation results before proceeding with optimization
+
+- Example: Separate Evaluation Step
 
 ```python
-def custom_evaluator(row):
-    """Custom evaluation logic"""
-    score = len(row["answer"]) / len(row["question"])
-    return {"length_ratio": score}
+from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from phoenix.evals import llm_classify, RAG_RELEVANCY_PROMPT_TEMPLATE
 
-
+# Initialize optimizer
 optimizer = MetaPromptOptimizer(
-    prompt=prompt_template,
-    dataset=data,
+    prompt="Answer the question: {question}",
+    model_choice="gpt-4",
+)
+
+# Define evaluators
+relevance_evaluator = llm_classify(
+    template=RAG_RELEVANCY_PROMPT_TEMPLATE,
+    model=model,
+    rails=["relevant", "irrelevant"],
+)
+
+# Step 1: Run evaluations separately
+evaluated_dataset, feedback_columns = optimizer.run_evaluators(
+    dataset=original_dataset,
+    evaluators=[relevance_evaluator],
+    feedback_columns=["existing_feedback"],  # Optional existing columns
+)
+
+# Inspect the results
+print(f"Feedback columns: {feedback_columns}")
+print(evaluated_dataset[feedback_columns].head())
+
+# Step 2: Run optimization with the evaluated dataset
+optimized_prompt = optimizer.optimize(
+    dataset=evaluated_dataset,
     output_column="answer",
-    evaluators=[custom_evaluator],
+    feedback_columns=feedback_columns,
+)
+```
+
+- Example: Running Evaluations Within Optimization
+
+You can also run evaluations as part of the optimization process:
+
+```python
+# Run evaluations and optimization in one step
+optimized_prompt = optimizer.optimize(
+    dataset=original_dataset,
+    output_column="answer",
+    evaluators=[relevance_evaluator],  # Evaluations run automatically
+    feedback_columns=["existing_feedback"],  # Optional existing columns
 )
 ```
 
@@ -352,12 +414,14 @@ prompt_v1 = PromptVersion(
 # Optimize it
 optimizer = MetaPromptOptimizer(
     prompt=prompt_v1,
+    model_choice="gpt-4",
+)
+
+optimized_v2 = optimizer.optimize(
     dataset=historical_data,
     output_column="response",
     feedback_columns=["rating", "feedback"],
 )
-
-optimized_v2, updated_dataset = optimizer.optimize()
 ```
 
 ### Handling Large Datasets
@@ -368,13 +432,16 @@ For datasets that exceed context limits:
 # The optimizer automatically handles batching
 optimizer = MetaPromptOptimizer(
     prompt=template,
-    dataset=large_df,  # e.g., 10,000 rows
-    output_column="output",
     model_choice="gpt-4",
 )
 
 # Specify smaller context size for more batches
-optimized_prompt, dataset = optimizer.optimize(context_size_k=4000)
+optimized_prompt = optimizer.optimize(
+    dataset=large_df,  # e.g., 10,000 rows
+    output_column="output",
+    feedback_columns=["score"],
+    context_size_k=4000,
+)
 ```
 
 ______________________________________________________________________
@@ -406,7 +473,12 @@ except Exception as e:
 
 # Token Limit Exceeded
 # Reduce context_size_k:
-optimized_prompt, dataset = optimizer.optimize(context_size_k=2000)
+optimized_prompt = optimizer.optimize(
+    dataset=data,
+    output_column="output", 
+    feedback_columns=["score"],
+    context_size_k=2000
+)
 ```
 
 ______________________________________________________________________
@@ -451,19 +523,77 @@ Please provide a clear, concise response."""
 # Create optimizer with multiple feedback signals
 optimizer = MetaPromptOptimizer(
     prompt=current_prompt,
-    dataset=support_data,
-    output_column="agent_response",
-    feedback_columns=["customer_satisfaction", "resolution_time", "resolved"],
     model_choice="gpt-4",
 )
 
-# Generate optimized prompt
-optimized_prompt, updated_dataset = optimizer.optimize()
-
-print("Original prompt:")
-print(current_prompt)
-print("\nOptimized prompt:")
-print(optimized_prompt)
+# Run optimization
+optimized_prompt = optimizer.optimize(
+    dataset=support_data,
+    output_column="agent_response",
+    feedback_columns=["customer_satisfaction", "resolution_time", "resolved"],
+)
 
 # The optimized prompt will incorporate patterns from high-performing responses
+```
+
+## API Reference
+
+### MetaPromptOptimizer
+
+```python
+class MetaPromptOptimizer:
+    def __init__(
+        self,
+        prompt: Union[PromptVersion, str, List[Dict[str, str]]],
+        model_choice: str = "gpt-4",
+        openai_api_key: Optional[str] = None,
+    ):
+        """
+        Initialize the MetaPromptOptimizer.
+
+        Args:
+            prompt: The prompt to optimize (PromptVersion, string, or list of messages)
+            model_choice: OpenAI model to use for optimization (default: "gpt-4")
+            openai_api_key: OpenAI API key (optional, can use env var)
+        """
+
+    def run_evaluators(
+        self,
+        dataset: Union[pd.DataFrame, str],
+        evaluators: List[Callable],
+        feedback_columns: List[str] = [],
+    ) -> Tuple[pd.DataFrame, List[str]]:
+        """
+        Run evaluators on the dataset and add results to feedback columns.
+
+        Args:
+            dataset: DataFrame or path to JSON file
+            evaluators: List of Phoenix evaluators to run
+            feedback_columns: Existing feedback columns to preserve
+
+        Returns:
+            Tuple of (evaluated_dataset, all_feedback_columns)
+        """
+
+    def optimize(
+        self,
+        dataset: Union[pd.DataFrame, str],
+        output_column: str,
+        evaluators: List[Callable] = [],
+        feedback_columns: List[str] = [],
+        context_size_k: int = 8000,
+    ) -> Union[PromptVersion, Sequence]:
+        """
+        Optimize the prompt using the meta-prompt approach.
+
+        Args:
+            dataset: DataFrame or path to JSON file
+            output_column: Column containing LLM outputs
+            evaluators: Optional evaluators to run before optimization
+            feedback_columns: Existing feedback columns
+            context_size_k: Context window size in thousands of tokens
+
+        Returns:
+            Optimized prompt in the same format as input
+        """
 ```
