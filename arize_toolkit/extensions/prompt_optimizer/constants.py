@@ -5,6 +5,15 @@
 START_DELIM = "{"
 END_DELIM = "}"
 
+SUPPORTED_MODELS = [
+    "o1",
+    "o3",
+    "gpt-4o",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "gpt-3.5",
+]
+
 # Meta prompt template sections
 META_PROMPT_TEMPLATE = """
 You are an expert in prompt optimization. Given the original baseline prompt and the following associated metadata (such as model inputs, outputs, evaluation labels and explanations),
