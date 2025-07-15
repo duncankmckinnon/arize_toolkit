@@ -8,9 +8,9 @@ that fit within LLM context windows.
 from typing import List, Tuple
 
 import pandas as pd
-
-# Import tiktoken
 import tiktoken
+
+from arize_toolkit.extensions.prompt_optimizer.constants import SUPPORTED_MODELS
 
 
 class TiktokenSplitter:
@@ -43,6 +43,9 @@ class TiktokenSplitter:
         Args:
             model: The model to use for tokenization (default: gpt-4o)
         """
+        if model not in SUPPORTED_MODELS:
+            raise ValueError(f"Model {model} not supported. Supported models: {SUPPORTED_MODELS}")
+
         self.tiktoken_encoder = tiktoken.encoding_for_model(model)
 
     def _count_tokens(self, text: str) -> int:
