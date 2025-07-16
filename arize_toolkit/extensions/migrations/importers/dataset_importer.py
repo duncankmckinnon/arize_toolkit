@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from arize_toolkit.migrations.importers.base_importer import BaseImporter
+from arize_toolkit.extensions.migrations.importers.base_importer import BaseImporter
 
 logger = logging.getLogger(__name__)
 

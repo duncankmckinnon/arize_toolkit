@@ -1,4 +1,4 @@
-# arize_toolkit/migration/phoenix_migrator.py
+# arize_toolkit/extensions/migrations/migrator.py
 import logging
 import time
 import uuid
@@ -6,10 +6,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from arize_toolkit.migrations.exporters import AnnotationExporter, DatasetExporter, EvaluationExporter, PromptExporter, TraceExporter
-from arize_toolkit.migrations.importers import AnnotationImporter, DatasetImporter, EvaluationImporter, PromptImporter, TraceImporter
-from arize_toolkit.migrations.models import DataType, MigrationConfig, MigrationFilters, MigrationJob, MigrationResult, MigrationStatus, MigrationValidationReport
-from arize_toolkit.migrations.utils import PhoenixClient, create_results_directory, save_migration_results
+from arize_toolkit.extensions.migrations.exporters import AnnotationExporter, DatasetExporter, EvaluationExporter, PromptExporter, TraceExporter
+from arize_toolkit.extensions.migrations.importers import AnnotationImporter, DatasetImporter, EvaluationImporter, PromptImporter, TraceImporter
+from arize_toolkit.extensions.migrations.models import DataType, MigrationConfig, MigrationFilters, MigrationJob, MigrationResult, MigrationStatus, MigrationValidationReport
+from arize_toolkit.extensions.migrations.utils import PhoenixClient, create_results_directory, save_migration_results
 
 logger = logging.getLogger(__name__)
 

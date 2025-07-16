@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from arize_toolkit.migrations.importers.base_importer import BaseImporter
+from arize_toolkit.extensions.migrations.importers.base_importer import BaseImporter
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ class EvaluationImporter(BaseImporter):
             "subject_id": phoenix_evaluation["subject_id"],
             "name": phoenix_evaluation["name"],
             "eval_name": phoenix_evaluation["name"],
-            "created_at": self._convert_phoenix_timestamp(phoenix_evaluation.get("created_at")),
+            "created_at": self._convert_phoenix_timestamp(phoenix_evaluation.get("created_at")),  # type: ignore
             "metadata": {},
         }
 

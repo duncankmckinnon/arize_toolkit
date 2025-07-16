@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List
 
-from arize_toolkit.migrations.importers.base_importer import BaseImporter
+from arize_toolkit.extensions.migrations.importers.base_importer import BaseImporter
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +91,8 @@ class TraceImporter(BaseImporter):
         arize_trace = {
             "trace_id": phoenix_trace["trace_id"],
             "project_name": phoenix_trace.get("project_name", "imported_project"),
-            "start_time": self._convert_phoenix_timestamp(phoenix_trace.get("start_time")),
-            "end_time": self._convert_phoenix_timestamp(phoenix_trace.get("end_time")),
+            "start_time": self._convert_phoenix_timestamp(phoenix_trace.get("start_time")),  # type: ignore
+            "end_time": self._convert_phoenix_timestamp(phoenix_trace.get("end_time")),  # type: ignore
             "status_code": phoenix_trace.get("status_code", "OK"),
             "metadata": {},
         }
@@ -174,8 +174,8 @@ class TraceImporter(BaseImporter):
             "parent_span_id": phoenix_span.get("parent_span_id"),
             "name": phoenix_span.get("name", "unknown_span"),
             "kind": phoenix_span.get("span_kind", "INTERNAL"),
-            "start_time": self._convert_phoenix_timestamp(phoenix_span.get("start_time")),
-            "end_time": self._convert_phoenix_timestamp(phoenix_span.get("end_time")),
+            "start_time": self._convert_phoenix_timestamp(phoenix_span.get("start_time")),  # type: ignore
+            "end_time": self._convert_phoenix_timestamp(phoenix_span.get("end_time")),  # type: ignore
             "status_code": phoenix_span.get("status_code", "OK"),
             "metadata": {},
         }

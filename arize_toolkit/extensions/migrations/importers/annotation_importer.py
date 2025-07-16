@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 import pandas as pd
 
-from arize_toolkit.migrations.importers.base_importer import BaseImporter
+from arize_toolkit.extensions.migrations.importers.base_importer import BaseImporter
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class AnnotationImporter(BaseImporter):
             "span_id": phoenix_annotation["span_id"],
             "name": phoenix_annotation["annotation_name"],
             "annotator_kind": "HUMAN",  # Default for Phoenix annotations
-            "updated_at": self._convert_phoenix_timestamp(phoenix_annotation.get("created_at") or phoenix_annotation.get("updated_at")),
+            "updated_at": self._convert_phoenix_timestamp(phoenix_annotation.get("created_at") or phoenix_annotation.get("updated_at")),  # type: ignore
             "metadata": {},
         }
 

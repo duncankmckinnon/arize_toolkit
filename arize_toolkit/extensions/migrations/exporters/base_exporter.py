@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from arize_toolkit.migrations.models import ExportFormat, MigrationFilters
+from arize_toolkit.extensions.migrations.models import ExportFormat, MigrationFilters
 
 logger = logging.getLogger(__name__)
 

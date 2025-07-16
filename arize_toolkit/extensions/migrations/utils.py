@@ -2,7 +2,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import httpx
 
@@ -167,7 +167,7 @@ def estimate_migration_time(record_counts: Dict[str, int], batch_size: int = 100
     return total_time / 60  # Convert to minutes
 
 
-def format_file_size(size_bytes: int) -> str:
+def format_file_size(size_bytes: Union[float, int]) -> str:
     """Format file size in human readable format"""
     for unit in ["B", "KB", "MB", "GB"]:
         if size_bytes < 1024:

@@ -6,8 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from arize_toolkit.client import ArizeClient
-from arize_toolkit.models.migration_models import MigrationConfig
+from arize_toolkit.extensions.migrations.models import MigrationConfig
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +25,6 @@ class BaseImporter(ABC):
         self.arize_space_id = arize_space_id
         self.developer_key = developer_key
         self.config = config or MigrationConfig()
-
-        # Initialize Arize client
-        self.arize_client = ArizeClient(api_key=arize_api_key, space_id=arize_space_id, developer_key=developer_key)
 
         # Track imported items to avoid duplicates
         self._imported_items: Set[str] = set()

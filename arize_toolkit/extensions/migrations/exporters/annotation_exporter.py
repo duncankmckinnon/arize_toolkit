@@ -2,8 +2,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from arize_toolkit.migrations.exporters.base_exporter import BaseExporter
-from arize_toolkit.migrations.models import MigrationFilters
+from arize_toolkit.extensions.migrations.exporters.base_exporter import BaseExporter
+from arize_toolkit.extensions.migrations.models import MigrationFilters
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +53,12 @@ class AnnotationExporter(BaseExporter):
         params = {"page_size": page_size}
         if filters:
             if filters.annotation_types:
-                params["annotation_types"] = ",".join(filters.annotation_types)
+                params["annotation_types"] = ",".join(filters.annotation_types)  # type: ignore
             if filters.date_range:
                 if filters.date_range.start:
-                    params["start_time"] = filters.date_range.start
+                    params["start_time"] = filters.date_range.start  # type: ignore
                 if filters.date_range.end:
-                    params["end_time"] = filters.date_range.end
+                    params["end_time"] = filters.date_range.end  # type: ignore
 
         while True:
             try:
