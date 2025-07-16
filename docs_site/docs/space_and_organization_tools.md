@@ -6,7 +6,9 @@ These tools and properties on the `Client` object help you manage the client's a
 
 | Operation | Helper Method/Property |
 |-----------------------------|-----------------------------|
-| Switch active Space | [`switch_space`](#switch_space) |
+| Switch active Space/Organization | [`switch_space`](#switch_space) |
+| Get all Organizations | [`get_all_organizations`](#get_all_organizations) |
+| Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
 | Get current Space URL | [`space_url`](#space_url) (Property) |
 | Get Model URL | [`model_url`](#model_url) |
 | Get Custom Metric URL | [`custom_metric_url`](#custom_metric_url) |
@@ -23,23 +25,39 @@ ______________________________________________________________________
 ### `switch_space`
 
 ```python
-new_space_url: str = client.switch_space(space: str, organization: Optional[str] = None)
+new_space_url: str = client.switch_space(space: Optional[str] = None, organization: Optional[str] = None)
 ```
 
 Switches the client's active space and, optionally, the organization. This method updates the client's internal `space_id` and `org_id` to reflect the new context. It's useful when you need to work with multiple Arize spaces or organizations within the same script or session.
 
 **Parameters**
 
-- `space` (str) – The name of the Arize space to switch to.
-- `organization` (Optional[str]) – The name of the Arize organization. If omitted, the client's current organization (used during initialization) is assumed.
+- `space` (Optional[str]) – The name of the Arize space to switch to. If omitted, defaults to the first space in the organization.
+- `organization` (Optional[str]) – The name of the Arize organization to switch to. If omitted, the client's current organization is used.
 
 **Returns**
 
 - `str` – The full URL to the new active space in the Arize UI.
 
+**Behavior**
+
+- If no arguments are provided, the space and organization remain unchanged.
+- If only the space is provided, the current organization is used.
+- If only the organization is provided, the first space in the provided organization is used.
+- If both are provided, switches to the specified space in the specified organization.
+
 **Example**
 
 ```python
+# Switch to a specific space in the current organization
+space_url = client.switch_space(space="my_new_space")
+
+# Switch to a specific organization (using first space in that org)
+space_url = client.switch_space(organization="my_other_org")
+
+# Switch to a specific space in a specific organization
+space_url = client.switch_space(space="specific_space", organization="specific_org")
+
 # Collect all models from all spaces in all organizations
 org_space_pairs = [
     ("other_org", "other_org1_space_1"),
@@ -51,6 +69,82 @@ all_models = client.get_all_models()
 for org, space in org_space_pairs:
     space_url = client.switch_space(space=space, organization=org)
     all_models.extend(client.get_all_models())
+```
+
+______________________________________________________________________
+
+### `get_all_organizations`
+
+```python
+organizations: List[dict] = client.get_all_organizations()
+```
+
+Retrieves all organizations in the current account. This method returns a list of organization dictionaries containing details about each organization the current user has access to.
+
+**Returns**
+
+A list of organization dictionaries, each containing:
+
+- `id` (str): Unique identifier for the organization
+- `name` (str): Name of the organization
+- `createdAt` (datetime): When the organization was created
+- `description` (str): Description of the organization
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error retrieving organizations from the API
+
+**Example**
+
+```python
+# Get all organizations
+organizations = client.get_all_organizations()
+for org in organizations:
+    print(f"Organization: {org['name']} (ID: {org['id']})")
+    print(f"  Created: {org['createdAt']}")
+    print(f"  Description: {org['description']}")
+```
+
+______________________________________________________________________
+
+### `get_all_spaces`
+
+```python
+spaces: List[dict] = client.get_all_spaces()
+```
+
+Retrieves all spaces in the current organization. This method returns a list of space dictionaries containing details about each space in the currently active organization.
+
+**Returns**
+
+A list of space dictionaries, each containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error retrieving spaces from the API
+
+**Example**
+
+```python
+# Get all spaces in the current organization
+spaces = client.get_all_spaces()
+for space in spaces:
+    print(f"Space: {space['name']} (ID: {space['id']})")
+    print(f"  Created: {space['createdAt']}")
+    print(f"  Private: {space['private']}")
+    print(f"  Description: {space['description']}")
+
+# Switch to each space and get model count
+for space in spaces:
+    client.switch_space(space=space["name"])
+    models = client.get_all_models()
+    print(f"Space '{space['name']}' has {len(models)} models")
 ```
 
 ______________________________________________________________________

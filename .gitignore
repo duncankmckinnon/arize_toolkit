@@ -77,4 +77,7 @@ cython_debug/
 env/
 venv
 
-poetry.lock
+uv.lock
+
+# macOS
+.DS_Store

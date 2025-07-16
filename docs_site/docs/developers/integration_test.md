@@ -4,7 +4,15 @@ This guide explains how to set up and run integration tests for the Arize API cl
 
 ## Setup
 
-### 1. Environment Variables
+### 1. Select an Arize Organization and Space
+
+For these integration tests, you will need to select an Arize organization and space. The space used for the tests should be separated from any sensitive use cases or production data that may also exist in the same account. Ideally, you should create Arize models and other resources in a separate space for testing, because this script will attempt to alter, delete and then recreate data resources in the chosen space, and it works best when:
+
+- there is a good representation of all different types of resources in the space.
+- it's easy to make synthetic resources for testing that won't be missed if they are deleted and fail to be recreated.
+- new resources can be created easily to test new features without needing to setup entire use cases.
+
+### 2. Environment Variables
 
 Create a `.env` file in the root directory with the following variables:
 
@@ -14,7 +22,7 @@ ORGANIZATION_NAME=your_organization
 SPACE_NAME=your_space_name
 ```
 
-### 2. Prerequisites
+### 3. Prerequisites
 
 Install required dependencies:
 
@@ -101,23 +109,84 @@ The integration tests follow this pattern:
 Example:
 
 ```python
+load_dotenv()
+
+
+def load_env_vars():
+    arize_developer_key = os.getenv("ARIZE_DEVELOPER_KEY")
+    if not arize_developer_key:
+        raise ValueError("ARIZE_DEVELOPER_KEY must be set in the .env file")
+
+    organization = os.getenv("ORGANIZATION_NAME")
+    if not organization:
+        raise ValueError("ORGANIZATION_NAME must be set in the .env file")
+
+    space = os.getenv("SPACE_NAME")
+    if not space:
+        raise ValueError("SPACE_NAME must be set in the .env file")
+
+    return arize_developer_key, organization, space
+
+
 def run_integration_tests():
-    # Initialize client
+    # Retrieve environment variables
+    arize_developer_key, organization, space = load_env_vars()
+    model_name = None
+    # Initialize the client
     client = Client(
-        organization=os.getenv("ORGANIZATION_NAME"),
-        space=os.getenv("SPACE_NAME"),
-        token=os.getenv("ARIZE_API_KEY"),
+        organization=organization,
+        space=space,
+        arize_developer_key=arize_developer_key,
+        sleep_time=5,
     )
 
-    # Run tests
+    # Model tests
     try:
+        # Get ALL
         models = client.get_all_models()
         print("Models found:", len(models))
 
-        # Additional test cases...
+        # Get by name and id
+        model_name = models[0].name
+        model_id = models[0].id
+
+        # Get by name
+        model = client.get_model(model_name)
+        print("Model found:", model)
+
+        # Get by id
+        model = client.get_model(model_id)
+        print("Model found by id:", model)
+
+        # Other tests...
+    except Exception as e:
+        print("Test failed:", str(e))
+
+    # Monitor tests (uses model name)
+    try:
+        # get all monitors using the model name
+        monitors = client.get_all_monitors(model_name)
+        print("Monitors found:", len(monitors))
+
+        # get monitor name and id
+        ...
+
+        # get monitor by name and id
+        ...
+
+        # update the monitor
+        ...
+
+        # delete the monitor
+        ...
+
+        # create the monitor again
+        ...
 
     except Exception as e:
         print("Test failed:", str(e))
+
+    # Pattern  continues for other resources...
 ```
 
 ## Adding New Tests
@@ -126,6 +195,7 @@ To add new test cases:
 
 1. Open `tests/integration_test/run.py`
 1. Add new test scenarios within the `run_integration_tests()` function
+1. Use the existing test structure as a guide, with try/except blocks to catch errors and print the error message so the full integration test output can run all the way through
 1. Follow the existing error handling pattern
 
 Example adding a new test:
@@ -151,8 +221,8 @@ Common issues and solutions:
 
 1. **Authentication Errors**
 
-   - Verify `ARIZE_API_KEY` is set correctly
-   - Check API key permissions
+   - Verify `ARIZE_DEVELOPER_KEY` is set correctly
+   - Make sure you use a space and organization that you have admin level permissions for
 
 1. **Resource Not Found**
 

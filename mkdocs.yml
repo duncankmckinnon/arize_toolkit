@@ -8,6 +8,7 @@ site_dir: site
 
 theme:
   name: material
+  favicon: images/logos/arize_toolkit_v1.png
   palette:
     primary: indigo
     accent: indigo
@@ -20,15 +21,20 @@ theme:
 
 nav:
   - Home: index.md
+  - Quickstart: quickstart.md
   
   - Tools:
     - Model Tools: model_tools.md
     - Monitor Tools: monitor_tools.md
     - Custom Metrics Tools: custom_metrics_tools.md
     - Language Model Tools: language_model_tools.md
-    - Space Tools: space_tools.md
+    - Space & Organization Tools: space_and_organization_tools.md
     - Data Import Tools: data_import_tools.md
     - Dashboard Tools: dashboard_tools.md
+    - Utility Tools: utility_tools.md
+
+  - Extensions:
+    - Prompt Optimization: extensions/prompt_optimization.md
 
   - For Developers:
     - Development: developers/development.md
@@ -44,4 +50,9 @@ markdown_extensions:
       custom_checkbox: true
 
 plugins:
-  - search 
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/duncankmckinnon/arize_toolkit

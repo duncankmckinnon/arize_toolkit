@@ -5,6 +5,10 @@
 - **Prompts** – version-controlled chat / completion templates ( system + user + assistant messages, tools, variables … ). You can create new prompts, fetch existing ones, update metadata, or iterate through prior versions.
 - **Annotations** – labels or scores attached to individual inference records, typically produced by human evaluation or another model.
 
+For more information about prompts in Arize check out the **[documentation on Arize prompts](https://arize.com/docs/ax/develop/prompt-hub)**.
+
+For more information about annotations in Arize check out the **[documentation on Arize annotations](https://arize.com/docs/ax/evaluate/human-annotations)**.
+
 `arize_toolkit.Client` exposes helpers for both areas:
 
 | Area | Operation | Helper |

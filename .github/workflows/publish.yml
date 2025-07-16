@@ -14,66 +14,64 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Required for hatch-vcs to access git history
 
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
 
-    - name: Install Poetry
+    - name: Install uv
       run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+        curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Configure Poetry
-      env:
-        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        poetry config pypi-token.pypi "$PYPI_TOKEN"
-
-    - name: Extract version from tag
-      id: get_version
-      run: |
-        # Get the tag name from the release
-        TAG_NAME="${{ github.event.release.tag_name }}"
-        # Remove 'v' prefix if it exists
-        VERSION=${TAG_NAME#v}
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-        echo "🏷️ Processing release: $TAG_NAME (version: $VERSION)"
-
-    - name: Update version in pyproject.toml
-      run: |
-        poetry version ${{ steps.get_version.outputs.version }}
-        echo "📝 Updated pyproject.toml version to ${{ steps.get_version.outputs.version }}"
 
     - name: Run tests before publishing
       run: |
         echo "🧪 Installing dependencies and running tests..."
-        poetry install --with dev
-        poetry run pytest -v
+        uv venv
+        uv pip install -e ".[dev,prompt_optimizer]"
+        # Use the same test command as our test workflow to avoid plugin issues
+        uv run pytest -v --continue-on-collection-errors -p no:snapshottest
         echo "✅ All tests passed!"
 
     - name: Build package
       run: |
         echo "🔨 Building package..."
-        poetry build
+        uv build
         echo "📦 Package built successfully!"
         ls -la dist/
+        
+        # Display the version that was built
+        BUILT_VERSION=$(ls dist/*.whl | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/')
+        echo "📋 Built version: $BUILT_VERSION"
+        echo "🏷️ Release tag: ${{ github.event.release.tag_name }}"
 
     - name: Publish to PyPI
+      env:
+        PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
       run: |
         echo "🚀 Publishing to PyPI..."
-        poetry publish
-        echo "✅ Successfully published to PyPI!"
+        # Try trusted publishing first (more secure), fallback to token
+        if uv publish --trusted-publishing automatic 2>/dev/null; then
+          echo "✅ Successfully published using trusted publishing!"
+        elif [ -n "$PYPI_TOKEN" ]; then
+          echo "📝 Trusted publishing not available, using token..."
+          uv publish --token $PYPI_TOKEN
+          echo "✅ Successfully published using token!"
+        else
+          echo "❌ No authentication method available (missing PYPI_API_TOKEN secret)"
+          echo "💡 Consider setting up trusted publishing: https://docs.pypi.org/trusted-publishers/"
+          exit 1
+        fi
 
     - name: Generate additional release notes
       id: release_notes
       run: |
         # Get build information
         BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
-        POETRY_VERSION=$(poetry --version)
+        UV_VERSION=$(uv --version)
+        BUILT_VERSION=$(ls dist/*.whl | head -1 | sed 's/.*-\([0-9][^-]*\)-.*/\1/')
         
         # Safely handle release body (escape any problematic characters)
         RELEASE_BODY=$(cat << 'RELEASE_BODY_EOF'
@@ -83,16 +81,16 @@ jobs:
         
         # Create enhanced release notes file with proper variable expansion
         cat > enhanced_release_notes.md << NOTES_EOF
-        ## 🚀 Release ${{ steps.get_version.outputs.tag_name }}
+        ## 🚀 Release ${{ github.event.release.tag_name }}
 
         ### 📦 PyPI Package
-        This release has been published to PyPI: https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/
+        This release has been published to PyPI: https://pypi.org/project/arize-toolkit/${BUILT_VERSION}/
 
         ### 🔧 Installation
         \`\`\`bash
-        pip install arize-toolkit==${{ steps.get_version.outputs.version }}
+        pip install arize-toolkit==${BUILT_VERSION}
         # or
-        poetry add arize-toolkit@${{ steps.get_version.outputs.version }}
+        uv add arize-toolkit@${BUILT_VERSION}
         \`\`\`
 
         ### 📋 Original Release Notes
@@ -108,17 +106,19 @@ jobs:
         - **Built from commit:** ${{ github.sha }}
         - **Build date:** ${BUILD_DATE}
         - **Python version:** 3.10
-        - **Poetry version:** ${POETRY_VERSION}
+        - **uv version:** ${UV_VERSION}
+        - **Package version:** ${BUILT_VERSION}
         BUILD_INFO_EOF
         
         echo "📝 Generated enhanced release notes"
+        echo "built_version=${BUILT_VERSION}" >> $GITHUB_OUTPUT
 
     - name: Update GitHub release with enhanced notes
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         echo "📤 Updating GitHub release with enhanced notes..."
-        if gh release edit "${{ steps.get_version.outputs.tag_name }}" --notes-file enhanced_release_notes.md; then
+        if gh release edit "${{ github.event.release.tag_name }}" --notes-file enhanced_release_notes.md; then
           echo "✅ Successfully updated release notes"
         else
           echo "⚠️ Failed to update release notes, but continuing..."
@@ -132,7 +132,7 @@ jobs:
         
         # Check if distribution files exist
         if ls dist/*.tar.gz 1> /dev/null 2>&1 && ls dist/*.whl 1> /dev/null 2>&1; then
-          if gh release upload "${{ steps.get_version.outputs.tag_name }}" dist/*.tar.gz dist/*.whl --clobber; then
+          if gh release upload "${{ github.event.release.tag_name }}" dist/*.tar.gz dist/*.whl --clobber; then
             echo "✅ Successfully uploaded release assets"
           else
             echo "❌ Failed to upload release assets"
@@ -147,7 +147,7 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: distribution-packages-${{ steps.get_version.outputs.tag_name }}
+        name: distribution-packages-${{ github.event.release.tag_name }}
         path: |
           dist/*.tar.gz
           dist/*.whl
@@ -164,8 +164,9 @@ jobs:
           # Backup existing changelog
           cp CHANGELOG.md CHANGELOG.md.bak
           
-          # Get current date
+          # Get current date and version
           CURRENT_DATE=$(date -u +"%Y-%m-%d")
+          BUILT_VERSION="${{ steps.release_notes.outputs.built_version }}"
           
           # Safely handle release body for changelog
           RELEASE_BODY_SAFE=$(cat << 'CHANGELOG_BODY_EOF'
@@ -176,11 +177,11 @@ jobs:
           # Create new changelog entry
           echo "# Changelog" > temp_changelog.md
           echo "" >> temp_changelog.md
-          echo "## [${{ steps.get_version.outputs.tag_name }}] - ${CURRENT_DATE}" >> temp_changelog.md
+          echo "## [${{ github.event.release.tag_name }}] - ${CURRENT_DATE}" >> temp_changelog.md
           echo "" >> temp_changelog.md
           echo "$RELEASE_BODY_SAFE" >> temp_changelog.md
           echo "" >> temp_changelog.md
-          echo "**PyPI:** https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/" >> temp_changelog.md
+          echo "**PyPI:** https://pypi.org/project/arize-toolkit/${BUILT_VERSION}/" >> temp_changelog.md
           echo "" >> temp_changelog.md
           echo "---" >> temp_changelog.md
           echo "" >> temp_changelog.md
@@ -198,13 +199,14 @@ jobs:
           mv temp_changelog.md CHANGELOG.md
           rm CHANGELOG.md.bak
           
-          echo "✅ Updated CHANGELOG.md with release ${{ steps.get_version.outputs.tag_name }}"
+          echo "✅ Updated CHANGELOG.md with release ${{ github.event.release.tag_name }}"
         else
           echo "ℹ️ No CHANGELOG.md found, skipping changelog update"
         fi
 
     - name: Summary
       run: |
-        echo "🎉 Release ${{ steps.get_version.outputs.tag_name }} completed successfully!"
-        echo "📦 PyPI: https://pypi.org/project/arize-toolkit/${{ steps.get_version.outputs.version }}/"
-        echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.tag_name }}"
+        BUILT_VERSION="${{ steps.release_notes.outputs.built_version }}"
+        echo "🎉 Release ${{ github.event.release.tag_name }} completed successfully!"
+        echo "📦 PyPI: https://pypi.org/project/arize-toolkit/${BUILT_VERSION}/"
+        echo "🏷️ GitHub: https://github.com/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }}"

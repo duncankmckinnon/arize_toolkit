@@ -21,6 +21,8 @@ from arize_toolkit.queries.custom_metric_queries import (
     UpdateCustomMetricMutation,
 )
 from arize_toolkit.queries.dashboard_queries import (
+    CreateDashboardMutation,
+    CreateLineChartWidgetMutation,
     GetAllDashboardsQuery,
     GetDashboardBarChartWidgetsQuery,
     GetDashboardByIdQuery,
@@ -63,10 +65,12 @@ from arize_toolkit.queries.monitor_queries import (
     CreatePerformanceMonitorMutation,
     DeleteMonitorMutation,
     GetAllModelMonitorsQuery,
+    GetModelMetricValueQuery,
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
-from arize_toolkit.queries.space_queries import OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
 logger = logging.getLogger("arize_toolkit")
@@ -131,25 +135,34 @@ class Client:
 
         Returns:
             Client: The updated client
-
         """
         self.sleep_time = sleep_time
         return self
 
-    def switch_space(self, space: str, organization: Optional[str] = None) -> str:
+    def switch_space(self, space: Optional[str] = None, organization: Optional[str] = None) -> str:
         """Switches the space for the client. Can also switch to a space in a different organization.
+        If no arguments are provided, the space and organization are unchanged.
+        If only the space is provided, the current organization is used.
+        If only the organization is provided, the first space in the provided organization is used.
 
         Args:
-            space (str): The space to switch to
+            space (Optional[str]): The space to switch to (defaults to the first space in the organization)
             organization (Optional[str]): The organization to switch to (defaults to the current organization)
 
         Returns:
             str: The URL of the new space
 
+        Raises:
+            ArizeAPIException: If there is an error switching spaces
         """
-        space = space
-        organization = organization or self.organization
-        result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
+        if space and space == self.space and (not organization or organization == self.organization):
+            return self.space_url
+        if not space:
+            result = OrgAndFirstSpaceQuery.run_graphql_query(self._graphql_client, organization=organization)
+        else:
+            if not organization:
+                organization = self.organization
+            result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
         if self.space_id != result.space_id:
             self.org_id = result.organization_id
             self.space_id = result.space_id
@@ -184,6 +197,46 @@ class Client:
 
     def dashboard_url(self, dashboard_id: str) -> str:
         return f"{self.space_url}/dashboards/{dashboard_id}"
+
+    def get_all_organizations(self) -> List[dict]:
+        """Retrieves all organizations in the current account.
+
+        Returns:
+            List[dict]: A list of organization dictionaries, each containing:
+            - id (str): Unique identifier for the organization
+            - name (str): Name of the organization
+            - createdAt (datetime): When the organization was created
+            - description (str): Description of the organization
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving organizations from the API
+        """
+        results = GetAllOrganizationsQuery.iterate_over_pages(
+            self._graphql_client,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
+    def get_all_spaces(self) -> List[dict]:
+        """Retrieves all spaces in the current organization.
+
+        Returns:
+            List[dict]: A list of space dictionaries, each containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving organizations from the API
+        """
+        results = GetAllSpacesQuery.iterate_over_pages(
+            self._graphql_client,
+            organization_id=self.org_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
@@ -2002,6 +2055,120 @@ class Client:
         )
         return self.monitor_url(new_monitor.monitor_id)
 
+    def get_monitor_metric_values(
+        self,
+        monitor_name: str,
+        model_name: str,
+        start_date: Optional[Union[datetime, str]] = None,
+        end_date: Optional[Union[datetime, str]] = None,
+        time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
+        to_dataframe: Optional[bool] = False,
+    ) -> Dict[str, Any]:
+        """Gets the metric history for a monitor. Dates are in UTC.
+
+        Args:
+            monitor_name (str): Name of the monitor to get the metric history for
+            model_name (str): Name of the model to get the metric history for
+            start_date (Optional[Union[datetime, str]]): Start date for the metric history (default is 30 days ago in UTC)
+            end_date (Optional[Union[datetime, str]]): End date for the metric history (default is now in UTC)
+            time_series_data_granularity (Literal["hour", "day", "week", "month"]): Granularity of the time series data (default is "hour")
+            to_dataframe (Optional[bool]): Whether to return the metric history as a pandas DataFrame (default is False)
+
+        Returns:
+            If to_dataframe is False:
+            The metric history for the monitor
+            - key: str - the metric name
+            - dataPoints: List[(datetime, float)] - the metric values
+            - thresholdDataPoints: List[(datetime, float)] - the threshold values (only for monitors with a threshold)
+
+            If to_dataframe is True:
+            A pandas DataFrame with the metric history for the monitor with the following columns:
+            - timestamp: datetime - the timestamp of the metric value
+            - metric_value: float - the metric value
+            - threshold_value: float - the threshold value (only for monitors with a threshold)
+
+        Raises:
+            ArizeAPIException: If metric history retrieval fails or there is an API error
+        """
+        results = GetModelMetricValueQuery.run_graphql_query(
+            self._graphql_client,
+            monitor_name=monitor_name,
+            model_name=model_name,
+            start_date=(parse_datetime(start_date) if start_date else datetime.now(tz=timezone.utc) - timedelta(days=30)),
+            end_date=(parse_datetime(end_date) if end_date else datetime.now(tz=timezone.utc)),
+            time_series_data_granularity=time_series_data_granularity,
+            space_id=self.space_id,
+        )
+        if to_dataframe:
+            rows = (
+                [
+                    {
+                        "timestamp": data_point.x,
+                        "metric_value": data_point.y,
+                        "threshold_value": (threshold_point.y if threshold_point else None),
+                    }
+                    for data_point, threshold_point in zip(results.dataPoints, results.thresholdDataPoints)
+                ]
+                if results.thresholdDataPoints
+                else [
+                    {
+                        "timestamp": data_point.x,
+                        "metric_value": data_point.y,
+                        "threshold_value": None,
+                    }
+                    for data_point in results.dataPoints
+                ]
+            )
+            return DataFrame(rows)
+        return results.to_dict()
+
+    def get_latest_monitor_value(
+        self,
+        monitor_name: str,
+        model_name: str,
+        time_series_data_granularity: Literal["hour", "day", "week", "month"] = "hour",
+    ) -> Dict[str, Any]:
+        """Gets the latest metric value for a monitor.
+
+        Args:
+            monitor_name (str): Name of the monitor to get the latest metric value for
+            model_name (str): Name of the model to get the latest metric value for
+            time_series_data_granularity (Literal["hour", "day", "week", "month"]): Granularity of the time series data (default is "hour")
+
+        Returns:
+            The latest metric value for the monitor
+            - timestamp: datetime - the timestamp of the metric value
+            - metric_value: float - the metric value
+            - threshold_value: float - the threshold value (only for monitors with a threshold)
+
+        Raises:
+            ArizeAPIException: If input validation fails or metric retrieval fails or there is an API error
+        """
+        if time_series_data_granularity not in ["hour", "day", "week", "month"]:
+            raise ArizeAPIException("Invalid time series data granularity. Must be one of: hour, day, week, month")
+        end_date = datetime.now(tz=timezone.utc)
+        if time_series_data_granularity == "month":
+            start_date = end_date - timedelta(days=30)
+        else:
+            granularity = f"{time_series_data_granularity}s"
+            start_date = end_date - timedelta(**{granularity: 2})
+        results = GetModelMetricValueQuery.run_graphql_query(
+            self._graphql_client,
+            monitor_name=monitor_name,
+            model_name=model_name,
+            start_date=start_date,
+            end_date=end_date,
+            time_series_data_granularity=time_series_data_granularity,
+            space_id=self.space_id,
+        )
+        if len(results.dataPoints) == 0:
+            raise ArizeAPIException("No metric values found for the given time range")
+        return {
+            "timestamp": results.dataPoints[-1].x,
+            "metric_value": results.dataPoints[-1].y,
+            "threshold_value": (results.thresholdDataPoints[-1].y if results.thresholdDataPoints else None),
+        }
+
     ## Data Import ##
 
     def get_file_import_job(self, job_id: str) -> Dict[str, Any]:
@@ -2681,5 +2848,120 @@ class Client:
         Raises:
             ArizeAPIException: If the dashboard retrieval fails or there is an API error
         """
-        dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name)
-        return f"{self.space_url}/dashboards/{dashboard.id}"
+        dashboard = GetDashboardQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, dashboardName=dashboard_name).to_dict()
+        dashboard_id = dashboard.get("id")
+        return self.dashboard_url(dashboard_id)
+
+    def create_dashboard(self, name: str) -> str:
+        """
+        Creates a new empty dashboard in the current space.
+
+        Args:
+            name (str): Name for the new dashboard
+
+        Returns:
+            str: The ID of the created dashboard
+
+        Raises:
+            ArizeAPIException: If the dashboard creation fails or there is an API error
+        """
+        dashboard = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=name, spaceId=self.space_id).to_dict()
+        dashboard_id = dashboard.get("id")
+        return self.dashboard_url(dashboard_id)
+
+    def create_model_volume_dashboard(self, dashboard_name: str, model_names: Optional[List[str]] = None) -> str:
+        """
+        Creates a new dashboard with model volume line chart widgets for each model in the space.
+        If model_names is provided, only creates widgets for those models.
+
+        Args:
+            dashboard_name (str): Name for the new dashboard
+            model_names (Optional[List[str]]): List of model names to include. If None, includes all models in the space.
+
+        Returns:
+            str: The URL of the created dashboard
+
+        Raises:
+            ArizeAPIException: If the dashboard creation fails or there is an API error
+        """
+        # Create the dashboard
+        dashboard = CreateDashboardMutation.run_graphql_mutation(self._graphql_client, name=dashboard_name, spaceId=self.space_id)
+        dashboard_id = dashboard.id
+
+        # Get models to include
+        if model_names:
+            models = []
+            for model_name in model_names:
+                try:
+                    model = GetModelQuery.run_graphql_query(
+                        self._graphql_client,
+                        spaceId=self.space_id,
+                        modelName=model_name,
+                    )
+                    models.append(model)
+                except ArizeAPIException:
+                    logger.warning(f"Model '{model_name}' not found, skipping")
+        else:
+            # Get all models in the space
+            models = GetAllModelsQuery.iterate_over_pages(self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time)
+
+        # Create a line chart widget for each model
+        for model in models:
+            # Create the widget with simplified plot configuration
+
+            # Get the model type
+            model_type = getattr(model, "modelType", None)
+            model_id = getattr(model, "id", None)
+            model_name = getattr(model, "name", None)
+
+            # Get the widget configuration
+            if model_type == ModelType.generative_llm:
+                continue  # TODO: Add support for generative LLMs
+
+                # title = "Tracing Volume"
+                # metric_type = "evaluationMetric"
+                # plots = [
+                #     {
+                #         "modelId": model_id,
+                #         "modelVersionIds": [],  # Required field, empty means all versions
+                #         "title": title,
+                #         "position": 0,
+                #         "modelEnvironmentName": "tracing",  # Enum value, not array
+                #         "metric": "count",
+                #         "filters": [],  # Required field, can be empty list
+                #         "dimension": {
+                #             "category": "spanProperty",
+                #             "name": "name",
+                #             "dataType": "STRING",
+                #         }
+                #     }
+                # ]
+            else:
+                title = "Prediction Volume"
+                metric_type = "evaluationMetric"
+                plots = [
+                    {
+                        "modelId": model_id,
+                        "modelVersionIds": [],  # Required field, empty means all versions
+                        "title": title,
+                        "position": 0,
+                        "modelEnvironmentName": "production",  # Enum value, not array
+                        "metric": "count",
+                        "filters": [],  # Required field, can be empty list
+                        "dimensionCategory": "prediction",
+                    }
+                ]
+
+            try:
+                CreateLineChartWidgetMutation.run_graphql_mutation(
+                    self._graphql_client,
+                    title=f"{model_name} {title}",
+                    dashboardId=dashboard_id,
+                    timeSeriesMetricType=metric_type,
+                    plots=plots,
+                )
+                sleep(self.sleep_time)
+            except ArizeAPIException as e:
+                logger.warning(f"Failed to create widget for model '{model_name}': {e}")
+
+        return self.dashboard_url(dashboard_id)

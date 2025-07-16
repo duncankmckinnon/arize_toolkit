@@ -3,7 +3,7 @@ from typing import List, Literal, Optional
 
 from pydantic import Field, model_validator
 
-from arize_toolkit.models.base_models import Dimension, DimensionFilterInput, DimensionValue, User
+from arize_toolkit.models.base_models import BaseNode, Dimension, DimensionFilterInput, DimensionValue, User
 from arize_toolkit.models.custom_metrics_models import CustomMetric
 from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DriftMetric, FilterRowType, ModelEnvironment, MonitorCategory, PerformanceMetric
 from arize_toolkit.utils import GraphQLModel
@@ -11,9 +11,7 @@ from arize_toolkit.utils import GraphQLModel
 ## Monitor GraphQL Models ##
 
 
-class IntegrationKey(GraphQLModel):
-    id: Optional[str] = Field(default=None)
-    name: str
+class IntegrationKey(BaseNode):
     providerName: Literal["slack", "pagerduty", "opsgenie"]
     createdAt: Optional[datetime] = Field(default=None)
     channelName: Optional[str] = Field(default=None)
@@ -57,9 +55,7 @@ class DynamicAutoThreshold(GraphQLModel):
     stdDevMultiplier: Optional[float] = Field(default=2.0)
 
 
-class BasicMonitor(GraphQLModel):
-    id: str
-    name: str
+class BasicMonitor(BaseNode):
     monitorCategory: MonitorCategory
     createdDate: Optional[datetime] = Field(default=None)
     notes: Optional[str] = Field(default=None)
@@ -153,3 +149,21 @@ class DriftMonitor(MonitorDetailedType):
     driftMetric: Optional[DriftMetric] = Field(default=DriftMetric.psi)
     dimensionCategory: Optional[DimensionCategory] = Field(default=None)
     dimensionName: Optional[str] = Field(default=None)
+
+
+## Time Series Models ##
+
+
+class DataPoint(GraphQLModel):
+    """Represents a single data point in a time series."""
+
+    x: datetime = Field(description="Timestamp of the data point")
+    y: Optional[float] = Field(description="Value at this timestamp")
+
+
+class TimeSeriesWithThresholdDataType(GraphQLModel):
+    """Represents time series data with optional threshold data points."""
+
+    key: str = Field(description="Key identifier for the time series")
+    dataPoints: List[DataPoint] = Field(default_factory=list, description="List of data points in the time series")
+    thresholdDataPoints: Optional[List[DataPoint]] = Field(default=None, description="List of threshold data points")

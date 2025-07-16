@@ -9,12 +9,15 @@ from arize_toolkit.models.dashboard_models import (
     BarChartWidgetData,
     BarChartWidgetDataKeysAndValuesObject,
     BarChartWidgetDataValueObjectType,
+    CreateDashboardMutationInput,
+    CreateLineChartWidgetMutationInput,
     Dashboard,
     DashboardBasis,
     DashboardPerformanceSlice,
     ExperimentChartPlot,
     ExperimentChartWidget,
     LineChartPlot,
+    LineChartPlotInput,
     LineChartWidget,
     LineChartWidgetAxisConfig,
     LineChartWidgetConfig,
@@ -69,6 +72,7 @@ from arize_toolkit.models.llm_utils_models import (
 )
 from arize_toolkit.models.monitor_models import (
     BasicMonitor,
+    DataPoint,
     DataQualityMonitor,
     DriftMonitor,
     DynamicAutoThreshold,
@@ -80,5 +84,6 @@ from arize_toolkit.models.monitor_models import (
     MonitorContactInput,
     MonitorDetailedType,
     PerformanceMonitor,
+    TimeSeriesWithThresholdDataType,
 )
 from arize_toolkit.models.space_models import Space

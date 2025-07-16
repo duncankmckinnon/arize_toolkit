@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from pydantic import Field
 
-from arize_toolkit.models.base_models import Dimension, DimensionValue, Model, User
+from arize_toolkit.models.base_models import BaseNode, Dimension, DimensionValue, Model, User
 
 # Import common models that are used by dashboard models
 from arize_toolkit.models.custom_metrics_models import CustomMetric
@@ -24,9 +24,7 @@ from arize_toolkit.utils import GraphQLModel
 ## Dashboard GraphQL Models ##
 
 
-class DashboardBasis(GraphQLModel):
-    id: str = Field(description="The ID of the dashboard")
-    name: Optional[str] = Field(default=None, description="The name of the dashboard")
+class DashboardBasis(BaseNode):
     creator: Optional[User] = Field(default=None, description="The user who created the dashboard")
     createdAt: Optional[datetime] = Field(default=None, description="The datetime the dashboard was created")
     status: Optional[DashboardStatus] = Field(default=None, description="The status of the dashboard")
@@ -52,11 +50,10 @@ class WidgetModel(GraphQLModel):
     modelType: Optional[ModelType] = Field(default=None, description="The type of the model")
 
 
-class PredictionValueClass(GraphQLModel):
+class PredictionValueClass(BaseNode):
     """A prediction value class"""
 
-    id: Optional[str] = Field(default=None, description="The ID of the prediction value class")
-    name: Optional[str] = Field(default=None, description="The name of the prediction value class")
+    pass
 
 
 class StatisticWidgetFilterItem(GraphQLModel):
@@ -332,3 +329,36 @@ class Dashboard(DashboardBasis):
     driftLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The drift line chart widgets on the dashboard")
     monitorLineChartWidgets: Optional[List[LineChartWidget]] = Field(default=None, description="The monitor line chart widgets on the dashboard")
     textWidgets: Optional[List[TextWidget]] = Field(default=None, description="The text widgets on the dashboard")
+
+
+## Dashboard Mutation Input Models ##
+
+
+class CreateDashboardMutationInput(GraphQLModel):
+    """Input for creating a new dashboard"""
+
+    name: str = Field(description="The name of the dashboard")
+    spaceId: str = Field(description="The ID of the space to create the dashboard in")
+    clientMutationId: Optional[str] = Field(default=None, description="Client mutation ID for tracking")
+
+
+class LineChartPlotInput(GraphQLModel):
+    """Input for a line chart plot"""
+
+    modelId: str = Field(description="The model ID for the plot")
+    modelVersionIds: List[Optional[str]] = Field(default=[], description="The model version IDs")
+    modelEnvironmentName: ModelEnvironment = Field(description="The model environment")
+    title: str = Field(description="The title of the plot")
+    position: int = Field(description="The position of the plot")
+    metric: str = Field(description="The metric to plot")
+    filters: List[StatisticWidgetFilterItem] = Field(description="Filters applied to the widget")
+    dimensionCategory: Optional[DimensionCategory] = Field(default=None, description="The dimension category of the plot")
+
+
+class CreateLineChartWidgetMutationInput(GraphQLModel):
+    """Input for creating a line chart widget"""
+
+    title: str = Field(description="The title of the widget")
+    dashboardId: str = Field(description="The dashboard ID to add the widget to")
+    timeSeriesMetricType: str = Field(default="modelDataMetric", description="The type of time series metric")
+    plots: List[LineChartPlotInput] = Field(description="The plots for the line chart")

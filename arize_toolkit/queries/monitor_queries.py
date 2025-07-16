@@ -1,6 +1,7 @@
-from typing import List, Optional, Tuple
+from datetime import datetime
+from typing import List, Literal, Optional, Tuple
 
-from arize_toolkit.models import BasicMonitor, DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor
+from arize_toolkit.models import BasicMonitor, DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor, TimeSeriesWithThresholdDataType
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -248,3 +249,69 @@ class DeleteMonitorMutation(BaseQuery):
             False,
             None,
         )
+
+
+class GetModelMetricValueQuery(BaseQuery):
+    graphql_query = (
+        """
+    query GetModelMetricValue($space_id: ID!, $model_name: String, $monitor_name: String, $start_date: DateTime!, $end_date: DateTime!, $time_series_data_granularity: DataGranularity!){
+        node(id: $space_id){
+            ... on Space{
+                models(first: 1, search: $model_name, useExactSearchMatch: true){
+                    edges{
+                        node{
+                            monitors(first: 1, search: $monitor_name){
+                                edges{
+                                    node{
+                                        metricHistory(startTime: $start_date, endTime: $end_date, timeZone: "utc", timeSeriesDataGranularity: $time_series_data_granularity){
+                                            ... on TimeSeriesWithThresholdDataType{"""
+        + TimeSeriesWithThresholdDataType.to_graphql_fields()
+        + """
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get metric values for a monitor over a specified time range"
+
+    class Variables(BaseVariables):
+        space_id: str
+        model_name: str
+        monitor_name: str
+        start_date: datetime
+        end_date: datetime
+        time_series_data_granularity: Literal["hour", "day", "week", "month"]
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting monitor metric values"
+
+    class QueryResponse(TimeSeriesWithThresholdDataType):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        # Navigate through the nested structure
+        models_edges = result.get("node", {}).get("models", {}).get("edges", [])
+        if not models_edges:
+            cls.raise_exception("No model found with the given name")
+
+        model_node = models_edges[0].get("node", {})
+        monitors_edges = model_node.get("monitors", {}).get("edges", [])
+        if not monitors_edges:
+            cls.raise_exception("No monitor found with the given name")
+
+        monitor_node = monitors_edges[0].get("node", {})
+        metric_history = monitor_node.get("metricHistory")
+        if not metric_history:
+            cls.raise_exception("No metric history data available for the specified time range")
+
+        # Parse the time series data
+        return [cls.QueryResponse(**metric_history)], False, None

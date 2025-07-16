@@ -9,17 +9,42 @@
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
 [![Lint and Format](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml)
 [![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12-blue)](https://www.python.org)
-[![Poetry](https://img.shields.io/badge/poetry-1.0+-blueviolet)](https://python-poetry.org)
+[![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Flake8](https://img.shields.io/badge/flake8-7.2.0-blue)](https://flake8.pycqa.org)
-[![isort](https://img.shields.io/badge/isort-5.13.2-blue)](https://pycqa.github.io/isort)
-[![mdformat](https://img.shields.io/badge/mdformat-0.7.22-blue)](https://mdformat.readthedocs.io)
-[![pytest](https://img.shields.io/badge/pytest-latest-blue)](https://docs.pytest.org)
-[![coverage](https://img.shields.io/badge/coverage-latest-blue)](https://coverage.readthedocs.io)
+[![coverage](https://img.shields.io/badge/coverage-92%25-green)](https://coverage.readthedocs.io)
 
 </div>
 
-Check out the [docs](https://duncankmckinnon.github.io/arize_toolkit) for the latest features and information.
+## 📚 Documentation
+
+### Quick Links
+
+- [**Home**](https://duncankmckinnon.github.io/arize_toolkit) - Main documentation page
+- [**Quickstart Guide**](https://duncankmckinnon.github.io/arize_toolkit/quickstart) - Get started quickly with Arize Toolkit
+
+### Tools Documentation
+
+| Tool Category | Description |
+|--------------|-------------|
+| [**Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage models, retrieve performance metrics and inference volumes |
+| [**Monitor Tools**](https://duncankmckinnon.github.io/arize_toolkit/monitor_tools) | Create, copy, and manage monitors and alerting |
+| [**Custom Metrics Tools**](https://duncankmckinnon.github.io/arize_toolkit/custom_metrics_tools) | Create and manage custom metrics |
+| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, and LLM features |
+| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and models |
+| [**Data Import Tools**](https://duncankmckinnon.github.io/arize_toolkit/data_import_tools) | Import data from cloud storage and databases |
+| [**Dashboard Tools**](https://duncankmckinnon.github.io/arize_toolkit/dashboard_tools) | Create and manage dashboards |
+| [**Utility Tools**](https://duncankmckinnon.github.io/arize_toolkit/utility_tools) | Client configuration and utility functions |
+
+### Extensions
+
+| Extension | Description |
+|-----------|-------------|
+| [**Prompt Optimization**](https://duncankmckinnon.github.io/arize_toolkit/extensions/prompt_optimization) | Automated prompt improvement based on historical performance |
+
+### For Developers
+
+- [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
+- [**Integration Tests**](https://duncankmckinnon.github.io/arize_toolkit/developers/integration_test) - Running integration tests
 
 ## Disclaimer
 
@@ -39,11 +64,22 @@ Here's a quick overview of the main features in the current release:
 - Work with LLM features like prompts and annotations
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
+- **Prompt Optimization Extension** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
 
 ## Installation
 
 ```bash
 pip install arize_toolkit
+```
+
+### Optional Dependencies
+
+#### Prompt Optimization Extension
+
+For automated prompt optimization using meta-prompt techniques, install with the `prompt_optimizer` extras:
+
+```bash
+pip install arize_toolkit[prompt_optimizer]
 ```
 
 ## Client Setup
@@ -69,37 +105,3 @@ For the example below, the organization is `Demo Models` and the space is `Demo 
 For SaaS users, the default API endpoint is always going to be `https://api.arize.com`.
 If you are using an on prem deployment of Arize, you will need to provide the `api_url` parameter.
 This parameters should just be the base url of your Arize instance.
-
-### Sleep Time
-
-The `Client` class can be configured to wait a certain amount of time between requests. This is useful to avoid rate limiting.
-The default sleep time is 0 seconds. When instantiating the client, you can set the `sleep_time` parameter to the number of seconds to wait between requests. This can save time if you are making a large number or requests or getting a large amount of data. If you start seeing rate limit errors, you can increase this value. There is a helper function in the client to update the sleep time in line:
-
-#### `set_sleep_time`
-
-```python
-from arize_toolkit import Client
-
-client: Client = client.set_sleep_time(sleep_time: int)
-```
-
-This will update the sleep time for the existing client in line.
-
-- **Parameters**
-
-  - `sleep_time` – The number of seconds to wait between requests
-
-- **Returns**
-
-  - `Client` – The updated client
-
-- **Example**
-
-```python
-from arize_toolkit import Client
-
-client = Client(..., sleep_time=0)
-
-# Update the sleep time in line
-lots_of_models = client.set_sleep_time(10).get_all_models()
-```
