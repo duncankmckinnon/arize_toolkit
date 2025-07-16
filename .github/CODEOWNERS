@@ -8,8 +8,8 @@
 
 # Specific module owners
 /arize_toolkit/client.py @duncankmckinnon
-/arize_toolkit/models.py @duncankmckinnon
-/arize_toolkit/types.py @duncankmckinnon
+/arize_toolkit/models/* @duncankmckinnon
+/arize_toolkit/types/* @duncankmckinnon
 
 # Documentation owners
 /docs_site/ @duncankmckinnon
