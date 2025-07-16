@@ -11,9 +11,9 @@ from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import Tiktoken
 from arize_toolkit.utils import get_key_value
 
 
-class MetaPromptOptimizer:
+class PromptLearningOptimizer:
     """
-    MetaPromptOptimizer is a class that optimizes a prompt using the meta-prompt approach.
+    PromptLearningOptimizer is a class that optimizes a prompt using the meta-prompt approach.
 
     Args:
         prompt: Either a PromptVersion object or list of messages or a string representing the user prompt
@@ -43,11 +43,11 @@ class MetaPromptOptimizer:
     ```python
         import pandas as pd
         import os
-        from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+        from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 
         os.environ["OPENAI_API_KEY"] = "your-api-key"
 
-        optimizer = MetaPromptOptimizer(
+        optimizer = PromptLearningOptimizer(
             prompt="You are a helpful assistant. Answer this question: {question}",
             model_choice="gpt-4",
         )

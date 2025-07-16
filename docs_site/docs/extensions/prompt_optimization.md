@@ -17,7 +17,7 @@ This extension is particularly useful for:
 
 | Component | Function | Purpose |
 |-----------|----------|---------|
-| [`MetaPromptOptimizer`](#metapromptoptimizer) | | Main class for prompt optimization workflow |
+| [`PromptLearningOptimizer`](#promptlearningoptimizer) | | Main class for prompt optimization workflow |
 | | [`optimize`](#optimize) | Generate optimized prompt from historical data |
 | | [`run_evaluators`](#run_evaluators) | Run evaluators to add feedback columns |
 | [`TiktokenSplitter`](#tiktokensplitter) | | Utility for splitting datasets into token-limited batches |
@@ -43,12 +43,12 @@ pip install arize_toolkit[prompt_optimizer]
 Once installed, import the extension like this:
 
 ```python
-from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 ```
 
 ### API Key Configuration
 
-The MetaPromptOptimizer requires an OpenAI API key. You can provide it in two ways:
+The PromptLearningOptimizer requires an OpenAI API key. You can provide it in two ways:
 
 **Method 1: Environment Variable (Recommended)**
 Either set the environment variable in your notebook or project directly (as shown), or provide it in a docker `env` configuration or local `.env` file. As long as the name is `OPENAI_API_KEY`, it will be picked up automatically.
@@ -60,7 +60,7 @@ import os
 os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
 # The optimizer will automatically use the environment variable
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt="Answer: {question}",
 )
 ```
@@ -70,7 +70,7 @@ You can also pass in the key directly within the function.
 
 ```python
 # Pass the API key directly
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt="Answer: {question}",
     openai_api_key="your-api-key-here",
 )
@@ -78,12 +78,12 @@ optimizer = MetaPromptOptimizer(
 
 ______________________________________________________________________
 
-## `MetaPromptOptimizer`
+## `PromptLearningOptimizer`
 
 ### Overview
 
 ```python
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt: Union[PromptVersion, str, List[Dict[str, str]]],
     model_choice: str = "gpt-4",
     openai_api_key: Optional[str] = None,
@@ -111,7 +111,7 @@ optimizer = MetaPromptOptimizer(
 ```python
 import os
 import pandas as pd
-from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 
 # Set OpenAI API key (if not already set)
 os.environ["OPENAI_API_KEY"] = "your-api-key-here"
@@ -127,7 +127,7 @@ data = pd.DataFrame(
 )
 
 # Create optimizer
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt="Answer the question: {question}",
     model_choice="gpt-4",
 )
@@ -336,7 +336,7 @@ ______________________________________________________________________
 
 ### Running Evaluations Separately
 
-The `MetaPromptOptimizer` allows you to run evaluations either as part of the optimization process or as a separate step. This flexibility is useful when you want to:
+The `PromptLearningOptimizer` allows you to run evaluations either as part of the optimization process or as a separate step. This flexibility is useful when you want to:
 
 1. Pre-process your dataset with evaluations before optimization
 1. Add additional evaluations to an existing dataset
@@ -345,11 +345,11 @@ The `MetaPromptOptimizer` allows you to run evaluations either as part of the op
 - Example: Separate Evaluation Step
 
 ```python
-from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 from phoenix.evals import llm_classify, RAG_RELEVANCY_PROMPT_TEMPLATE
 
 # Initialize optimizer
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt="Answer the question: {question}",
     model_choice="gpt-4",
 )
@@ -412,7 +412,7 @@ prompt_v1 = PromptVersion(
 )
 
 # Optimize it
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt=prompt_v1,
     model_choice="gpt-4",
 )
@@ -430,7 +430,7 @@ For datasets that exceed context limits:
 
 ```python
 # The optimizer automatically handles batching
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt=template,
     model_choice="gpt-4",
 )
@@ -463,7 +463,7 @@ Common errors and solutions:
 ```python
 # Missing API Key
 try:
-    optimizer = MetaPromptOptimizer(...)
+    optimizer = PromptLearningOptimizer(...)
 except Exception as e:
     # Set OPENAI_API_KEY environment variable or pass openai_api_key parameter
     
@@ -490,7 +490,7 @@ Here's a full workflow for optimizing a customer support prompt:
 ```python
 import os
 import pandas as pd
-from arize_toolkit.extensions.prompt_optimizer import MetaPromptOptimizer
+from arize_toolkit.extensions.prompt_optimizer import PromptLearningOptimizer
 
 # Configure OpenAI API key
 # Option 1: Environment variable (recommended for production)
@@ -521,7 +521,7 @@ Customer Query: {customer_query}
 Please provide a clear, concise response."""
 
 # Create optimizer with multiple feedback signals
-optimizer = MetaPromptOptimizer(
+optimizer = PromptLearningOptimizer(
     prompt=current_prompt,
     model_choice="gpt-4",
 )
@@ -538,10 +538,10 @@ optimized_prompt = optimizer.optimize(
 
 ## API Reference
 
-### MetaPromptOptimizer
+### PromptLearningOptimizer
 
 ```python
-class MetaPromptOptimizer:
+class PromptLearningOptimizer:
     def __init__(
         self,
         prompt: Union[PromptVersion, str, List[Dict[str, str]]],
@@ -549,7 +549,7 @@ class MetaPromptOptimizer:
         openai_api_key: Optional[str] = None,
     ):
         """
-        Initialize the MetaPromptOptimizer.
+        Initialize the PromptLearningOptimizer.
 
         Args:
             prompt: The prompt to optimize (PromptVersion, string, or list of messages)

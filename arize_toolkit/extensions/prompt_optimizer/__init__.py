@@ -6,12 +6,12 @@ Requires the 'prompt_optimizer' optional dependency to be installed.
 """
 
 try:
-    from arize_toolkit.extensions.prompt_optimizer.meta_prompt_optimizer import MetaPromptOptimizer
+    from arize_toolkit.extensions.prompt_optimizer.prompt_learning_optimizer import PromptLearningOptimizer
     from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
     __all__ = [
         "TiktokenSplitter",
-        "MetaPromptOptimizer",
+        "PromptLearningOptimizer",
     ]
 except ImportError as e:
     # If optional dependencies are not installed, provide helpful error message
