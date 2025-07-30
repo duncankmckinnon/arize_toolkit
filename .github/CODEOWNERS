@@ -4,19 +4,19 @@
 # Format: file_pattern @user_or_team
 
 # Default owners for everything
-* @duncankmckinnon
+* @duncankmckinnon @trevorlaviale @gabe0912
 
 # Specific module owners
-/arize_toolkit/client.py @duncankmckinnon
-/arize_toolkit/models/* @duncankmckinnon
-/arize_toolkit/types/* @duncankmckinnon
+/arize_toolkit/client.py @duncankmckinnon @trevorlaviale @gabe0912
+/arize_toolkit/models/* @duncankmckinnon @trevorlaviale @gabe0912
+/arize_toolkit/types/* @duncankmckinnon @trevorlaviale @gabe0912
 
 # Documentation owners
-/docs_site/ @duncankmckinnon
-*.md @duncankmckinnon
+/docs_site/ @duncankmckinnon @trevorlaviale @gabe0912
+*.md @duncankmckinnon @trevorlaviale @gabe0912
 
 # GitHub workflow owners
-/.github/ @duncankmckinnon
+/.github/ @duncankmckinnon @trevorlaviale @gabe0912
 
 # Test owners
-/tests/ @duncankmckinnon 
+/tests/ @duncankmckinnon @trevorlaviale @gabe0912
