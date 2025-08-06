@@ -164,8 +164,8 @@ class DeleteDataMutation(BaseQuery):
 
     class Variables(BaseVariables):
         modelId: str
-        startTime: datetime
-        endTime: datetime = datetime.now()
+        startDate: datetime
+        endDate: datetime = datetime.now()
         environment: Literal["PRODUCTION", "PREPRODUCTION"] = "PRODUCTION"
 
     class QueryException(ArizeAPIException):

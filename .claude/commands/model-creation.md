@@ -1,0 +1,197 @@
+# Creating New GraphQL Models
+
+When creating a new model class for use in GraphQL queries or mutations, follow these guidelines:
+
+## When to Create a New GraphQL Model
+
+Create a new GraphQL model class when:
+
+1. You need to represent a new type of data from the GraphQL API
+1. You need to define input parameters for a mutation
+1. You need to structure response data from a query
+1. You need to share a common set of fields across multiple queries
+
+## Model Class Structure
+
+```python
+from typing import Optional, List, Literal, Dict, Any
+from pydantic import Field
+from arize_toolkit.utils import GraphQLModel
+
+
+class NewModel(GraphQLModel):
+    # Required fields (no default)
+    id: str = Field(description="The unique identifier")
+    name: str = Field(description="The name of the item")
+
+    # Optional fields (with defaults)
+    description: Optional[str] = Field(
+        default=None, description="Optional description of the item"
+    )
+
+    # Enums and Literals
+    status: Literal["active", "inactive"] = Field(
+        default="active", description="Current status of the item"
+    )
+
+    # Nested models
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional metadata"
+    )
+
+    # Lists of other models
+    items: Optional[List[OtherModel]] = Field(
+        default=None, description="List of related items"
+    )
+
+    # Optional: Add validators if needed
+    @model_validator(mode="after")
+    def validate_model(self):
+        # Add validation logic
+        return self
+```
+
+## Best Practices for GraphQL Models
+
+1. **Field Definitions**:
+
+   - Use `Field` for all fields to provide descriptions
+   - Make fields optional with `Optional[]` when appropriate
+   - Provide sensible defaults for optional fields
+   - Use type hints for all fields
+   - Add descriptive docstrings for complex fields
+
+1. **Type Usage**:
+
+   - Use `str` for IDs and text fields
+   - Use `Optional[]` for nullable fields
+   - Create new type class of `InputValidationEnum` for complex enum types
+   - Use `List[]` for array fields
+   - Use `Dict` for JSON-like fields
+   - Use nested models for complex structures
+
+1. **Model Organization**:
+
+   - Group related models together
+   - Use clear, descriptive names
+   - Inherit from `GraphQLModel`
+   - Add section comments for model groups
+   - Place models in appropriate files
+
+1. **Input vs Response Models**:
+
+   - Create separate models for input and response when they differ
+   - Use `Input` suffix for mutation input models
+   - Include only necessary fields in input models
+   - Use more comprehensive fields in response models
+
+1. **Validation**:
+
+   - Add model validators for complex validation rules
+   - Validate required fields based on conditions
+   - Use Pydantic's validation features
+   - Add custom error messages
+
+## Example: Complete Model Definition
+
+```python
+from datetime import datetime
+from typing import Optional, List, Literal
+from pydantic import Field, model_validator
+from arize_toolkit.utils import GraphQLModel
+
+
+class UserModel(GraphQLModel):
+    """Model representing a user in the system."""
+
+    # Required fields
+    id: str = Field(description="The user's unique identifier")
+    name: str = Field(description="The user's display name")
+
+    # Optional fields with defaults
+    email: Optional[str] = Field(default=None, description="The user's email address")
+    role: Literal["admin", "user", "guest"] = Field(
+        default="user", description="The user's role in the system"
+    )
+
+    # Complex fields
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional user metadata"
+    )
+    created_at: Optional[datetime] = Field(
+        default=None, description="When the user was created"
+    )
+
+    # Validation
+    @model_validator(mode="after")
+    def validate_user(self):
+        if self.role == "admin" and not self.email:
+            raise ValueError("Admin users must have an email address")
+        return self
+
+
+class UserInput(GraphQLModel):
+    """Input model for creating or updating a user."""
+
+    name: str = Field(description="The user's display name")
+    email: Optional[str] = Field(default=None, description="The user's email address")
+    role: Literal["admin", "user", "guest"] = Field(
+        default="user", description="The user's role in the system"
+    )
+```
+
+## Using Models in Queries
+
+1. **In Query Variables**:
+
+```python
+class GetUserQuery(BaseQuery):
+    class Variables(BaseVariables):
+        user_id: str  # Simple type
+        include_metadata: Optional[bool] = False  # Optional parameter
+```
+
+2. **In Query Response**:
+
+```python
+class GetUserQuery(BaseQuery):
+    class QueryResponse(UserModel):  # Use the model as response type
+        pass
+```
+
+3. **In Mutations**:
+
+```python
+class CreateUserMutation(BaseQuery):
+    class Variables(UserInput):  # Use input model for variables
+        pass
+```
+
+## Testing Models
+
+1. Test model validation:
+
+```python
+def test_user_model_validation():
+    # Test valid data
+    user = UserModel(id="123", name="Test User")
+    assert user.role == "user"  # Default value
+
+    # Test invalid data
+    with pytest.raises(ValueError):
+        UserModel(id="123", name="Admin User", role="admin")  # Missing email
+```
+
+2. Test model serialization:
+
+```python
+def test_user_model_serialization():
+    user = UserModel(id="123", name="Test User")
+    data = user.to_dict()
+    assert data["id"] == "123"
+    assert data["name"] == "Test User"
+    assert "email" not in data  # Optional field not included
+```
+
+```
+```
