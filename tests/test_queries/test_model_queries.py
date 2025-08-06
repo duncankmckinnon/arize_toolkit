@@ -168,7 +168,7 @@ class TestDeleteDataMutation:
         result = DeleteDataMutation.run_graphql_mutation(
             gql_client,
             modelId="123",
-            startTime="2024-01-01T00:00:00Z",
+            startDate="2024-01-01T00:00:00Z",
         )
 
         # Assertions
@@ -184,8 +184,8 @@ class TestDeleteDataMutation:
             result = DeleteDataMutation.run_graphql_mutation(
                 gql_client,
                 modelId="123",
-                startTime="2024-01-01T00:00:00Z",
-                endTime="2025-01-01T00:00:00Z",
+                startDate="2024-01-01T00:00:00Z",
+                endDate="2025-01-01T00:00:00Z",
                 environment="PREPRODUCTION",
             )
         assert result is None
