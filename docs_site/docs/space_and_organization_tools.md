@@ -2,19 +2,53 @@
 
 ## Overview
 
-These tools and properties on the `Client` object help you manage the client's active connection to specific Arize Spaces and Organizations. They also provide convenient methods for generating URLs to various entities within the Arize platform, based on the currently configured space.
+These tools and properties on the `Client` object help you manage the client's active connection to specific Arize Spaces and Organizations. They also provide convenient methods for creating new spaces, managing API keys, and generating URLs to various entities within the Arize platform, based on the currently configured space.
+
+**Note:** When creating a `Client`, both `organization` and `space` parameters are optional. If not provided:
+
+- If no organization is specified, the client will automatically use the first organization in your account
+- If no space is specified, the client will automatically use the first space in the selected organization
 
 | Operation | Helper Method/Property |
 |-----------------------------|-----------------------------|
 | Switch active Space/Organization | [`switch_space`](#switch_space) |
 | Get all Organizations | [`get_all_organizations`](#get_all_organizations) |
 | Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
+| Create new Space | [`create_new_space`](#create_new_space) |
+| Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
 | Get current Space URL | [`space_url`](#space_url) (Property) |
 | Get Model URL | [`model_url`](#model_url) |
 | Get Custom Metric URL | [`custom_metric_url`](#custom_metric_url) |
 | Get Monitor URL | [`monitor_url`](#monitor_url) |
 | Get Prompt Hub Prompt URL | [`prompt_url`](#prompt_url) |
 | Get Prompt Hub Version URL | [`prompt_version_url`](#prompt_version_url) |
+
+______________________________________________________________________
+
+## Client Initialization
+
+The `Client` constructor accepts optional `organization` and `space` parameters, providing flexible initialization options:
+
+```python
+# Explicit organization and space
+client = Client(
+    organization="my_organization", space="my_space", arize_developer_key="your_api_key"
+)
+
+# Auto-select first organization and space
+client = Client(arize_developer_key="your_api_key")
+
+# Specify organization, auto-select first space in that org
+client = Client(organization="my_organization", arize_developer_key="your_api_key")
+
+client.switch_space(space="my_space")
+```
+
+**Auto-selection Behavior:**
+
+- If no organization is provided, the client selects the first organization in your account
+- If no space is provided, the client selects the first space in the selected organization
+- This makes it easy to get started quickly while still allowing precise control when needed
 
 ______________________________________________________________________
 
@@ -145,6 +179,93 @@ for space in spaces:
     client.switch_space(space=space["name"])
     models = client.get_all_models()
     print(f"Space '{space['name']}' has {len(models)} models")
+```
+
+______________________________________________________________________
+
+### `create_new_space`
+
+```python
+space_id: str = client.create_new_space(name: str, private: bool = True)
+```
+
+Creates a new space in the current organization. This method allows you to programmatically create new spaces for organizing your ML models and data.
+
+**Parameters**
+
+- `name` (str) – Name for the new space
+- `private` (bool, optional) – Whether the space should be private. Defaults to True.
+
+**Returns**
+
+- `str` – The unique identifier (ID) of the newly created space
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error creating the space
+
+**Example**
+
+```python
+# Create a private space (default)
+new_space_id = client.create_new_space("My Production Space")
+print(f"Created private space with ID: {new_space_id}")
+
+# Create a public space
+public_space_id = client.create_new_space("Public Demo Space", private=False)
+print(f"Created public space with ID: {public_space_id}")
+
+# Switch to the newly created space
+client.switch_space(space="My Production Space")
+```
+
+______________________________________________________________________
+
+### `create_space_admin_api_key`
+
+```python
+api_key_info: dict = client.create_space_admin_api_key(name: str, space_id: str)
+```
+
+Creates an admin API key for a specific space. This method generates API keys with admin-level permissions for the specified space, useful for automated workflows and service accounts.
+
+**Parameters**
+
+- `name` (str) – Name for the API key (for identification purposes)
+- `space_id` (str) – ID of the space to create the admin key for
+
+**Returns**
+
+A dictionary containing:
+
+- `apiKey` (str): The generated API key
+- `expiresAt` (datetime, optional): When the key expires (None if permanent)
+- `id` (str): Unique identifier for the key
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error creating the API key
+
+**Example**
+
+```python
+# Create an admin key for a specific space
+space_id = "space_123456"
+key_info = client.create_space_admin_api_key("Production Bot Key", space_id)
+
+print(f"API Key: {key_info['apiKey']}")
+print(f"Key ID: {key_info['id']}")
+if key_info["expiresAt"]:
+    print(f"Expires: {key_info['expiresAt']}")
+else:
+    print("Key does not expire")
+
+# Use the API key to create a new client for that space
+production_client = Client(
+    organization="my_org",
+    space="production_space",
+    arize_developer_key=key_info["apiKey"],
+)
 ```
 
 ______________________________________________________________________

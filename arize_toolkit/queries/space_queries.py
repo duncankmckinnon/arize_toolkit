@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from arize_toolkit.models.space_models import Organization, Space
@@ -238,6 +239,59 @@ class CreateNewSpaceMutation(BaseQuery):
         space = result["createSpace"]["space"]
         return (
             [cls.QueryResponse(name=space["name"], id=space["id"])],
+            False,
+            None,
+        )
+
+
+class CreateSpaceAdminApiKeyMutation(BaseQuery):
+    graphql_query = """
+    mutation createSpaceAdminApiKey($name: String!, $space_id: String!) {
+        createServiceApiKey(
+            input: {
+                name: $name,
+                spaceId: $space_id,
+                spaceRole: admin,
+                accountOrganizationRole: member,
+                accountRole: member,
+            }
+        ) {
+            apiKey
+            keyInfo {
+                expiresAt
+                id
+            }
+        }
+    }
+    """
+    query_description = "Create a space admin API key for the specified space"
+
+    class Variables(BaseVariables):
+        name: str
+        space_id: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to create space admin API key"
+
+    class QueryResponse(BaseResponse):
+        apiKey: str
+        expiresAt: Optional[datetime]
+        id: str
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "createServiceApiKey" not in result or "apiKey" not in result["createServiceApiKey"] or "keyInfo" not in result["createServiceApiKey"]:
+            cls.raise_exception("Failed to create space admin API key")
+        api_key_data = result["createServiceApiKey"]
+        key_info = api_key_data["keyInfo"]
+        return (
+            [
+                cls.QueryResponse(
+                    apiKey=api_key_data["apiKey"],
+                    expiresAt=key_info.get("expiresAt"),
+                    id=key_info["id"],
+                )
+            ],
             False,
             None,
         )

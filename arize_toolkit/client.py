@@ -69,7 +69,7 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
-from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, CreateSpaceAdminApiKeyMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -277,6 +277,29 @@ class Client:
             private=private,
         )
         return result.id
+
+    def create_space_admin_api_key(self, name: str, space_id: str) -> dict:
+        """Creates an admin API key for a specific space.
+
+        Args:
+            name (str): Name for the API key
+            space_id (str): ID of the space to create the admin key for
+
+        Returns:
+            dict: A dictionary containing:
+            - apiKey (str): The generated API key
+            - expiresAt (datetime, optional): When the key expires (None if permanent)
+            - id (str): Unique identifier for the key
+
+        Raises:
+            ArizeAPIException: If there is an error creating the API key
+        """
+        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(
+            self._graphql_client,
+            name=name,
+            space_id=space_id,
+        )
+        return result.to_dict()
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.

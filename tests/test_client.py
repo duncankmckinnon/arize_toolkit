@@ -1652,6 +1652,52 @@ class TestUtilityMethods:
         assert variables["name"] == "Private Test Space"
         assert variables["private"] is True
 
+    def test_create_space_admin_api_key(self, client, mock_graphql_client):
+        """Test creating a space admin API key"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "createServiceApiKey": {
+                "apiKey": "sk_admin_1234567890abcdef",
+                "keyInfo": {"expiresAt": "2024-12-31T23:59:59Z", "id": "key_admin_123"},
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        api_key_info = client.create_space_admin_api_key("Admin Key", "space_123")
+
+        assert api_key_info["apiKey"] == "sk_admin_1234567890abcdef"
+        assert api_key_info["expiresAt"] == "2024-12-31T23:59:59.000000Z"
+        assert api_key_info["id"] == "key_admin_123"
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["name"] == "Admin Key"
+        assert variables["space_id"] == "space_123"
+
+    def test_create_space_admin_api_key_no_expiration(self, client, mock_graphql_client):
+        """Test creating a space admin API key without expiration"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "createServiceApiKey": {
+                "apiKey": "sk_admin_permanent_abcdef",
+                "keyInfo": {"expiresAt": None, "id": "key_permanent_456"},
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        api_key_info = client.create_space_admin_api_key("Permanent Admin Key", "space_456")
+
+        assert api_key_info["apiKey"] == "sk_admin_permanent_abcdef"
+        assert api_key_info["expiresAt"] is None
+        assert api_key_info["id"] == "key_permanent_456"
+        mock_graphql_client.return_value.execute.assert_called_once()
+
     def test_spaces_and_organizations_integration(self, client, mock_graphql_client):
         """Test integration between space and organization methods"""
         mock_graphql_client.return_value.execute.reset_mock()

@@ -1,6 +1,8 @@
+from datetime import datetime
+
 import pytest
 
-from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, CreateSpaceAdminApiKeyMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
 
 
 class TestOrgIDandSpaceIDQuery:
@@ -584,3 +586,111 @@ class TestCreateNewSpaceMutation:
         assert variables_public.orgId == "org_456"
         assert variables_public.name == "Public Space"
         assert variables_public.private is False
+
+
+class TestCreateSpaceAdminApiKeyMutation:
+    """Test the CreateSpaceAdminApiKeyMutation class."""
+
+    def test_mutation_structure(self):
+        """Test that the mutation structure is correct."""
+        mutation = CreateSpaceAdminApiKeyMutation.graphql_query
+        assert "mutation createSpaceAdminApiKey" in mutation
+        assert "$name: String!" in mutation
+        assert "$space_id: String!" in mutation
+        assert "createServiceApiKey" in mutation
+        assert "spaceId: $space_id" in mutation
+        assert "spaceRole: admin" in mutation
+        assert "accountOrganizationRole: member" in mutation
+        assert "accountRole: member" in mutation
+        assert "apiKey" in mutation
+        assert "keyInfo" in mutation
+
+    def test_successful_mutation(self, gql_client):
+        """Test successful API key creation."""
+        mock_response = {
+            "createServiceApiKey": {
+                "apiKey": "sk_test_1234567890abcdef",
+                "keyInfo": {"expiresAt": "2024-12-31T23:59:59Z", "id": "key_id_123"},
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+
+        assert result.apiKey == "sk_test_1234567890abcdef"
+        assert result.expiresAt == datetime.strptime("2024-12-31T23:59:59Z", "%Y-%m-%dT%H:%M:%S%z")
+        assert result.id == "key_id_123"
+        gql_client.execute.assert_called_once()
+
+    def test_successful_mutation_no_expiration(self, gql_client):
+        """Test successful API key creation without expiration date."""
+        mock_response = {
+            "createServiceApiKey": {
+                "apiKey": "sk_test_abcdef1234567890",
+                "keyInfo": {"expiresAt": None, "id": "key_id_456"},
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Permanent Admin Key", space_id="space_456")
+
+        assert result.apiKey == "sk_test_abcdef1234567890"
+        assert result.expiresAt is None
+        assert result.id == "key_id_456"
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_no_create_service_api_key(self, gql_client):
+        """Test error when createServiceApiKey is not in response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            CreateSpaceAdminApiKeyMutation.QueryException,
+            match="Failed to create space admin API key",
+        ):
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_missing_api_key(self, gql_client):
+        """Test error when apiKey is missing from response."""
+        mock_response = {"createServiceApiKey": {"keyInfo": {"expiresAt": "2024-12-31T23:59:59Z", "id": "key_id_123"}}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            CreateSpaceAdminApiKeyMutation.QueryException,
+            match="Failed to create space admin API key",
+        ):
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_missing_key_info(self, gql_client):
+        """Test error when keyInfo is missing from response."""
+        mock_response = {"createServiceApiKey": {"apiKey": "sk_test_1234567890abcdef"}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            CreateSpaceAdminApiKeyMutation.QueryException,
+            match="Failed to create space admin API key",
+        ):
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for required variables."""
+        # Test missing name
+        with pytest.raises(Exception) as exc_info:
+            CreateSpaceAdminApiKeyMutation.Variables(space_id="space_123")
+        assert "name" in str(exc_info.value)
+
+        # Test missing space_id
+        with pytest.raises(Exception) as exc_info:
+            CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key")
+        assert "space_id" in str(exc_info.value)
+
+        # Test valid variables
+        variables = CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key", space_id="space_123")
+        assert variables.name == "Test Admin Key"
+        assert variables.space_id == "space_123"
