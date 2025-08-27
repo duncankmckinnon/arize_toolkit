@@ -65,6 +65,7 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
                         spaces(first: 1) {
                             edges {
                                 node {
+                                    name
                                     id
                                 }
                             }
@@ -86,6 +87,7 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
     class QueryResponse(BaseResponse):
         organization_id: str
         space_id: str
+        space_name: str
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
@@ -96,8 +98,15 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
         if "spaces" not in node or "edges" not in node["spaces"] or len(node["spaces"]["edges"]) == 0:
             cls.raise_exception("No spaces found in the organization")
         space_id = node["spaces"]["edges"][0]["node"]["id"]
+        space_name = node["spaces"]["edges"][0]["node"]["name"]
         return (
-            [cls.QueryResponse(organization_id=organization_id, space_id=space_id)],
+            [
+                cls.QueryResponse(
+                    organization_id=organization_id,
+                    space_id=space_id,
+                    space_name=space_name,
+                )
+            ],
             False,
             None,
         )
@@ -189,3 +198,46 @@ class GetAllOrganizationsQuery(BaseQuery):
         has_next_page = page_info["hasNextPage"]
         end_cursor = page_info["endCursor"]
         return (org_nodes, has_next_page, end_cursor)
+
+
+class CreateNewSpaceMutation(BaseQuery):
+    graphql_query = """
+    mutation createNewSpace($orgId: ID!, $name: String!, $private: Boolean!) {
+        createSpace(
+            input: {
+                name: $name
+                accountOrganizationId: $orgId
+                private: $private
+            }
+        ) {
+            space {
+                name
+                id
+            }
+        }
+    }
+    """
+    query_description = "Create a new space in the specified organization"
+
+    class Variables(BaseVariables):
+        orgId: str
+        name: str
+        private: bool
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to create new space"
+
+    class QueryResponse(BaseResponse):
+        name: str
+        id: str
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "createSpace" not in result or "space" not in result["createSpace"]:
+            cls.raise_exception("Failed to create space")
+        space = result["createSpace"]["space"]
+        return (
+            [cls.QueryResponse(name=space["name"], id=space["id"])],
+            False,
+            None,
+        )

@@ -69,7 +69,7 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
-from arize_toolkit.queries.space_queries import GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -103,8 +103,8 @@ class Client:
 
     def __init__(
         self,
-        organization: str,
-        space: str,
+        organization: Optional[str] = None,
+        space: Optional[str] = None,
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
@@ -123,9 +123,25 @@ class Client:
         self._set_org_and_space_id()
 
     def _set_org_and_space_id(self) -> None:
-        results = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=self.organization, space=self.space)
-        self.org_id = results.organization_id
-        self.space_id = results.space_id
+        if not self.organization:
+            organizations = self.get_all_organizations()
+            if len(organizations) > 0:
+                self.organization = organizations[0]["name"]
+                self.org_id = organizations[0]["id"]
+            else:
+                raise ValueError("no organizations in the account")
+        if not self.space:
+            spaces = self.get_all_spaces()
+            if len(spaces) > 0:
+                self.space = spaces[0]["name"]
+                self.space_id = spaces[0]["id"]
+            else:
+                raise ValueError("no spaces in the organization")
+        else:
+            results = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=self.organization, space=self.space)
+            self.org_id = results.organization_id
+            self.space_id = results.space_id
+        logger.info(f"Using organization: {self.organization} and space: {self.space}")
 
     def set_sleep_time(self, sleep_time: int) -> "Client":
         """Updates the sleep time between API requests.
@@ -159,11 +175,14 @@ class Client:
             return self.space_url
         if not space:
             result = OrgAndFirstSpaceQuery.run_graphql_query(self._graphql_client, organization=organization)
+            self.org_id = result.organization_id
+            self.space_id = result.space_id
+            self.organization = organization
+            self.space = result.space_name
         else:
             if not organization:
                 organization = self.organization
             result = OrgIDandSpaceIDQuery.run_graphql_query(self._graphql_client, organization=organization, space=space)
-        if self.space_id != result.space_id:
             self.org_id = result.organization_id
             self.space_id = result.space_id
             self.organization = organization
@@ -237,6 +256,27 @@ class Client:
             sleep_time=self.sleep_time,
         )
         return [result.to_dict() for result in results]
+
+    def create_new_space(self, name: str, private: bool = True) -> str:
+        """Creates a new space in the current organization.
+
+        Args:
+            name (str): Name for the new space
+            private (bool, optional): Whether the space should be private. Defaults to True.
+
+        Returns:
+            str: The unique identifier (ID) of the newly created space
+
+        Raises:
+            ArizeAPIException: If there is an error creating the space
+        """
+        result = CreateNewSpaceMutation.run_graphql_mutation(
+            self._graphql_client,
+            orgId=self.org_id,
+            name=name,
+            private=private,
+        )
+        return result.id
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
@@ -2916,26 +2956,24 @@ class Client:
 
             # Get the widget configuration
             if model_type == ModelType.generative_llm:
-                continue  # TODO: Add support for generative LLMs
-
-                # title = "Tracing Volume"
-                # metric_type = "evaluationMetric"
-                # plots = [
-                #     {
-                #         "modelId": model_id,
-                #         "modelVersionIds": [],  # Required field, empty means all versions
-                #         "title": title,
-                #         "position": 0,
-                #         "modelEnvironmentName": "tracing",  # Enum value, not array
-                #         "metric": "count",
-                #         "filters": [],  # Required field, can be empty list
-                #         "dimension": {
-                #             "category": "spanProperty",
-                #             "name": "name",
-                #             "dataType": "STRING",
-                #         }
-                #     }
-                # ]
+                title = "Tracing Volume"
+                metric_type = "evaluationMetric"
+                plots = [
+                    {
+                        "modelId": model_id,
+                        "modelVersionIds": [],  # Required field, empty means all versions
+                        "title": title,
+                        "position": 0,
+                        "modelEnvironmentName": "tracing",  # Enum value, not array
+                        "metric": "count",
+                        "filters": [],  # Required field, can be empty list
+                        "dimension": {
+                            "category": "spanProperty",
+                            "name": "name",
+                            "dataType": "STRING",
+                        },
+                    }
+                ]
             else:
                 title = "Prediction Volume"
                 metric_type = "evaluationMetric"
