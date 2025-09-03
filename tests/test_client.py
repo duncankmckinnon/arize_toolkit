@@ -1596,19 +1596,34 @@ class TestUtilityMethods:
         """Test creating a new private space (default behavior)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_new_123"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
 
         space_id = client.create_new_space("Test Space")
 
         assert space_id == "space_new_123"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Test Space"
         assert variables["private"] is True
 
@@ -1616,19 +1631,34 @@ class TestUtilityMethods:
         """Test creating a new public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_public_456"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
 
         space_id = client.create_new_space("Public Test Space", private=False)
 
         assert space_id == "space_public_456"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Public Test Space"
         assert variables["private"] is False
 
@@ -1636,19 +1666,34 @@ class TestUtilityMethods:
         """Test creating a new private space (explicitly set)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_private_789"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
 
         space_id = client.create_new_space("Private Test Space", private=True)
 
         assert space_id == "space_private_789"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Private Test Space"
         assert variables["private"] is True
 
@@ -1665,7 +1710,7 @@ class TestUtilityMethods:
 
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        api_key_info = client.create_space_admin_api_key("Admin Key", "space_123")
+        api_key_info = client.create_space_admin_api_key("Admin Key")
 
         assert api_key_info["apiKey"] == "sk_admin_1234567890abcdef"
         assert api_key_info["expiresAt"] == "2024-12-31T23:59:59.000000Z"
@@ -1676,7 +1721,7 @@ class TestUtilityMethods:
         call_args = mock_graphql_client.return_value.execute.call_args
         variables = call_args[1]["variable_values"]["input"]
         assert variables["name"] == "Admin Key"
-        assert variables["space_id"] == "space_123"
+        assert variables["spaceId"] == "test_space_id"
 
     def test_create_space_admin_api_key_no_expiration(self, client, mock_graphql_client):
         """Test creating a space admin API key without expiration"""
@@ -1691,7 +1736,7 @@ class TestUtilityMethods:
 
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        api_key_info = client.create_space_admin_api_key("Permanent Admin Key", "space_456")
+        api_key_info = client.create_space_admin_api_key("Permanent Admin Key")
 
         assert api_key_info["apiKey"] == "sk_admin_permanent_abcdef"
         assert api_key_info["expiresAt"] is None

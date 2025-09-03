@@ -257,12 +257,13 @@ class Client:
         )
         return [result.to_dict() for result in results]
 
-    def create_new_space(self, name: str, private: bool = True) -> str:
+    def create_new_space(self, name: str, private: bool = True, set_as_active: bool = True) -> str:
         """Creates a new space in the current organization.
 
         Args:
             name (str): Name for the new space
             private (bool, optional): Whether the space should be private. Defaults to True.
+            set_as_active (bool, optional): Whether to set the new space as the active space. Defaults to True.
 
         Returns:
             str: The unique identifier (ID) of the newly created space
@@ -272,18 +273,19 @@ class Client:
         """
         result = CreateNewSpaceMutation.run_graphql_mutation(
             self._graphql_client,
-            orgId=self.org_id,
+            accountOrganizationId=self.org_id,
             name=name,
             private=private,
         )
+        if set_as_active:
+            self.switch_space(organization=self.organization, space=name)
         return result.id
 
-    def create_space_admin_api_key(self, name: str, space_id: str) -> dict:
+    def create_space_admin_api_key(self, name: str) -> dict:
         """Creates an admin API key for a specific space.
 
         Args:
             name (str): Name for the API key
-            space_id (str): ID of the space to create the admin key for
 
         Returns:
             dict: A dictionary containing:
@@ -297,7 +299,7 @@ class Client:
         result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(
             self._graphql_client,
             name=name,
-            space_id=space_id,
+            spaceId=self.space_id,
         )
         return result.to_dict()
 
