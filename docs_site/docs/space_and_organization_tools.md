@@ -195,6 +195,7 @@ Creates a new space in the current organization. This method allows you to progr
 
 - `name` (str) – Name for the new space
 - `private` (bool, optional) – Whether the space should be private. Defaults to True.
+- `set_as_active` (bool, optional) – Whether the client should switch to the new space. Defaults to True.
 
 **Returns**
 
@@ -214,9 +215,6 @@ print(f"Created private space with ID: {new_space_id}")
 # Create a public space
 public_space_id = client.create_new_space("Public Demo Space", private=False)
 print(f"Created public space with ID: {public_space_id}")
-
-# Switch to the newly created space
-client.switch_space(space="My Production Space")
 ```
 
 ______________________________________________________________________
@@ -224,15 +222,14 @@ ______________________________________________________________________
 ### `create_space_admin_api_key`
 
 ```python
-api_key_info: dict = client.create_space_admin_api_key(name: str, space_id: str)
+api_key_info: dict = client.create_space_admin_api_key(name: str)
 ```
 
-Creates an admin API key for a specific space. This method generates API keys with admin-level permissions for the specified space, useful for automated workflows and service accounts.
+Creates an admin API key for the active space. This method generates API keys with admin-level permissions for the space, useful for automated workflows and service accounts.
 
 **Parameters**
 
 - `name` (str) – Name for the API key (for identification purposes)
-- `space_id` (str) – ID of the space to create the admin key for
 
 **Returns**
 
@@ -249,9 +246,11 @@ A dictionary containing:
 **Example**
 
 ```python
-# Create an admin key for a specific space
-space_id = "space_123456"
-key_info = client.create_space_admin_api_key("Production Bot Key", space_id)
+# Create a new space - this will be set as the current space
+new_space = client.create_new_space("Production Bot Space")
+
+# Create a new api key for the current space
+key_info = client.create_space_admin_api_key("Production Bot Space Key")
 
 print(f"API Key: {key_info['apiKey']}")
 print(f"Key ID: {key_info['id']}")
@@ -259,13 +258,6 @@ if key_info["expiresAt"]:
     print(f"Expires: {key_info['expiresAt']}")
 else:
     print("Key does not expire")
-
-# Use the API key to create a new client for that space
-production_client = Client(
-    organization="my_org",
-    space="production_space",
-    arize_developer_key=key_info["apiKey"],
-)
 ```
 
 ______________________________________________________________________
