@@ -63,7 +63,6 @@ class BaseQuery:
         try:
             query = gql(cls.graphql_query)
             variable_values = cls.Variables(**kwargs).to_dict(exclude_none=True)
-            print(f"Variable Values: {variable_values}")
             result = client.execute(
                 query,
                 variable_values={"input": variable_values},
