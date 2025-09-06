@@ -1,20 +1,27 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import AnnotationMutationInput, CreatePromptMutationInput, CreatePromptVersionMutationInput, Prompt, PromptVersion
+from arize_toolkit.models import CreatePromptMutationInput, CreatePromptVersionMutationInput, Prompt, PromptVersion, UpdateAnnotationsInput
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
 class CreateAnnotationMutation(BaseQuery):
     graphql_query = """
-    mutation createAnnotation($input: UpdateAnnotationsInput!) {
+    mutation updateAnnotations($input: UpdateAnnotationsInput!) {
         updateAnnotations(input: $input) {
-            clientMutationId
+            result{
+                ... on UpdateAnnotationSuccess {
+                    success
+                }
+                ... on UpdateAnnotationError {
+                    message
+                }
+            }
         }
     }
     """
     query_description = "Create an annotation for a model"
 
-    class Variables(AnnotationMutationInput):
+    class Variables(UpdateAnnotationsInput):
         pass
 
     class QueryException(ArizeAPIException):
@@ -27,7 +34,15 @@ class CreateAnnotationMutation(BaseQuery):
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
         if "updateAnnotations" not in result:
             cls.raise_exception("No annotations updated")
-        return [cls.QueryResponse(success=True)], False, None
+        if "result" not in result["updateAnnotations"]:
+            cls.raise_exception("No result in update annotations")
+        if "success" not in result["updateAnnotations"]["result"]:
+            cls.raise_exception("No success in update annotations")
+        return (
+            [cls.QueryResponse(success=result["updateAnnotations"]["result"]["success"])],
+            False,
+            None,
+        )
 
 
 class GetPromptByIDQuery(BaseQuery):

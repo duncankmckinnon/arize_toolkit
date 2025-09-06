@@ -76,54 +76,87 @@ def mock_prompt_version():
 
 class TestCreateAnnotationMutation:
     @pytest.mark.parametrize(
-        "annotations,model_environment,note",
+        "annotation_updates,model_environment",
         [
             (
                 [
                     {
-                        "annotationType": "label",
-                        "label": "test",
-                        "updatedBy": "test",
-                        "name": "test",
+                        "annotationConfigId": "config123",
+                        "annotation": {
+                            "annotationType": "label",
+                            "label": "test",
+                            "updatedBy": "test",
+                            "name": "test",
+                        },
                     },
                     {
-                        "annotationType": "score",
-                        "score": 0.5,
-                        "updatedBy": "test",
-                        "name": "test",
+                        "annotationConfigId": "config456",
+                        "annotation": {
+                            "annotationType": "score",
+                            "score": 0.5,
+                            "updatedBy": "test",
+                            "name": "test",
+                        },
                     },
                 ],
                 "tracing",
-                {"text": "test"},
             ),
             (
-                {
-                    "annotationType": "label",
-                    "label": "test",
-                    "updatedBy": "test",
-                    "name": "test",
-                },
+                [
+                    {
+                        "annotationConfigId": "config789",
+                        "annotation": {
+                            "annotationType": "text",
+                            "text": "sample text",
+                            "updatedBy": "test",
+                            "name": "test",
+                        },
+                    }
+                ],
                 "production",
-                None,
             ),
         ],
     )
-    def test_create_annotation_mutation_success(self, gql_client, annotations, model_environment, note):
-        mock_response = {"updateAnnotations": {"clientMutationId": None}}
+    def test_create_annotation_mutation_success(self, gql_client, annotation_updates, model_environment):
+        mock_response = {"updateAnnotations": {"result": {"success": True}}}
         gql_client.execute.return_value = mock_response
         # Execute the query
         result = CreateAnnotationMutation.run_graphql_mutation(
             gql_client,
             modelId="123",
-            annotations=annotations,
+            annotationUpdates=annotation_updates,
             recordId="123",
             startTime="2024-01-01T00:00:00Z",
             modelEnvironment=model_environment,
-            note=note,
         )
 
         # Assertions
         assert result.success is True
+
+    def test_create_annotation_mutation_error(self, gql_client):
+        """Test CreateAnnotationMutation with error response."""
+        mock_response = {"updateAnnotations": {"result": {"message": "Annotation failed"}}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error in creating an annotation for a model"):
+            CreateAnnotationMutation.run_graphql_mutation(
+                gql_client,
+                modelId="123",
+                annotationUpdates=[
+                    {
+                        "annotationConfigId": "config123",
+                        "annotation": {
+                            "annotationType": "label",
+                            "label": "test",
+                            "updatedBy": "test",
+                            "name": "test",
+                        },
+                    }
+                ],
+                recordId="123",
+                startTime="2024-01-01T00:00:00Z",
+                modelEnvironment="tracing",
+            )
 
 
 class TestCreatePromptMutation:

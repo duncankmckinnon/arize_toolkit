@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from arize_toolkit.models import (
     AnnotationInput,
-    AnnotationMutationInput,
+    AnnotationWithConfigIdInput,
     CreatePromptBaseMutationInput,
     CreatePromptMutationInput,
     CreatePromptVersionMutationInput,
@@ -16,6 +18,7 @@ from arize_toolkit.models import (
     ToolChoiceInput,
     ToolConfigInput,
     ToolInput,
+    UpdateAnnotationsInput,
     User,
 )
 from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, ModelEnvironment, PromptVersionInputVariableFormatEnum
@@ -376,14 +379,22 @@ class TestLanguageModelInputs:
         assert params.region == "us-east-1"
 
     def test_annotation_mutation_input(self):
-        """Test AnnotationMutationInput model."""
+        """Test UpdateAnnotationsInput model."""
         start_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
 
-        # Single annotation
-        mutation1 = AnnotationMutationInput(
+        # Single annotation update
+        mutation1 = UpdateAnnotationsInput(
             modelId="model123",
             note=NoteInput(text="Test note"),
-            annotations=AnnotationInput(name="quality", updatedBy="user123", score=0.9, annotationType="score"),
+            annotationUpdates=AnnotationWithConfigIdInput(
+                annotationConfigId="config123",
+                annotation=AnnotationInput(
+                    name="quality",
+                    updatedBy="user123",
+                    score=0.9,
+                    annotationType="score",
+                ),
+            ),
             recordId="record123",
             startTime=start_time,
         )
@@ -392,23 +403,80 @@ class TestLanguageModelInputs:
         assert mutation1.note.text == "Test note"
         assert mutation1.recordId == "record123"
         assert mutation1.modelEnvironment == ModelEnvironment.tracing  # Default
+        assert mutation1.annotationUpdates.annotationConfigId == "config123"
+        assert mutation1.annotationUpdates.annotation.name == "quality"
 
-        # Multiple annotations
-        mutation2 = AnnotationMutationInput(
+        # Multiple annotation updates
+        mutation2 = UpdateAnnotationsInput(
             modelId="model123",
-            annotations=[
-                AnnotationInput(
-                    name="sentiment",
-                    updatedBy="user1",
-                    label="positive",
-                    annotationType="label",
+            annotationUpdates=[
+                AnnotationWithConfigIdInput(
+                    annotationConfigId="config456",
+                    annotation=AnnotationInput(
+                        name="sentiment",
+                        updatedBy="user1",
+                        label="positive",
+                        annotationType="label",
+                    ),
                 ),
-                AnnotationInput(name="quality", updatedBy="user2", score=0.8, annotationType="score"),
+                AnnotationWithConfigIdInput(
+                    annotationConfigId="config789",
+                    annotation=AnnotationInput(
+                        name="quality",
+                        updatedBy="user2",
+                        score=0.8,
+                        annotationType="score",
+                    ),
+                ),
             ],
             recordId="record456",
             modelEnvironment=ModelEnvironment.production,
             startTime=start_time,
         )
 
-        assert len(mutation2.annotations) == 2
+        assert len(mutation2.annotationUpdates) == 2
         assert mutation2.modelEnvironment == ModelEnvironment.production
+        assert mutation2.annotationUpdates[0].annotationConfigId == "config456"
+        assert mutation2.annotationUpdates[1].annotationConfigId == "config789"
+
+    def test_annotation_with_config_id_input(self):
+        """Test AnnotationWithConfigIdInput model."""
+        annotation_update = AnnotationWithConfigIdInput(
+            annotationConfigId="config123",
+            annotation=AnnotationInput(
+                name="quality",
+                updatedBy="user123",
+                text="This is good quality",
+                annotationType="text",
+            ),
+        )
+
+        assert annotation_update.annotationConfigId == "config123"
+        assert annotation_update.annotation.name == "quality"
+        assert annotation_update.annotation.text == "This is good quality"
+        assert annotation_update.annotation.annotationType == "text"
+
+    def test_annotation_input_text_type(self):
+        """Test AnnotationInput with text annotation type."""
+        annotation = AnnotationInput(
+            name="feedback",
+            updatedBy="user123",
+            text="Great job!",
+            annotationType="text",
+        )
+
+        assert annotation.name == "feedback"
+        assert annotation.updatedBy == "user123"
+        assert annotation.text == "Great job!"
+        assert annotation.annotationType == "text"
+        assert annotation.label is None
+        assert annotation.score is None
+
+        # Test validation - text required for text type
+        with pytest.raises(ValueError, match="Text is required for text annotation type"):
+            AnnotationInput(
+                name="feedback",
+                updatedBy="user123",
+                annotationType="text",
+                # Missing text field
+            )

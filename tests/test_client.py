@@ -619,28 +619,166 @@ class TestMonitors:
 
 
 class TestLanguageModel:
-    def test_create_annotation(self, client, mock_graphql_client):
+    def test_create_annotation_label(self, client, mock_graphql_client):
+        """Test creating a label annotation"""
         mock_graphql_client.return_value.execute.reset_mock()
 
         mock_response = {
-            "updateAnnotations": {
-                "clientMutationId": None,
-            },
+            "updateAnnotations": {"result": {"success": True}},
         }
         mock_graphql_client.return_value.execute.return_value = mock_response
 
         annotation_result = client.create_annotation(
-            name="test",
-            label="test",
-            updated_by="test",
+            name="test_label",
+            label="positive",
+            updated_by="test_user",
             annotation_type="label",
+            annotation_config_id="config_123",
             model_id="test_model_id",
             record_id="test_record_id",
             model_environment="tracing",
-            note="test",
             start_time="2024-01-01T00:00:00Z",
         )
         assert annotation_result is True
+
+    def test_create_annotation_score(self, client, mock_graphql_client):
+        """Test creating a score annotation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateAnnotations": {"result": {"success": True}},
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        annotation_result = client.create_annotation(
+            name="quality_score",
+            score=0.85,
+            updated_by="test_user",
+            annotation_type="score",
+            annotation_config_id="config_456",
+            model_id="test_model_id",
+            record_id="test_record_id",
+            model_environment="production",
+        )
+        assert annotation_result is True
+
+    def test_create_annotation_text(self, client, mock_graphql_client):
+        """Test creating a text annotation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock model lookup response first, then annotation creation
+        mock_responses = [
+            # Model lookup response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "resolved_model_id",
+                                    "name": "test_model",
+                                    "modelType": "numeric",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Annotation creation response
+            {
+                "updateAnnotations": {"result": {"success": True}},
+            },
+        ]
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        annotation_result = client.create_annotation(
+            name="feedback",
+            text="This response was very helpful",
+            updated_by="test_user",
+            annotation_type="text",
+            annotation_config_id="config_789",
+            model_name="test_model",  # Test using model_name instead of model_id
+            record_id="test_record_id",
+        )
+        assert annotation_result is True
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_create_annotation_with_model_name_lookup(self, client, mock_graphql_client):
+        """Test creating annotation using model_name (requires model lookup)"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock model lookup response first, then annotation creation
+        mock_responses = [
+            # Model lookup response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "resolved_model_id",
+                                    "name": "test_model",
+                                    "modelType": "numeric",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Annotation creation response
+            {
+                "updateAnnotations": {"result": {"success": True}},
+            },
+        ]
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        annotation_result = client.create_annotation(
+            name="test_annotation",
+            label="test_label",
+            updated_by="test_user",
+            annotation_type="label",
+            annotation_config_id="config_123",
+            model_name="test_model",  # Using model_name instead of model_id
+            record_id="test_record_id",
+        )
+        assert annotation_result is True
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_create_annotation_missing_model_error(self, client, mock_graphql_client):
+        """Test error when neither model_id nor model_name is provided"""
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
+            client.create_annotation(
+                name="test_annotation",
+                label="test_label",
+                updated_by="test_user",
+                annotation_type="label",
+                annotation_config_id="config_123",
+                record_id="test_record_id",
+            )
+
+    def test_create_annotation_api_error(self, client, mock_graphql_client):
+        """Test handling of API errors during annotation creation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateAnnotations": {"result": {"message": "Annotation configuration not found"}},
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error in creating an annotation for a model"):
+            client.create_annotation(
+                name="test_annotation",
+                label="test_label",
+                updated_by="test_user",
+                annotation_type="label",
+                annotation_config_id="invalid_config_id",
+                model_id="test_model_id",
+                record_id="test_record_id",
+            )
 
     def test_get_all_prompts(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
@@ -1613,7 +1751,10 @@ class TestUtilityMethods:
             }
         }
 
-        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Test Space")
 
@@ -1648,7 +1789,10 @@ class TestUtilityMethods:
             }
         }
 
-        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Public Test Space", private=False)
 
@@ -1683,7 +1827,10 @@ class TestUtilityMethods:
             }
         }
 
-        mock_graphql_client.return_value.execute.side_effect = [create_space_response, switch_space_response]
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Private Test Space", private=True)
 

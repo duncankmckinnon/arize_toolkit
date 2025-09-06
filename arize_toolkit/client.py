@@ -623,12 +623,13 @@ class Client:
         name: str,
         updated_by: str,
         record_id: str,
-        annotation_type: Literal["label", "score"],
+        annotation_type: Literal["label", "score", "text"],
+        annotation_config_id: str,
         model_id: Optional[str] = None,
         model_name: Optional[str] = None,
         label: Optional[str] = None,
         score: Optional[float] = None,
-        note: Optional[str] = None,
+        text: Optional[str] = None,
         model_environment: Optional[str] = None,
         start_time: Optional[Union[datetime, str]] = None,
     ) -> bool:
@@ -638,12 +639,13 @@ class Client:
             name (str): The name of the annotation
             updated_by (str): The user who updated the annotation
             record_id (str): The ID of the record to annotate
-            annotation_type (Literal["label", "score"]): The type of annotation
+            annotation_type (Literal["label", "score", "text"]): The type of annotation
+            annotation_config_id (str): The ID of the annotation configuration
             model_id (Optional[str]): The ID of the model to annotate (either model_id or model_name must be provided)
             model_name (Optional[str]): The name of the model to annotate (either model_id or model_name must be provided)
             label (Optional[str]): The label of the annotation (required if annotation_type is "label")
             score (Optional[float]): The score of the annotation (required if annotation_type is "score")
-            note (Optional[str]): A note to accompany the annotation
+            text (Optional[str]): The text of the annotation (required if annotation_type is "text")
             model_environment (Optional[str]): The environment of the model (options are "production", "staging", "development", "tracing", defaults to "tracing")
             start_time (Optional[datetime | str]): The start time of the annotation (defaults to now)
 
@@ -664,23 +666,32 @@ class Client:
                 space_id=self.space_id,
             )
             model_id = model.id
+        annotation_data = {
+            "name": name,
+            "updatedBy": updated_by,
+            "annotationType": annotation_type,
+        }
+
+        # Add the appropriate value based on annotation type
+        if annotation_type == "label" and label is not None:
+            annotation_data["label"] = label
+        elif annotation_type == "score" and score is not None:
+            annotation_data["score"] = score
+        elif annotation_type == "text" and text is not None:
+            annotation_data["text"] = text
+
         inputs = {
             "modelId": model_id,
             "recordId": record_id,
-            "annotations": [
+            "annotationUpdates": [
                 {
-                    "name": name,
-                    "updatedBy": updated_by,
-                    "label": label,
-                    "score": score,
-                    "annotationType": annotation_type,
+                    "annotationConfigId": annotation_config_id,
+                    "annotation": annotation_data,
                 }
             ],
         }
         if start_time:
             inputs["startTime"] = parse_datetime(start_time)
-        if note:
-            inputs["note"] = {"text": note}
         if model_environment:
             inputs["modelEnvironment"] = model_environment
         result = CreateAnnotationMutation.run_graphql_mutation(
