@@ -274,6 +274,16 @@ def run_integration_tests():
                         std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
                     )
                     print(f"Drift Monitor: {drift_monitor}")
+
+        get_all_spaces = client.get_all_spaces()
+        space_names = [space["name"] for space in get_all_spaces]
+        if "integration_test_space" not in space_names:
+            print(f"All Spaces: {get_all_spaces}")
+            create_space = client.create_new_space(name="integration_test_space")
+            print(f"Created Space: {create_space}")
+            create_space_admin_api_key = client.create_space_admin_api_key(name="integration_test_space_admin_api_key")
+            print(f"Created Space Admin API Key - ID: {create_space_admin_api_key['id']}")
+
         # Add more client queries as needed
     except Exception as e:
         print("An error occurred during integration tests:", e)

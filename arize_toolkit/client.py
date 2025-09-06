@@ -257,12 +257,13 @@ class Client:
         )
         return [result.to_dict() for result in results]
 
-    def create_new_space(self, name: str, private: bool = True) -> str:
+    def create_new_space(self, name: str, private: bool = True, set_as_active: bool = True) -> str:
         """Creates a new space in the current organization.
 
         Args:
             name (str): Name for the new space
             private (bool, optional): Whether the space should be private. Defaults to True.
+            set_as_active (bool, optional): Whether to set the new space as the active space. Defaults to True.
 
         Returns:
             str: The unique identifier (ID) of the newly created space
@@ -272,18 +273,19 @@ class Client:
         """
         result = CreateNewSpaceMutation.run_graphql_mutation(
             self._graphql_client,
-            orgId=self.org_id,
+            accountOrganizationId=self.org_id,
             name=name,
             private=private,
         )
+        if set_as_active:
+            self.switch_space(organization=self.organization, space=name)
         return result.id
 
-    def create_space_admin_api_key(self, name: str, space_id: str) -> dict:
+    def create_space_admin_api_key(self, name: str) -> dict:
         """Creates an admin API key for a specific space.
 
         Args:
             name (str): Name for the API key
-            space_id (str): ID of the space to create the admin key for
 
         Returns:
             dict: A dictionary containing:
@@ -297,7 +299,7 @@ class Client:
         result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(
             self._graphql_client,
             name=name,
-            space_id=space_id,
+            spaceId=self.space_id,
         )
         return result.to_dict()
 
@@ -621,12 +623,13 @@ class Client:
         name: str,
         updated_by: str,
         record_id: str,
-        annotation_type: Literal["label", "score"],
+        annotation_type: Literal["label", "score", "text"],
+        annotation_config_id: str,
         model_id: Optional[str] = None,
         model_name: Optional[str] = None,
         label: Optional[str] = None,
         score: Optional[float] = None,
-        note: Optional[str] = None,
+        text: Optional[str] = None,
         model_environment: Optional[str] = None,
         start_time: Optional[Union[datetime, str]] = None,
     ) -> bool:
@@ -636,12 +639,13 @@ class Client:
             name (str): The name of the annotation
             updated_by (str): The user who updated the annotation
             record_id (str): The ID of the record to annotate
-            annotation_type (Literal["label", "score"]): The type of annotation
+            annotation_type (Literal["label", "score", "text"]): The type of annotation
+            annotation_config_id (str): The ID of the annotation configuration
             model_id (Optional[str]): The ID of the model to annotate (either model_id or model_name must be provided)
             model_name (Optional[str]): The name of the model to annotate (either model_id or model_name must be provided)
             label (Optional[str]): The label of the annotation (required if annotation_type is "label")
             score (Optional[float]): The score of the annotation (required if annotation_type is "score")
-            note (Optional[str]): A note to accompany the annotation
+            text (Optional[str]): The text of the annotation (required if annotation_type is "text")
             model_environment (Optional[str]): The environment of the model (options are "production", "staging", "development", "tracing", defaults to "tracing")
             start_time (Optional[datetime | str]): The start time of the annotation (defaults to now)
 
@@ -662,23 +666,32 @@ class Client:
                 space_id=self.space_id,
             )
             model_id = model.id
+        annotation_data = {
+            "name": name,
+            "updatedBy": updated_by,
+            "annotationType": annotation_type,
+        }
+
+        # Add the appropriate value based on annotation type
+        if annotation_type == "label" and label is not None:
+            annotation_data["label"] = label
+        elif annotation_type == "score" and score is not None:
+            annotation_data["score"] = score
+        elif annotation_type == "text" and text is not None:
+            annotation_data["text"] = text
+
         inputs = {
             "modelId": model_id,
             "recordId": record_id,
-            "annotations": [
+            "annotationUpdates": [
                 {
-                    "name": name,
-                    "updatedBy": updated_by,
-                    "label": label,
-                    "score": score,
-                    "annotationType": annotation_type,
+                    "annotationConfigId": annotation_config_id,
+                    "annotation": annotation_data,
                 }
             ],
         }
         if start_time:
             inputs["startTime"] = parse_datetime(start_time)
-        if note:
-            inputs["note"] = {"text": note}
         if model_environment:
             inputs["modelEnvironment"] = model_environment
         result = CreateAnnotationMutation.run_graphql_mutation(

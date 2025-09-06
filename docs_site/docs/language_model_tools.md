@@ -438,29 +438,29 @@ success: bool = client.create_annotation(
     name="human_label",
     updated_by="duncan",
     record_id="abc123",
-    annotation_type="label",  # "label" or "score"
+    annotation_type="label",  # "label", "score", or "text"
+    annotation_config_id="config_123",
     model_name="fraud-detection-v3",
     label="fraud",  # required when annotation_type="label"
-    note="Checked by expert",
     model_environment="production",
     start_time="2024-05-01T10:00:00Z",  # optional, defaults to now
 )
 ```
 
-Adds a label/score to a specific record.
+Adds a label, score, or text annotation to a specific record.
 
 **Required parameters**
 
 - `name` – Logical annotation name (e.g. "ground_truth").
 - `updated_by` – User or process writing the annotation.
 - `record_id` – Identifier of the record being annotated.
-- `annotation_type` – "label" or "score".
+- `annotation_type` – "label", "score", or "text".
+- `annotation_config_id` – ID of the annotation configuration.
 - *Either* `model_name` **or** `model_id`.
-- `label` **or** `score` depending on `annotation_type`.
+- `label`, `score`, or `text` depending on `annotation_type`.
 
 **Optional parameters**
 
-- `note` – Free-text note.
 - `model_environment` – Environment name; defaults to "tracing".
 - `start_time` – Timestamp; defaults to now.
 
@@ -468,17 +468,42 @@ Adds a label/score to a specific record.
 
 `True` when the annotation is accepted.
 
-**Example**
+**Examples**
 
 ```python
+# Label annotation
 ok = client.create_annotation(
-    name="score",
+    name="sentiment",
+    updated_by="qa_bot",
+    record_id="rec_123",
+    annotation_type="label",
+    annotation_config_id="config_456",
+    label="positive",
+    model_name="support-bot",
+)
+
+# Score annotation
+ok = client.create_annotation(
+    name="quality_score",
     updated_by="qa_bot",
     record_id="rec_123",
     annotation_type="score",
+    annotation_config_id="config_789",
     score=0.9,
     model_name="support-bot",
 )
+
+# Text annotation
+ok = client.create_annotation(
+    name="feedback",
+    updated_by="human_reviewer",
+    record_id="rec_123",
+    annotation_type="text",
+    annotation_config_id="config_012",
+    text="This response was very helpful and accurate",
+    model_name="support-bot",
+)
+
 print("Saved" if ok else "Failed")
 ```
 
@@ -516,6 +541,7 @@ client.create_annotation(
     updated_by="analyst",
     record_id="resp_789",
     annotation_type="score",
+    annotation_config_id="config_1234",
     score=4.5,
     model_name="support-bot",
 )

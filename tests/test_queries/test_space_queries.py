@@ -515,18 +515,16 @@ class TestCreateNewSpaceMutation:
         """Test that the mutation structure is correct."""
         mutation = CreateNewSpaceMutation.graphql_query
         assert "mutation createNewSpace" in mutation
-        assert "$orgId: ID!" in mutation
-        assert "$name: String!" in mutation
-        assert "$private: Boolean!" in mutation
+        assert "$input: CreateSpaceMutationInput!" in mutation
         assert "createSpace" in mutation
-        assert "accountOrganizationId: $orgId" in mutation
+        assert "input: $input" in mutation
 
     def test_successful_mutation(self, gql_client):
         """Test successful space creation."""
         mock_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
         gql_client.execute.return_value = mock_response
 
-        result = CreateNewSpaceMutation.run_graphql_mutation(gql_client, orgId="org_123", name="Test Space", private=True)
+        result = CreateNewSpaceMutation.run_graphql_mutation(gql_client, accountOrganizationId="org_123", name="Test Space", private=True)
 
         assert result.name == "Test Space"
         assert result.id == "space_new_123"
@@ -541,7 +539,7 @@ class TestCreateNewSpaceMutation:
             CreateNewSpaceMutation.QueryException,
             match="Failed to create space",
         ):
-            CreateNewSpaceMutation.run_graphql_mutation(gql_client, orgId="org_123", name="Test Space", private=True)
+            CreateNewSpaceMutation.run_graphql_mutation(gql_client, accountOrganizationId="org_123", name="Test Space", private=True)
 
         gql_client.execute.assert_called_once()
 
@@ -554,36 +552,36 @@ class TestCreateNewSpaceMutation:
             CreateNewSpaceMutation.QueryException,
             match="Failed to create space",
         ):
-            CreateNewSpaceMutation.run_graphql_mutation(gql_client, orgId="org_123", name="Test Space", private=True)
+            CreateNewSpaceMutation.run_graphql_mutation(gql_client, accountOrganizationId="org_123", name="Test Space", private=True)
 
         gql_client.execute.assert_called_once()
 
     def test_variables_validation(self):
         """Test input validation for required variables."""
-        # Test missing orgId
+        # Test missing accountOrganizationId
         with pytest.raises(Exception) as exc_info:
             CreateNewSpaceMutation.Variables(name="Test Space", private=True)
-        assert "orgId" in str(exc_info.value)
+        assert "accountOrganizationId" in str(exc_info.value)
 
         # Test missing name
         with pytest.raises(Exception) as exc_info:
-            CreateNewSpaceMutation.Variables(orgId="org_123", private=True)
+            CreateNewSpaceMutation.Variables(accountOrganizationId="org_123", private=True)
         assert "name" in str(exc_info.value)
 
         # Test missing private
         with pytest.raises(Exception) as exc_info:
-            CreateNewSpaceMutation.Variables(orgId="org_123", name="Test Space")
+            CreateNewSpaceMutation.Variables(accountOrganizationId="org_123", name="Test Space")
         assert "private" in str(exc_info.value)
 
         # Test valid variables
-        variables = CreateNewSpaceMutation.Variables(orgId="org_123", name="Test Space", private=True)
-        assert variables.orgId == "org_123"
+        variables = CreateNewSpaceMutation.Variables(accountOrganizationId="org_123", name="Test Space", private=True)
+        assert variables.accountOrganizationId == "org_123"
         assert variables.name == "Test Space"
         assert variables.private is True
 
         # Test with private=False
-        variables_public = CreateNewSpaceMutation.Variables(orgId="org_456", name="Public Space", private=False)
-        assert variables_public.orgId == "org_456"
+        variables_public = CreateNewSpaceMutation.Variables(accountOrganizationId="org_456", name="Public Space", private=False)
+        assert variables_public.accountOrganizationId == "org_456"
         assert variables_public.name == "Public Space"
         assert variables_public.private is False
 
@@ -595,13 +593,9 @@ class TestCreateSpaceAdminApiKeyMutation:
         """Test that the mutation structure is correct."""
         mutation = CreateSpaceAdminApiKeyMutation.graphql_query
         assert "mutation createSpaceAdminApiKey" in mutation
-        assert "$name: String!" in mutation
-        assert "$space_id: String!" in mutation
+        assert "$input: CreateServiceApiKeyInput!" in mutation
         assert "createServiceApiKey" in mutation
-        assert "spaceId: $space_id" in mutation
-        assert "spaceRole: admin" in mutation
-        assert "accountOrganizationRole: member" in mutation
-        assert "accountRole: member" in mutation
+        assert "input: $input" in mutation
         assert "apiKey" in mutation
         assert "keyInfo" in mutation
 
@@ -615,7 +609,7 @@ class TestCreateSpaceAdminApiKeyMutation:
         }
         gql_client.execute.return_value = mock_response
 
-        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", spaceId="space_123")
 
         assert result.apiKey == "sk_test_1234567890abcdef"
         assert result.expiresAt == datetime.strptime("2024-12-31T23:59:59Z", "%Y-%m-%dT%H:%M:%S%z")
@@ -632,7 +626,7 @@ class TestCreateSpaceAdminApiKeyMutation:
         }
         gql_client.execute.return_value = mock_response
 
-        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Permanent Admin Key", space_id="space_456")
+        result = CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Permanent Admin Key", spaceId="space_456")
 
         assert result.apiKey == "sk_test_abcdef1234567890"
         assert result.expiresAt is None
@@ -648,7 +642,7 @@ class TestCreateSpaceAdminApiKeyMutation:
             CreateSpaceAdminApiKeyMutation.QueryException,
             match="Failed to create space admin API key",
         ):
-            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", spaceId="space_123")
 
         gql_client.execute.assert_called_once()
 
@@ -661,7 +655,7 @@ class TestCreateSpaceAdminApiKeyMutation:
             CreateSpaceAdminApiKeyMutation.QueryException,
             match="Failed to create space admin API key",
         ):
-            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", spaceId="space_123")
 
         gql_client.execute.assert_called_once()
 
@@ -674,7 +668,7 @@ class TestCreateSpaceAdminApiKeyMutation:
             CreateSpaceAdminApiKeyMutation.QueryException,
             match="Failed to create space admin API key",
         ):
-            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", space_id="space_123")
+            CreateSpaceAdminApiKeyMutation.run_graphql_mutation(gql_client, name="Test Admin Key", spaceId="space_123")
 
         gql_client.execute.assert_called_once()
 
@@ -682,15 +676,15 @@ class TestCreateSpaceAdminApiKeyMutation:
         """Test input validation for required variables."""
         # Test missing name
         with pytest.raises(Exception) as exc_info:
-            CreateSpaceAdminApiKeyMutation.Variables(space_id="space_123")
+            CreateSpaceAdminApiKeyMutation.Variables(spaceId="space_123")
         assert "name" in str(exc_info.value)
 
-        # Test missing space_id
+        # Test missing spaceId
         with pytest.raises(Exception) as exc_info:
             CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key")
-        assert "space_id" in str(exc_info.value)
+        assert "spaceId" in str(exc_info.value)
 
         # Test valid variables
-        variables = CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key", space_id="space_123")
+        variables = CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key", spaceId="space_123")
         assert variables.name == "Test Admin Key"
-        assert variables.space_id == "space_123"
+        assert variables.spaceId == "space_123"

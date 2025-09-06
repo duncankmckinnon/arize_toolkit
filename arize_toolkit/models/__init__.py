@@ -54,7 +54,7 @@ from arize_toolkit.models.data_import_models import (
 )
 from arize_toolkit.models.llm_utils_models import (
     AnnotationInput,
-    AnnotationMutationInput,
+    AnnotationWithConfigIdInput,
     CreatePromptBaseMutationInput,
     CreatePromptMutationInput,
     CreatePromptVersionMutationInput,
@@ -69,6 +69,7 @@ from arize_toolkit.models.llm_utils_models import (
     ToolChoiceTool,
     ToolConfigInput,
     ToolInput,
+    UpdateAnnotationsInput,
 )
 from arize_toolkit.models.monitor_models import (
     BasicMonitor,

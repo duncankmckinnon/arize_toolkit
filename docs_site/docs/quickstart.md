@@ -619,10 +619,11 @@ The `arize_toolkit` provides a convenience method for creating new annotations o
 create a new annotation on a specific record. This method requires a lot of detailed information about the model, record, and environment, but makes it possible to create annotiations in Arize from in-house infrastructure tools.
 This probably isn't a function you want to expose to your end users, but it's useful when abstracted inside an internal tool.
 
-There are two types of annotations that can be created:
+There are three types of annotations that can be created:
 
-- Label annotations: These are used to provide a label for a specific record.
-- Score annotations: These are used to provide a score for a specific record.
+- Label annotations: These are used to provide a categorical label for a specific record.
+- Score annotations: These are used to provide a numeric score for a specific record.
+- Text annotations: These are used to provide free-form text feedback for a specific record.
 
 ```python
 # Create a label annotation
@@ -631,10 +632,10 @@ annotation_success = client.create_annotation(
     label="fraud",
     updated_by="ml-engineer@company.com",
     annotation_type="label",
+    annotation_config_id="fraud_label_config",
     model_name="fraud-detection-v2",
     record_id="transaction_12345",
     model_environment="production",
-    note="Confirmed fraud case through manual investigation",
 )
 
 print(f"Annotation created: {annotation_success}")
@@ -645,10 +646,10 @@ score_annotation_success = client.create_annotation(
     score=0.95,
     updated_by="data-scientist@company.com",
     annotation_type="score",
+    annotation_config_id="confidence_score_config",
     model_name="fraud-detection-v2",
     record_id="transaction_12346",
     model_environment="production",
-    note="High confidence prediction",
 )
 
 print(f"Score annotation created: {score_annotation_success}")

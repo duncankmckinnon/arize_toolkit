@@ -203,13 +203,9 @@ class GetAllOrganizationsQuery(BaseQuery):
 
 class CreateNewSpaceMutation(BaseQuery):
     graphql_query = """
-    mutation createNewSpace($orgId: ID!, $name: String!, $private: Boolean!) {
+    mutation createNewSpace($input: CreateSpaceMutationInput!) {
         createSpace(
-            input: {
-                name: $name
-                accountOrganizationId: $orgId
-                private: $private
-            }
+            input: $input
         ) {
             space {
                 name
@@ -221,7 +217,7 @@ class CreateNewSpaceMutation(BaseQuery):
     query_description = "Create a new space in the specified organization"
 
     class Variables(BaseVariables):
-        orgId: str
+        accountOrganizationId: str
         name: str
         private: bool
 
@@ -246,15 +242,9 @@ class CreateNewSpaceMutation(BaseQuery):
 
 class CreateSpaceAdminApiKeyMutation(BaseQuery):
     graphql_query = """
-    mutation createSpaceAdminApiKey($name: String!, $space_id: String!) {
+    mutation createSpaceAdminApiKey($input: CreateServiceApiKeyInput!) {
         createServiceApiKey(
-            input: {
-                name: $name,
-                spaceId: $space_id,
-                spaceRole: admin,
-                accountOrganizationRole: member,
-                accountRole: member,
-            }
+            input: $input
         ) {
             apiKey
             keyInfo {
@@ -268,7 +258,10 @@ class CreateSpaceAdminApiKeyMutation(BaseQuery):
 
     class Variables(BaseVariables):
         name: str
-        space_id: str
+        spaceId: str
+        spaceRole: str = "admin"
+        accountOrganizationRole: str = "member"
+        accountRole: str = "member"
 
     class QueryException(ArizeAPIException):
         message: str = "Error running mutation to create space admin API key"

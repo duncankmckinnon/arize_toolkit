@@ -19,7 +19,8 @@ class AnnotationInput(GraphQLModel):
     updatedBy: str  # Assuming string, could be User ID
     label: Optional[str] = Field(default=None)
     score: Optional[float] = Field(default=None)
-    annotationType: Literal["label", "score"]
+    text: Optional[str] = Field(default=None)
+    annotationType: Literal["label", "score", "text"]
 
     @model_validator(mode="after")
     def verify_type_and_value(self):
@@ -27,13 +28,20 @@ class AnnotationInput(GraphQLModel):
             raise ValueError("Label is required for label annotation type")
         if self.annotationType == "score" and self.score is None:
             raise ValueError("Score is required for score annotation type")
+        if self.annotationType == "text" and self.text is None:
+            raise ValueError("Text is required for text annotation type")
         return self
 
 
-class AnnotationMutationInput(GraphQLModel):
+class AnnotationWithConfigIdInput(GraphQLModel):
+    annotationConfigId: str
+    annotation: AnnotationInput
+
+
+class UpdateAnnotationsInput(GraphQLModel):
     modelId: str
     note: Optional[NoteInput] = Field(default=None)  # Assuming note is optional
-    annotations: Union[AnnotationInput, List[AnnotationInput]]
+    annotationUpdates: Union[AnnotationWithConfigIdInput, List[AnnotationWithConfigIdInput]]
     modelEnvironment: ModelEnvironment = Field(default=ModelEnvironment.tracing)
     recordId: str
     startTime: datetime = Field(default=datetime.now())

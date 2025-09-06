@@ -619,28 +619,166 @@ class TestMonitors:
 
 
 class TestLanguageModel:
-    def test_create_annotation(self, client, mock_graphql_client):
+    def test_create_annotation_label(self, client, mock_graphql_client):
+        """Test creating a label annotation"""
         mock_graphql_client.return_value.execute.reset_mock()
 
         mock_response = {
-            "updateAnnotations": {
-                "clientMutationId": None,
-            },
+            "updateAnnotations": {"result": {"success": True}},
         }
         mock_graphql_client.return_value.execute.return_value = mock_response
 
         annotation_result = client.create_annotation(
-            name="test",
-            label="test",
-            updated_by="test",
+            name="test_label",
+            label="positive",
+            updated_by="test_user",
             annotation_type="label",
+            annotation_config_id="config_123",
             model_id="test_model_id",
             record_id="test_record_id",
             model_environment="tracing",
-            note="test",
             start_time="2024-01-01T00:00:00Z",
         )
         assert annotation_result is True
+
+    def test_create_annotation_score(self, client, mock_graphql_client):
+        """Test creating a score annotation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateAnnotations": {"result": {"success": True}},
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        annotation_result = client.create_annotation(
+            name="quality_score",
+            score=0.85,
+            updated_by="test_user",
+            annotation_type="score",
+            annotation_config_id="config_456",
+            model_id="test_model_id",
+            record_id="test_record_id",
+            model_environment="production",
+        )
+        assert annotation_result is True
+
+    def test_create_annotation_text(self, client, mock_graphql_client):
+        """Test creating a text annotation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock model lookup response first, then annotation creation
+        mock_responses = [
+            # Model lookup response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "resolved_model_id",
+                                    "name": "test_model",
+                                    "modelType": "numeric",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Annotation creation response
+            {
+                "updateAnnotations": {"result": {"success": True}},
+            },
+        ]
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        annotation_result = client.create_annotation(
+            name="feedback",
+            text="This response was very helpful",
+            updated_by="test_user",
+            annotation_type="text",
+            annotation_config_id="config_789",
+            model_name="test_model",  # Test using model_name instead of model_id
+            record_id="test_record_id",
+        )
+        assert annotation_result is True
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_create_annotation_with_model_name_lookup(self, client, mock_graphql_client):
+        """Test creating annotation using model_name (requires model lookup)"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock model lookup response first, then annotation creation
+        mock_responses = [
+            # Model lookup response
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "resolved_model_id",
+                                    "name": "test_model",
+                                    "modelType": "numeric",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            # Annotation creation response
+            {
+                "updateAnnotations": {"result": {"success": True}},
+            },
+        ]
+        mock_graphql_client.return_value.execute.side_effect = mock_responses
+
+        annotation_result = client.create_annotation(
+            name="test_annotation",
+            label="test_label",
+            updated_by="test_user",
+            annotation_type="label",
+            annotation_config_id="config_123",
+            model_name="test_model",  # Using model_name instead of model_id
+            record_id="test_record_id",
+        )
+        assert annotation_result is True
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_create_annotation_missing_model_error(self, client, mock_graphql_client):
+        """Test error when neither model_id nor model_name is provided"""
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
+            client.create_annotation(
+                name="test_annotation",
+                label="test_label",
+                updated_by="test_user",
+                annotation_type="label",
+                annotation_config_id="config_123",
+                record_id="test_record_id",
+            )
+
+    def test_create_annotation_api_error(self, client, mock_graphql_client):
+        """Test handling of API errors during annotation creation"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateAnnotations": {"result": {"message": "Annotation configuration not found"}},
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error in creating an annotation for a model"):
+            client.create_annotation(
+                name="test_annotation",
+                label="test_label",
+                updated_by="test_user",
+                annotation_type="label",
+                annotation_config_id="invalid_config_id",
+                model_id="test_model_id",
+                record_id="test_record_id",
+            )
 
     def test_get_all_prompts(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
@@ -1596,19 +1734,37 @@ class TestUtilityMethods:
         """Test creating a new private space (default behavior)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_new_123"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Test Space")
 
         assert space_id == "space_new_123"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Test Space"
         assert variables["private"] is True
 
@@ -1616,19 +1772,37 @@ class TestUtilityMethods:
         """Test creating a new public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_public_456"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Public Test Space", private=False)
 
         assert space_id == "space_public_456"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Public Test Space"
         assert variables["private"] is False
 
@@ -1636,19 +1810,37 @@ class TestUtilityMethods:
         """Test creating a new private space (explicitly set)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
+        # Mock responses for both create space mutation and switch space query
+        create_space_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
+        switch_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "space_private_789"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
 
-        mock_graphql_client.return_value.execute.return_value = mock_response
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_space_response,
+            switch_space_response,
+        ]
 
         space_id = client.create_new_space("Private Test Space", private=True)
 
         assert space_id == "space_private_789"
-        mock_graphql_client.return_value.execute.assert_called_once()
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
-        # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args
+        # Verify the mutation was called with correct parameters (check the first call)
+        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
-        assert variables["orgId"] == "test_org_id"
+        assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Private Test Space"
         assert variables["private"] is True
 
@@ -1665,7 +1857,7 @@ class TestUtilityMethods:
 
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        api_key_info = client.create_space_admin_api_key("Admin Key", "space_123")
+        api_key_info = client.create_space_admin_api_key("Admin Key")
 
         assert api_key_info["apiKey"] == "sk_admin_1234567890abcdef"
         assert api_key_info["expiresAt"] == "2024-12-31T23:59:59.000000Z"
@@ -1676,7 +1868,7 @@ class TestUtilityMethods:
         call_args = mock_graphql_client.return_value.execute.call_args
         variables = call_args[1]["variable_values"]["input"]
         assert variables["name"] == "Admin Key"
-        assert variables["space_id"] == "space_123"
+        assert variables["spaceId"] == "test_space_id"
 
     def test_create_space_admin_api_key_no_expiration(self, client, mock_graphql_client):
         """Test creating a space admin API key without expiration"""
@@ -1691,7 +1883,7 @@ class TestUtilityMethods:
 
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        api_key_info = client.create_space_admin_api_key("Permanent Admin Key", "space_456")
+        api_key_info = client.create_space_admin_api_key("Permanent Admin Key")
 
         assert api_key_info["apiKey"] == "sk_admin_permanent_abcdef"
         assert api_key_info["expiresAt"] is None
