@@ -506,16 +506,16 @@ class Client:
 
         """
         if start_time:
-            start_time = parse_datetime(start_time)
+            start_time = parse_datetime(start_time).date()
         if end_time:
-            end_time = parse_datetime(end_time)
+            end_time = parse_datetime(end_time).date()
         variables = {
             "modelId": model_id,
-            "startTime": start_time,
+            "startDate": start_time,
             "environment": environment.upper(),
         }
         if end_time and end_time > start_time:
-            variables["endTime"] = end_time
+            variables["endDate"] = end_time
 
         result = DeleteDataMutation.run_graphql_mutation(
             self._graphql_client,
