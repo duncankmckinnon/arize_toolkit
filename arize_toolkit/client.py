@@ -85,6 +85,7 @@ class Client:
         - `arize_developer_key` (Optional[str]): The API key. This can be copied from the space settings page in Arize.
         - `arize_app_url` (Optional[str]): The URL of the Arize API (default for SaaS is https://app.arize.com). For on-prem deployments, this will need to be set to the URL of Arize app.
         - `sleep_time` (Optional[int]): The number of seconds to sleep between API requests (may be needed if rate limiting is an issue)
+        - `verify` (Optional[bool]): Whether to verify the SSL certificate for the Arize API (default is True)
     (Note: ARIZE_DEVELOPER_KEY environment variable can be set instead of passing in `arize_developer_key`)
 
     Properties:
@@ -108,16 +109,21 @@ class Client:
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
+        verify: bool = True,
+        headers: Optional[Dict[str, str]] = None,
     ):
         self.organization = organization
         self.space = space
         self.sleep_time = sleep_time
         self.arize_app_url = arize_app_url
         arize_developer_key = arize_developer_key or os.getenv("ARIZE_DEVELOPER_KEY")
+        headers = headers or {}
+        headers["x-api-key"] = arize_developer_key
         self._graphql_client = GraphQLClient(
             transport=RequestsHTTPTransport(
                 url=f"{self.arize_app_url}/graphql",
-                headers={"x-api-key": arize_developer_key},
+                headers=headers,
+                verify=verify,
             )
         )
         self._set_org_and_space_id()
