@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Optional, Tuple
 
 from arize_toolkit.models.space_models import Organization, Space
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -288,3 +289,13 @@ class CreateSpaceAdminApiKeyMutation(BaseQuery):
             False,
             None,
         )
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+
+AsyncOrgIDandSpaceIDQuery = make_async(OrgIDandSpaceIDQuery)
+AsyncOrgAndFirstSpaceQuery = make_async(OrgAndFirstSpaceQuery)
+AsyncGetAllSpacesQuery = make_async(GetAllSpacesQuery)
+AsyncGetAllOrganizationsQuery = make_async(GetAllOrganizationsQuery)
+AsyncCreateNewSpaceMutation = make_async(CreateNewSpaceMutation)
+AsyncCreateSpaceAdminApiKeyMutation = make_async(CreateSpaceAdminApiKeyMutation)

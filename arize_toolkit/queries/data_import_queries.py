@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 
 from arize_toolkit.models import FileImportJob, FileImportJobCheck, FileImportJobInput, FullSchema, TableImportJob, TableImportJobCheck, TableImportJobInput
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -536,3 +537,17 @@ class DeleteTableImportJobMutation(BaseQuery):
 
         job_data = delete_response["tableImportJob"]
         return [cls.QueryResponse(**job_data)], False, None
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+
+AsyncGetAllFileImportJobsQuery = make_async(GetAllFileImportJobsQuery)
+AsyncGetFileImportJobQuery = make_async(GetFileImportJobQuery)
+AsyncCreateFileImportJobMutation = make_async(CreateFileImportJobMutation)
+AsyncUpdateFileImportJobMutation = make_async(UpdateFileImportJobMutation)
+AsyncDeleteFileImportJobMutation = make_async(DeleteFileImportJobMutation)
+AsyncGetAllTableImportJobsQuery = make_async(GetAllTableImportJobsQuery)
+AsyncGetTableImportJobQuery = make_async(GetTableImportJobQuery)
+AsyncCreateTableImportJobMutation = make_async(CreateTableImportJobMutation)
+AsyncUpdateTableImportJobMutation = make_async(UpdateTableImportJobMutation)
+AsyncDeleteTableImportJobMutation = make_async(DeleteTableImportJobMutation)

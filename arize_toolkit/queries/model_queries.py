@@ -4,6 +4,7 @@ from typing import List, Literal, Optional, Tuple
 from pydantic import Field
 
 from arize_toolkit.models import Model
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 from arize_toolkit.types import DataGranularity, ModelEnvironment, PerformanceMetric
 
@@ -240,3 +241,14 @@ class GetPerformanceMetricValuesQuery(BaseQuery):
             False,
             None,
         )
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+# Import the mixin at the end to avoid circular imports
+
+AsyncGetModelByIDQuery = make_async(GetModelByIDQuery)
+AsyncGetModelQuery = make_async(GetModelQuery)
+AsyncGetAllModelsQuery = make_async(GetAllModelsQuery)
+AsyncGetModelVolumeQuery = make_async(GetModelVolumeQuery)
+AsyncDeleteDataMutation = make_async(DeleteDataMutation)
+AsyncGetPerformanceMetricValuesQuery = make_async(GetPerformanceMetricValuesQuery)

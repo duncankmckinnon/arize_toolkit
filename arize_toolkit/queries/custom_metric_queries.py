@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 
 from arize_toolkit.models import CustomMetric, CustomMetricInput
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -269,3 +270,14 @@ class UpdateCustomMetricMutation(BaseQuery):
         if "customMetric" not in update_result:
             cls.raise_exception("no custom metric id returned")
         return [cls.QueryResponse(**update_result["customMetric"])], False, None
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+
+AsyncGetAllCustomMetricsByModelIdQuery = make_async(GetAllCustomMetricsByModelIdQuery)
+AsyncGetAllCustomMetricsQuery = make_async(GetAllCustomMetricsQuery)
+AsyncGetCustomMetricQuery = make_async(GetCustomMetricQuery)
+AsyncGetCustomMetricByIDQuery = make_async(GetCustomMetricByIDQuery)
+AsyncCreateCustomMetricMutation = make_async(CreateCustomMetricMutation)
+AsyncDeleteCustomMetricMutation = make_async(DeleteCustomMetricMutation)
+AsyncUpdateCustomMetricMutation = make_async(UpdateCustomMetricMutation)

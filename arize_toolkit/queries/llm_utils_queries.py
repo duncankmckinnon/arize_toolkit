@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple
 
 from arize_toolkit.models import CreatePromptMutationInput, CreatePromptVersionMutationInput, Prompt, PromptVersion, UpdateAnnotationsInput
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -356,3 +357,17 @@ class DeletePromptMutation(BaseQuery):
             False,
             None,
         )
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+
+AsyncCreateAnnotationMutation = make_async(CreateAnnotationMutation)
+AsyncGetPromptByIDQuery = make_async(GetPromptByIDQuery)
+AsyncGetPromptQuery = make_async(GetPromptQuery)
+AsyncGetPromptVersionByIDQuery = make_async(GetPromptVersionByIDQuery)
+AsyncGetAllPromptVersionsQuery = make_async(GetAllPromptVersionsQuery)
+AsyncGetAllPromptsQuery = make_async(GetAllPromptsQuery)
+AsyncCreatePromptMutation = make_async(CreatePromptMutation)
+AsyncCreatePromptVersionMutation = make_async(CreatePromptVersionMutation)
+AsyncUpdatePromptMutation = make_async(UpdatePromptMutation)
+AsyncDeletePromptMutation = make_async(DeletePromptMutation)

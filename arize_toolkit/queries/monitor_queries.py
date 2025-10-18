@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Tuple
 
 from arize_toolkit.models import BasicMonitor, DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor, TimeSeriesWithThresholdDataType
+from arize_toolkit.queries.async_basequery import make_async
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -315,3 +316,15 @@ class GetModelMetricValueQuery(BaseQuery):
 
         # Parse the time series data
         return [cls.QueryResponse(**metric_history)], False, None
+
+
+# Async versions - these reuse all the parsing logic from the sync versions
+
+AsyncGetAllModelMonitorsQuery = make_async(GetAllModelMonitorsQuery)
+AsyncGetMonitorQuery = make_async(GetMonitorQuery)
+AsyncGetMonitorByIDQuery = make_async(GetMonitorByIDQuery)
+AsyncGetModelMetricValueQuery = make_async(GetModelMetricValueQuery)
+AsyncCreateDriftMonitorMutation = make_async(CreateDriftMonitorMutation)
+AsyncCreatePerformanceMonitorMutation = make_async(CreatePerformanceMonitorMutation)
+AsyncCreateDataQualityMonitorMutation = make_async(CreateDataQualityMonitorMutation)
+AsyncDeleteMonitorMutation = make_async(DeleteMonitorMutation)

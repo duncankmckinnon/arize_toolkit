@@ -1,5 +1,6 @@
 from importlib.metadata import PackageNotFoundError, version
 
+from arize_toolkit.async_client import Client as AsyncClient
 from arize_toolkit.client import Client
 
 try:
@@ -7,4 +8,4 @@ try:
 except PackageNotFoundError:
     __version__ = "0.0.0"
 
-__all__ = ["Client", "__version__"]
+__all__ = ["Client", "AsyncClient", "__version__"]
