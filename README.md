@@ -94,11 +94,12 @@ To create a client, you need to provide your Arize API key. Use this reference t
 
 ### Organization and Space
 
-You will also need to provide an `organization` name and `space` name. To give some context, models are scoped to a space, and the space is scoped to an organization. These can be found by navigating to the Arize UI and looking at the upper left path in the `Projects & Models` page. They will be in the format `organization/space`.
+You will also need to provide an `organization` name and `space` name. To give some context, models are scoped to a space, and the space is scoped to an organization. These can be found by navigating to the Arize UI and looking at the upper left dropdown. You will first select the organization and then a space option from within that organization.
 
-For the example below, the organization is `Demo Models` and the space is `Demo Model Manager`.
+For the example below, the organization is `Demo Org` and the space is `Test Space`.
 
-![Arize UI Path](docs_site/docs/images/path_ref.png)
+<img width="334" height="202" alt="image" src="https://github.com/user-attachments/assets/0558a95c-0d53-4db7-8aec-3ce8c860ee00" />
+
 
 ### For On Prem deployments
 
