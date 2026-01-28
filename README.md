@@ -88,9 +88,9 @@ The `Client` class is the entrypoint for interacting with the toolkit. It provid
 
 ### API Key
 
-To create a client, you need to provide your Arize API key. Use this reference to [get your API key](https://docs.arize.com/arize/reference/authentication-and-security/api-keys) from the Arize UI.
+To create a client, you need to provide your Arize API key. Use this reference to [get your API key](https://arize.com/docs/ax/security-and-settings/api-keys) from the Arize UI.
 
-![Arize UI Path](docs_site/docs/images/api_key_ref.png)
+<img width="684" height="182" alt="image" src="https://github.com/user-attachments/assets/8df87a78-e67d-45c6-8bc2-c58dad5baf42" />
 
 ### Organization and Space
 
