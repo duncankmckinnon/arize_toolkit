@@ -14,6 +14,7 @@ These tools and properties on the `Client` object help you manage the client's a
 | Switch active Space/Organization | [`switch_space`](#switch_space) |
 | Get all Organizations | [`get_all_organizations`](#get_all_organizations) |
 | Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
+| Create new Organization and Space | [`create_new_organization_and_space`](#create_new_organization_and_space) |
 | Create new Space | [`create_new_space`](#create_new_space) |
 | Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
 | Get current Space URL | [`space_url`](#space_url) (Property) |
@@ -179,6 +180,60 @@ for space in spaces:
     client.switch_space(space=space["name"])
     models = client.get_all_models()
     print(f"Space '{space['name']}' has {len(models)} models")
+```
+
+______________________________________________________________________
+
+### `create_new_organization_and_space`
+
+```python
+space_url: str = client.create_new_organization_and_space(
+    org_name: str,
+    space_name: str,
+    org_description: Optional[str] = None,
+    space_private: bool = False,
+    set_as_active: bool = True
+)
+```
+
+Creates a new organization and adds a new space to it. A new organization must have at least one space to work correctly, so this method creates both together.
+
+**Parameters**
+
+- `org_name` (str) – Name for the new organization
+- `space_name` (str) – Name for the new space in the organization
+- `org_description` (Optional[str], optional) – Description for the organization. Defaults to None.
+- `space_private` (bool, optional) – Whether the space should be private. Defaults to False.
+- `set_as_active` (bool, optional) – Whether to switch the client to the new organization and space. Defaults to True.
+
+**Returns**
+
+- `str` – The URL of the newly created space
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error creating the organization or space
+
+**Example**
+
+```python
+# Create a new organization with a space and switch to it
+space_url = client.create_new_organization_and_space(
+    org_name="My New Organization",
+    space_name="Production Space",
+    org_description="Organization for production ML models",
+)
+print(f"Created new organization and space: {space_url}")
+
+# The client is now connected to the new organization and space
+print(f"Current organization: {client.organization}")
+print(f"Current space: {client.space}")
+
+# Create organization and space without switching to it
+space_url = client.create_new_organization_and_space(
+    org_name="Another Organization", space_name="Dev Space", set_as_active=False
+)
+# Client remains connected to previous organization/space
 ```
 
 ______________________________________________________________________

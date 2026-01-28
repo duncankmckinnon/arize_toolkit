@@ -2,7 +2,15 @@ from datetime import datetime
 
 import pytest
 
-from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, CreateSpaceAdminApiKeyMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import (
+    CreateNewOrganizationMutation,
+    CreateNewSpaceMutation,
+    CreateSpaceAdminApiKeyMutation,
+    GetAllOrganizationsQuery,
+    GetAllSpacesQuery,
+    OrgAndFirstSpaceQuery,
+    OrgIDandSpaceIDQuery,
+)
 
 
 class TestOrgIDandSpaceIDQuery:
@@ -506,6 +514,83 @@ class TestQueryIntegration:
 
         # Verify both calls were made
         assert gql_client.execute.call_count == 2
+
+
+class TestCreateNewOrganizationMutation:
+    """Test the CreateNewOrganizationMutation class."""
+
+    def test_mutation_structure(self):
+        """Test that the mutation structure is correct."""
+        mutation = CreateNewOrganizationMutation.graphql_query
+        assert "mutation createNewOrganization" in mutation
+        assert "$input: CreateOrganizationMutationInput!" in mutation
+        assert "createOrganization" in mutation
+        assert "input: $input" in mutation
+        assert "organization" in mutation
+        assert "id" in mutation
+
+    def test_successful_mutation(self, gql_client):
+        """Test successful organization creation."""
+        mock_response = {"createOrganization": {"organization": {"id": "org_new_123"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = CreateNewOrganizationMutation.run_graphql_mutation(gql_client, name="Test Organization", description="A test organization")
+
+        assert result.id == "org_new_123"
+        gql_client.execute.assert_called_once()
+
+    def test_successful_mutation_without_description(self, gql_client):
+        """Test successful organization creation without description."""
+        mock_response = {"createOrganization": {"organization": {"id": "org_new_456"}}}
+        gql_client.execute.return_value = mock_response
+
+        result = CreateNewOrganizationMutation.run_graphql_mutation(gql_client, name="Test Organization")
+
+        assert result.id == "org_new_456"
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_no_create_organization(self, gql_client):
+        """Test error when createOrganization is not in response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            CreateNewOrganizationMutation.QueryException,
+            match="Failed to create organization",
+        ):
+            CreateNewOrganizationMutation.run_graphql_mutation(gql_client, name="Test Organization")
+
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_no_organization_in_response(self, gql_client):
+        """Test error when organization is not in createOrganization response."""
+        mock_response = {"createOrganization": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            CreateNewOrganizationMutation.QueryException,
+            match="Failed to create organization",
+        ):
+            CreateNewOrganizationMutation.run_graphql_mutation(gql_client, name="Test Organization")
+
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for required variables."""
+        # Test missing name
+        with pytest.raises(Exception) as exc_info:
+            CreateNewOrganizationMutation.Variables(description="A description")
+        assert "name" in str(exc_info.value)
+
+        # Test valid variables with description
+        variables = CreateNewOrganizationMutation.Variables(name="Test Organization", description="A test organization")
+        assert variables.name == "Test Organization"
+        assert variables.description == "A test organization"
+
+        # Test valid variables without description
+        variables_no_desc = CreateNewOrganizationMutation.Variables(name="Test Organization")
+        assert variables_no_desc.name == "Test Organization"
+        assert variables_no_desc.description is None
 
 
 class TestCreateNewSpaceMutation:

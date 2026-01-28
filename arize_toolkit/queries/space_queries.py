@@ -240,6 +240,40 @@ class CreateNewSpaceMutation(BaseQuery):
         )
 
 
+class CreateNewOrganizationMutation(BaseQuery):
+    graphql_query = """
+    mutation createNewOrganization($input: CreateOrganizationMutationInput!) {
+        createOrganization(input: $input) {
+            organization {
+                id
+            }
+        }
+    }
+    """
+    query_description = "Create a new organization"
+
+    class Variables(BaseVariables):
+        name: str
+        description: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to create new organization"
+
+    class QueryResponse(BaseResponse):
+        id: str
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "createOrganization" not in result or "organization" not in result["createOrganization"]:
+            cls.raise_exception("Failed to create organization")
+        organization = result["createOrganization"]["organization"]
+        return (
+            [cls.QueryResponse(id=organization["id"])],
+            False,
+            None,
+        )
+
+
 class CreateSpaceAdminApiKeyMutation(BaseQuery):
     graphql_query = """
     mutation createSpaceAdminApiKey($input: CreateServiceApiKeyInput!) {
