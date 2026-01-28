@@ -37,7 +37,7 @@ class CreateAnnotationMutation(BaseQuery):
         if "result" not in result["updateAnnotations"]:
             cls.raise_exception("No result in update annotations")
         if "success" not in result["updateAnnotations"]["result"]:
-            cls.raise_exception("No success in update annotations")
+            cls.raise_exception("Error in updating annotations: " + result["updateAnnotations"]["result"]["message"])
         return (
             [cls.QueryResponse(success=result["updateAnnotations"]["result"]["success"])],
             False,

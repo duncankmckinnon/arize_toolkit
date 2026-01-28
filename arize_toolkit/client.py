@@ -69,7 +69,15 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorByIDQuery,
     GetMonitorQuery,
 )
-from arize_toolkit.queries.space_queries import CreateNewSpaceMutation, CreateSpaceAdminApiKeyMutation, GetAllOrganizationsQuery, GetAllSpacesQuery, OrgAndFirstSpaceQuery, OrgIDandSpaceIDQuery
+from arize_toolkit.queries.space_queries import (
+    CreateNewOrganizationMutation,
+    CreateNewSpaceMutation,
+    CreateSpaceAdminApiKeyMutation,
+    GetAllOrganizationsQuery,
+    GetAllSpacesQuery,
+    OrgAndFirstSpaceQuery,
+    OrgIDandSpaceIDQuery,
+)
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -189,9 +197,15 @@ class Client:
             self.space = space
         return self.space_url
 
+    def _org_url(self, org_id: str) -> str:
+        return f"{self.arize_app_url}/organizations/{org_id}"
+
+    def _space_url(self, org_id: str, space_id: str) -> str:
+        return f"{self._org_url(org_id)}/spaces/{space_id}"
+
     @property
     def space_url(self) -> str:
-        return f"{self.arize_app_url}/organizations/{self.org_id}/spaces/{self.space_id}"
+        return self._space_url(self.org_id, self.space_id)
 
     def model_url(self, model_id: str) -> str:
         return f"{self.space_url}/models/{model_id}"
@@ -278,8 +292,53 @@ class Client:
             private=private,
         )
         if set_as_active:
-            self.switch_space(organization=self.organization, space=name)
+            self.space = name
+            self.space_id = result.id
         return result.id
+
+    def create_new_organization_and_space(
+        self,
+        org_name: str,
+        space_name: str,
+        org_description: Optional[str] = None,
+        space_private: bool = False,
+        set_as_active: bool = True,
+    ) -> str:
+        """Creates a new organization and adds a new space. The new org must have at least one space to work correctly.
+
+        Args:
+            org_name (str): Name for the new organization
+            space_name (str): Name for the new space in the org
+            org_description (Optional[str], optional): Description for the organization. Defaults to None.
+            space_private (bool, optional): Whether the space should be private. Defaults to False.
+            set_as_active (bool, optional): Whether to switch to the new organization and space. Defaults to True.
+
+        Returns:
+            str: The unique identifier (ID) of the newly created organization
+
+        Raises:
+            ArizeAPIException: If there is an error creating the organization or space
+        """
+        org_result = CreateNewOrganizationMutation.run_graphql_mutation(
+            self._graphql_client,
+            name=org_name,
+            description=org_description,
+        )
+
+        space_result = CreateNewSpaceMutation.run_graphql_mutation(
+            self._graphql_client,
+            accountOrganizationId=org_result.id,
+            name=space_name,
+            private=space_private,
+        )
+
+        if set_as_active:
+            self.org_id = org_result.id
+            self.organization = org_name
+            self.space_id = space_result.id
+            self.space = space_name
+
+        return self._space_url(org_result.id, space_result.id)
 
     def create_space_admin_api_key(self, name: str) -> dict:
         """Creates an admin API key for a specific space.
