@@ -113,7 +113,6 @@ def run_integration_tests():
             prompts = client.get_all_prompts()
             print("Prompts:", prompts)
             if prompts:
-
                 prompt_name = prompts.pop(0)["name"]
                 print(f"Running get_prompt query for prompt: {prompt_name}...")
                 prompt = client.get_prompt(prompt_name=prompt_name)

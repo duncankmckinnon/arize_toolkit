@@ -70,13 +70,16 @@ from arize_toolkit.queries.monitor_queries import (
     GetMonitorQuery,
 )
 from arize_toolkit.queries.space_queries import (
+    AssignSpaceMembershipMutation,
     CreateNewOrganizationMutation,
     CreateNewSpaceMutation,
     CreateSpaceAdminApiKeyMutation,
     GetAllOrganizationsQuery,
     GetAllSpacesQuery,
+    GetUserQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
+    RemoveSpaceMemberMutation,
 )
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
@@ -359,6 +362,228 @@ class Client:
             self._graphql_client,
             name=name,
             spaceId=self.space_id,
+        )
+        return result.to_dict()
+
+    def assign_space_membership(
+        self,
+        user_names: Union[str, List[str]],
+        space_names: Optional[Union[str, List[str]]] = None,
+        role: str = "member",
+        custom_role_id: Optional[str] = None,
+    ) -> List[dict]:
+        """Assigns users to spaces with the specified role using user names/emails and space names.
+
+        This method looks up user IDs from names/emails and space IDs from space names,
+        then delegates to assign_space_membership_by_id.
+
+        Args:
+            user_names (Union[str, List[str]]): A single user name/email or list of user names/emails to assign
+            space_names (Optional[Union[str, List[str]]]): A single space name or list of space names.
+                If not provided, uses the current space.
+            role (str): The role to assign. One of: 'admin', 'member', 'readOnly', 'annotator'.
+                Defaults to 'member'.
+            custom_role_id (Optional[str]): Custom role ID to use instead of a standard role.
+                Cannot be used together with role parameter.
+
+        Returns:
+            List[dict]: A list of space membership dictionaries, each containing:
+                - id (str): The membership ID
+                - role (str): The assigned role
+                - user (dict): User information including id, email, name
+
+        Raises:
+            ValueError: If user_names is empty
+            ArizeAPIException: If a user or space is not found, or if there is an error assigning the membership
+        """
+        # Normalize inputs to lists
+        user_name_list = [user_names] if isinstance(user_names, str) else user_names
+        if not user_name_list:
+            raise ValueError("user_names must not be empty")
+
+        # Look up user IDs from names/emails
+        user_ids = [self.get_user(search=name)["id"] for name in user_name_list]
+
+        # Look up space IDs from names if provided
+        space_ids: Optional[List[str]] = None
+        if space_names is not None:
+            space_name_list = [space_names] if isinstance(space_names, str) else space_names
+            space_ids = []
+            for space_name in space_name_list:
+                result = OrgIDandSpaceIDQuery.run_graphql_query(
+                    self._graphql_client,
+                    organization=self.organization,
+                    space=space_name,
+                )
+                space_ids.append(result.space_id)
+
+        return self.assign_space_membership_by_id(
+            user_ids=user_ids,
+            space_ids=space_ids,
+            role=role,
+            custom_role_id=custom_role_id,
+        )
+
+    def assign_space_membership_by_id(
+        self,
+        user_ids: Union[str, List[str]],
+        space_ids: Optional[Union[str, List[str]]] = None,
+        role: str = "member",
+        custom_role_id: Optional[str] = None,
+    ) -> List[dict]:
+        """Assigns users to spaces with the specified role using user IDs and space IDs.
+
+        Args:
+            user_ids (Union[str, List[str]]): A single user ID or list of user IDs to assign
+            space_ids (Optional[Union[str, List[str]]]): A single space ID or list of space IDs.
+                If not provided, uses the current space.
+            role (str): The role to assign. One of: 'admin', 'member', 'readOnly', 'annotator'.
+                Defaults to 'member'.
+            custom_role_id (Optional[str]): Custom role ID to use instead of a standard role.
+                Cannot be used together with role parameter.
+
+        Returns:
+            List[dict]: A list of space membership dictionaries, each containing:
+                - id (str): The membership ID
+                - role (str): The assigned role
+                - user (dict): User information including id, email, name
+
+        Raises:
+            ValueError: If user_ids is empty
+            ArizeAPIException: If there is an error assigning the membership
+        """
+        # Normalize inputs to lists
+        user_id_list = [user_ids] if isinstance(user_ids, str) else user_ids
+        if space_ids is None:
+            space_id_list = [self.space_id]
+        elif isinstance(space_ids, str):
+            space_id_list = [space_ids]
+        else:
+            space_id_list = space_ids
+
+        if not user_id_list:
+            raise ValueError("user_ids must not be empty")
+
+        space_memberships = []
+        for user_id in user_id_list:
+            for space_id in space_id_list:
+                membership = {
+                    "userId": user_id,
+                    "spaceId": space_id,
+                }
+                if custom_role_id:
+                    membership["customRoleId"] = custom_role_id
+                else:
+                    membership["role"] = role
+                space_memberships.append(membership)
+
+        result = AssignSpaceMembershipMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceMemberships=space_memberships,
+        )
+        return [m.to_dict() for m in result.spaceMemberships]
+
+    def remove_space_member(
+        self,
+        user_name: str,
+        space_name: Optional[str] = None,
+    ) -> dict:
+        """Removes a user from a space using user name/email and space name.
+
+        This method looks up the user ID from name/email and space ID from space name,
+        then delegates to remove_space_member_by_id.
+
+        Args:
+            user_name (str): The name or email of the user to remove
+            space_name (Optional[str]): The name of the space to remove the user from.
+                If not provided, uses the current space.
+
+        Returns:
+            dict: A dictionary containing:
+                - space_id (str): The ID of the space the user was removed from
+                - space_name (str): The name of the space
+
+        Raises:
+            ValueError: If user_name is empty
+            ArizeAPIException: If the user or space is not found, or if there is an error removing the member
+        """
+        if not user_name:
+            raise ValueError("user_name must not be empty")
+
+        # Look up user ID from name/email
+        user_id = self.get_user(search=user_name)["id"]
+
+        # Look up space ID from name if provided
+        space_id: Optional[str] = None
+        if space_name is not None:
+            result = OrgIDandSpaceIDQuery.run_graphql_query(
+                self._graphql_client,
+                organization=self.organization,
+                space=space_name,
+            )
+            space_id = result.space_id
+
+        return self.remove_space_member_by_id(user_id=user_id, space_id=space_id)
+
+    def remove_space_member_by_id(
+        self,
+        user_id: str,
+        space_id: Optional[str] = None,
+    ) -> dict:
+        """Removes a user from a space using user ID and space ID.
+
+        Args:
+            user_id (str): The ID of the user to remove
+            space_id (Optional[str]): The ID of the space to remove the user from.
+                If not provided, uses the current space.
+
+        Returns:
+            dict: A dictionary containing:
+                - space_id (str): The ID of the space the user was removed from
+                - space_name (str): The name of the space
+
+        Raises:
+            ValueError: If user_id is empty
+            ArizeAPIException: If there is an error removing the member
+        """
+        if not user_id:
+            raise ValueError("user_id must not be empty")
+
+        space_id = space_id or self.space_id
+
+        result = RemoveSpaceMemberMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=space_id,
+            userId=user_id,
+        )
+        return result.to_dict()
+
+    def get_user(self, search: str) -> dict:
+        """Retrieves a user by searching for their name or email.
+
+        Args:
+            search (str): Search term to match against user name or email
+
+        Returns:
+            dict: A dictionary containing user information:
+                - id (str): Unique identifier for the user
+                - name (str): Name of the user
+                - email (str): Email of the user
+                - status (str): User status (active/inactive)
+                - accountRole (str): User's account role (admin/member)
+                - userType (str): Type of user (human/bot)
+                - createdAt (datetime): When the user was created
+
+        Raises:
+            ValueError: If search is empty
+            ArizeAPIException: If no user is found or there is an error
+        """
+        if not search:
+            raise ValueError("search must not be empty")
+
+        result = GetUserQuery.run_graphql_query(
+            self._graphql_client,
+            search=search,
         )
         return result.to_dict()
 

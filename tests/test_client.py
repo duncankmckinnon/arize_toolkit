@@ -1932,6 +1932,534 @@ class TestUtilityMethods:
         assert client.space_id == "space2"
         assert client.organization == "Development Org"
 
+    def test_assign_space_membership_by_id_single_user(self, client, mock_graphql_client):
+        """Test assigning a single user to the current space by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "assignSpaceMembership": {
+                "spaceMemberships": [
+                    {
+                        "id": "membership_123",
+                        "role": "member",
+                        "user": {
+                            "id": "user_456",
+                            "email": "user@example.com",
+                            "name": "Test User",
+                        },
+                    }
+                ]
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.assign_space_membership_by_id(user_ids="user_456")
+
+        assert len(result) == 1
+        assert result[0]["id"] == "membership_123"
+        assert result[0]["role"] == "member"
+        assert result[0]["user"]["email"] == "user@example.com"
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert len(variables["spaceMemberships"]) == 1
+        assert variables["spaceMemberships"][0]["userId"] == "user_456"
+        assert variables["spaceMemberships"][0]["spaceId"] == "test_space_id"
+        assert variables["spaceMemberships"][0]["role"] == "member"
+
+    def test_assign_space_membership_by_id_multiple_users_and_spaces(self, client, mock_graphql_client):
+        """Test assigning multiple users to multiple spaces by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "assignSpaceMembership": {
+                "spaceMemberships": [
+                    {
+                        "id": "m1",
+                        "role": "admin",
+                        "user": {
+                            "id": "user_1",
+                            "email": "u1@test.com",
+                            "name": "User 1",
+                        },
+                    },
+                    {
+                        "id": "m2",
+                        "role": "admin",
+                        "user": {
+                            "id": "user_1",
+                            "email": "u1@test.com",
+                            "name": "User 1",
+                        },
+                    },
+                    {
+                        "id": "m3",
+                        "role": "admin",
+                        "user": {
+                            "id": "user_2",
+                            "email": "u2@test.com",
+                            "name": "User 2",
+                        },
+                    },
+                    {
+                        "id": "m4",
+                        "role": "admin",
+                        "user": {
+                            "id": "user_2",
+                            "email": "u2@test.com",
+                            "name": "User 2",
+                        },
+                    },
+                ]
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.assign_space_membership_by_id(
+            user_ids=["user_1", "user_2"],
+            space_ids=["space_a", "space_b"],
+            role="admin",
+        )
+
+        assert len(result) == 4
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert len(variables["spaceMemberships"]) == 4
+        # Check that all combinations are present
+        user_space_pairs = [(m["userId"], m["spaceId"]) for m in variables["spaceMemberships"]]
+        assert ("user_1", "space_a") in user_space_pairs
+        assert ("user_1", "space_b") in user_space_pairs
+        assert ("user_2", "space_a") in user_space_pairs
+        assert ("user_2", "space_b") in user_space_pairs
+
+    def test_assign_space_membership_by_id_with_custom_role(self, client, mock_graphql_client):
+        """Test assigning membership with a custom role ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "assignSpaceMembership": {
+                "spaceMemberships": [
+                    {
+                        "id": "m1",
+                        "role": "member",
+                        "user": {
+                            "id": "user_1",
+                            "email": "u1@test.com",
+                            "name": "User 1",
+                        },
+                    },
+                ]
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.assign_space_membership_by_id(
+            user_ids="user_1",
+            custom_role_id="custom_role_xyz",
+        )
+
+        assert len(result) == 1
+
+        # Verify custom role ID was used instead of standard role
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceMemberships"][0]["customRoleId"] == "custom_role_xyz"
+        assert "role" not in variables["spaceMemberships"][0]
+
+    def test_assign_space_membership_by_id_empty_user_ids_raises(self, client, mock_graphql_client):
+        """Test that empty user_ids raises ValueError"""
+        with pytest.raises(ValueError, match="user_ids must not be empty"):
+            client.assign_space_membership_by_id(user_ids=[])
+
+    def test_remove_space_member_by_id(self, client, mock_graphql_client):
+        """Test removing a user from a space by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "removeSpaceMember": {
+                "space": {
+                    "id": "test_space_id",
+                    "name": "Test Space",
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.remove_space_member_by_id(user_id="user_to_remove")
+
+        assert result["space_id"] == "test_space_id"
+        assert result["space_name"] == "Test Space"
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "test_space_id"
+        assert variables["userId"] == "user_to_remove"
+
+    def test_remove_space_member_by_id_from_specific_space(self, client, mock_graphql_client):
+        """Test removing a user from a specific space by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "removeSpaceMember": {
+                "space": {
+                    "id": "other_space_id",
+                    "name": "Other Space",
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.remove_space_member_by_id(user_id="user_123", space_id="other_space_id")
+
+        assert result["space_id"] == "other_space_id"
+
+        # Verify the specific space_id was used
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "other_space_id"
+        assert variables["userId"] == "user_123"
+
+    def test_remove_space_member_by_id_empty_user_id_raises(self, client, mock_graphql_client):
+        """Test that empty user_id raises ValueError"""
+        with pytest.raises(ValueError, match="user_id must not be empty"):
+            client.remove_space_member_by_id(user_id="")
+
+    def test_assign_space_membership_by_name(self, client, mock_graphql_client):
+        """Test assigning a user to the current space by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses: first for get_user, then for assign_space_membership
+        get_user_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_456",
+                                "name": "Test User",
+                                "email": "test@example.com",
+                                "status": "active",
+                                "accountRole": "member",
+                                "userType": "human",
+                                "createdAt": "2024-01-15T10:30:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        assign_response = {
+            "assignSpaceMembership": {
+                "spaceMemberships": [
+                    {
+                        "id": "membership_123",
+                        "role": "member",
+                        "user": {
+                            "id": "user_456",
+                            "email": "test@example.com",
+                            "name": "Test User",
+                        },
+                    }
+                ]
+            }
+        }
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            get_user_response,
+            assign_response,
+        ]
+
+        result = client.assign_space_membership(user_names="test@example.com")
+
+        assert len(result) == 1
+        assert result[0]["id"] == "membership_123"
+        assert result[0]["user"]["email"] == "test@example.com"
+
+    def test_assign_space_membership_by_name_with_space_name(self, client, mock_graphql_client):
+        """Test assigning a user to a specific space by names"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses: get_user, get space ID, then assign_space_membership
+        get_user_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_456",
+                                "name": "Test User",
+                                "email": "test@example.com",
+                                "status": "active",
+                                "accountRole": "member",
+                                "userType": "human",
+                                "createdAt": "2024-01-15T10:30:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        get_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "target_space_id"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        assign_response = {
+            "assignSpaceMembership": {
+                "spaceMemberships": [
+                    {
+                        "id": "membership_789",
+                        "role": "admin",
+                        "user": {
+                            "id": "user_456",
+                            "email": "test@example.com",
+                            "name": "Test User",
+                        },
+                    }
+                ]
+            }
+        }
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            get_user_response,
+            get_space_response,
+            assign_response,
+        ]
+
+        result = client.assign_space_membership(
+            user_names="test@example.com",
+            space_names="Target Space",
+            role="admin",
+        )
+
+        assert len(result) == 1
+        assert result[0]["role"] == "admin"
+
+    def test_assign_space_membership_empty_user_names_raises(self, client, mock_graphql_client):
+        """Test that empty user_names raises ValueError"""
+        with pytest.raises(ValueError, match="user_names must not be empty"):
+            client.assign_space_membership(user_names=[])
+
+    def test_remove_space_member_by_name(self, client, mock_graphql_client):
+        """Test removing a user from a space by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses: get_user, then remove_space_member
+        get_user_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_to_remove",
+                                "name": "User To Remove",
+                                "email": "remove@example.com",
+                                "status": "active",
+                                "accountRole": "member",
+                                "userType": "human",
+                                "createdAt": "2024-01-15T10:30:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        remove_response = {
+            "removeSpaceMember": {
+                "space": {
+                    "id": "test_space_id",
+                    "name": "Test Space",
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            get_user_response,
+            remove_response,
+        ]
+
+        result = client.remove_space_member(user_name="remove@example.com")
+
+        assert result["space_id"] == "test_space_id"
+        assert result["space_name"] == "Test Space"
+
+    def test_remove_space_member_by_name_with_space_name(self, client, mock_graphql_client):
+        """Test removing a user from a specific space by names"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses: get_user, get space ID, then remove_space_member
+        get_user_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_to_remove",
+                                "name": "User To Remove",
+                                "email": "remove@example.com",
+                                "status": "active",
+                                "accountRole": "member",
+                                "userType": "human",
+                                "createdAt": "2024-01-15T10:30:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        get_space_response = {
+            "account": {
+                "organizations": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "test_org_id",
+                                "spaces": {"edges": [{"node": {"id": "other_space_id"}}]},
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        remove_response = {
+            "removeSpaceMember": {
+                "space": {
+                    "id": "other_space_id",
+                    "name": "Other Space",
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            get_user_response,
+            get_space_response,
+            remove_response,
+        ]
+
+        result = client.remove_space_member(user_name="remove@example.com", space_name="Other Space")
+
+        assert result["space_id"] == "other_space_id"
+        assert result["space_name"] == "Other Space"
+
+    def test_remove_space_member_empty_user_name_raises(self, client, mock_graphql_client):
+        """Test that empty user_name raises ValueError"""
+        with pytest.raises(ValueError, match="user_name must not be empty"):
+            client.remove_space_member(user_name="")
+
+    def test_get_user_by_email(self, client, mock_graphql_client):
+        """Test getting a user by email"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_123",
+                                "name": "Test User",
+                                "email": "test@example.com",
+                                "status": "active",
+                                "accountRole": "member",
+                                "userType": "human",
+                                "createdAt": "2024-01-15T10:30:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_user(search="test@example.com")
+
+        assert result["id"] == "user_123"
+        assert result["name"] == "Test User"
+        assert result["email"] == "test@example.com"
+        assert result["status"] == "active"
+        assert result["accountRole"] == "member"
+        assert result["userType"] == "human"
+
+        # Verify the query was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]
+        assert variables["search"] == "test@example.com"
+
+    def test_get_user_by_name(self, client, mock_graphql_client):
+        """Test getting a user by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "account": {
+                "users": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "user_456",
+                                "name": "John Doe",
+                                "email": "john.doe@example.com",
+                                "status": "active",
+                                "accountRole": "admin",
+                                "userType": "human",
+                                "createdAt": "2024-02-20T14:00:00Z",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_user(search="John")
+
+        assert result["id"] == "user_456"
+        assert result["name"] == "John Doe"
+        assert result["accountRole"] == "admin"
+
+    def test_get_user_empty_search_raises(self, client, mock_graphql_client):
+        """Test that empty search raises ValueError"""
+        with pytest.raises(ValueError, match="search must not be empty"):
+            client.get_user(search="")
+
+    def test_get_user_not_found(self, client, mock_graphql_client):
+        """Test that searching for non-existent user raises exception"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {"account": {"users": {"edges": []}}}
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        from arize_toolkit.queries.space_queries import GetUserQuery
+
+        with pytest.raises(GetUserQuery.QueryException):
+            client.get_user(search="nonexistent@example.com")
+
     def test_url_generation_methods(self, client):
         """Test URL generation helper methods"""
         # Test space_url property

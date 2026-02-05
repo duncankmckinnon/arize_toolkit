@@ -245,9 +245,7 @@ class PromptLearningOptimizer:
         optimized_prompt_content = prompt_content
 
         for i, batch in enumerate(batch_dataframes):
-
             try:
-
                 # Construct meta-prompt content
                 meta_prompt_content = self.meta_prompter.construct_content(
                     batch_df=batch,

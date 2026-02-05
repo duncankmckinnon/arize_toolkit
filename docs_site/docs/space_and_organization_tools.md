@@ -17,6 +17,11 @@ These tools and properties on the `Client` object help you manage the client's a
 | Create new Organization and Space | [`create_new_organization_and_space`](#create_new_organization_and_space) |
 | Create new Space | [`create_new_space`](#create_new_space) |
 | Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
+| Get User by Name or Email | [`get_user`](#get_user) |
+| Assign Space Membership (by name) | [`assign_space_membership`](#assign_space_membership) |
+| Assign Space Membership (by ID) | [`assign_space_membership_by_id`](#assign_space_membership_by_id) |
+| Remove Space Member (by name) | [`remove_space_member`](#remove_space_member) |
+| Remove Space Member (by ID) | [`remove_space_member_by_id`](#remove_space_member_by_id) |
 | Get current Space URL | [`space_url`](#space_url) (Property) |
 | Get Model URL | [`model_url`](#model_url) |
 | Get Custom Metric URL | [`custom_metric_url`](#custom_metric_url) |
@@ -313,6 +318,256 @@ if key_info["expiresAt"]:
     print(f"Expires: {key_info['expiresAt']}")
 else:
     print("Key does not expire")
+```
+
+______________________________________________________________________
+
+### `get_user`
+
+```python
+user: dict = client.get_user(search: str)
+```
+
+Searches for a user by name or email and retrieves their details. This is useful for finding user IDs needed for operations like assigning space membership.
+
+**Parameters**
+
+- `search` (str) – Search term to match against user name or email. The search performs a partial match.
+
+**Returns**
+
+A dictionary containing user information:
+
+- `id` (str): Unique identifier for the user
+- `name` (str): Name of the user
+- `email` (str): Email of the user
+- `status` (str): User status ('active' or 'inactive')
+- `accountRole` (str): User's account role ('admin' or 'member')
+- `userType` (str): Type of user ('human' or 'bot')
+- `createdAt` (datetime): When the user was created
+
+**Raises**
+
+- `ValueError` – If search is empty
+- `ArizeAPIException` – If no user is found matching the search criteria
+
+**Example**
+
+```python
+# Find a user by email
+user = client.get_user(search="john@example.com")
+print(f"Found user: {user['name']} (ID: {user['id']})")
+
+# Find a user by name
+user = client.get_user(search="John")
+print(f"User email: {user['email']}")
+print(f"Account role: {user['accountRole']}")
+
+# Use with assign_space_membership
+user = client.get_user(search="jane@example.com")
+client.assign_space_membership_by_id(user_ids=user["id"], role="admin")
+```
+
+______________________________________________________________________
+
+### `assign_space_membership`
+
+```python
+memberships: List[dict] = client.assign_space_membership(
+    user_names: Union[str, List[str]],
+    space_names: Optional[Union[str, List[str]]] = None,
+    role: str = "member",
+    custom_role_id: Optional[str] = None
+)
+```
+
+Assigns one or more users to one or more spaces with the specified role using user names/emails and space names. This method looks up user IDs and space IDs automatically, then creates a membership for each combination.
+
+**Parameters**
+
+- `user_names` (Union\[str, List[str]\]) – A single user name/email or list of user names/emails to assign
+- `space_names` (Optional\[Union\[str, List[str]\]\]) – A single space name or list of space names. If not provided, uses the current space.
+- `role` (str, optional) – The role to assign. One of: 'admin', 'member', 'readOnly', 'annotator'. Defaults to 'member'.
+- `custom_role_id` (Optional[str]) – Custom role ID to use instead of a standard role. Cannot be used together with the role parameter.
+
+**Returns**
+
+A list of space membership dictionaries, each containing:
+
+- `id` (str): The membership ID
+- `role` (str): The assigned role
+- `user` (dict): User information including id, email, and name
+
+**Raises**
+
+- `ValueError` – If user_names is empty
+- `ArizeAPIException` – If a user or space is not found, or if there is an error assigning the membership
+
+**Example**
+
+```python
+# Assign a single user to the current space as a member (by email)
+memberships = client.assign_space_membership(user_names="john@example.com")
+
+# Assign multiple users to multiple spaces as admins (by names)
+memberships = client.assign_space_membership(
+    user_names=["john@example.com", "jane@example.com"],
+    space_names=["Production", "Staging"],
+    role="admin",
+)
+
+# Assign a user with a custom role
+memberships = client.assign_space_membership(
+    user_names="john@example.com", custom_role_id="custom_role_xyz"
+)
+
+for membership in memberships:
+    print(f"Assigned {membership['user']['email']} as {membership['role']}")
+```
+
+______________________________________________________________________
+
+### `assign_space_membership_by_id`
+
+```python
+memberships: List[dict] = client.assign_space_membership_by_id(
+    user_ids: Union[str, List[str]],
+    space_ids: Optional[Union[str, List[str]]] = None,
+    role: str = "member",
+    custom_role_id: Optional[str] = None
+)
+```
+
+Assigns one or more users to one or more spaces with the specified role using user IDs and space IDs directly.
+
+**Parameters**
+
+- `user_ids` (Union\[str, List[str]\]) – A single user ID or list of user IDs to assign
+- `space_ids` (Optional\[Union\[str, List[str]\]\]) – A single space ID or list of space IDs. If not provided, uses the current space.
+- `role` (str, optional) – The role to assign. One of: 'admin', 'member', 'readOnly', 'annotator'. Defaults to 'member'.
+- `custom_role_id` (Optional[str]) – Custom role ID to use instead of a standard role. Cannot be used together with the role parameter.
+
+**Returns**
+
+A list of space membership dictionaries, each containing:
+
+- `id` (str): The membership ID
+- `role` (str): The assigned role
+- `user` (dict): User information including id, email, and name
+
+**Raises**
+
+- `ValueError` – If user_ids is empty
+- `ArizeAPIException` – If there is an error assigning the membership
+
+**Example**
+
+```python
+# Assign a single user to the current space as a member
+memberships = client.assign_space_membership_by_id(user_ids="user_123")
+
+# Assign multiple users to multiple spaces as admins
+memberships = client.assign_space_membership_by_id(
+    user_ids=["user_1", "user_2", "user_3"],
+    space_ids=["space_a", "space_b"],
+    role="admin",
+)
+
+# Combine with get_user to look up IDs first
+user = client.get_user(search="john@example.com")
+memberships = client.assign_space_membership_by_id(user_ids=user["id"], role="admin")
+```
+
+______________________________________________________________________
+
+### `remove_space_member`
+
+```python
+result: dict = client.remove_space_member(
+    user_name: str,
+    space_name: Optional[str] = None
+)
+```
+
+Removes a user from a space using user name/email and space name. This method looks up the user ID and space ID automatically.
+
+**Parameters**
+
+- `user_name` (str) – The name or email of the user to remove
+- `space_name` (Optional[str]) – The name of the space to remove the user from. If not provided, uses the current space.
+
+**Returns**
+
+A dictionary containing:
+
+- `space_id` (str): The ID of the space the user was removed from
+- `space_name` (str): The name of the space
+
+**Raises**
+
+- `ValueError` – If user_name is empty
+- `ArizeAPIException` – If the user or space is not found, or if there is an error removing the member
+
+**Example**
+
+```python
+# Remove a user from the current space (by email)
+result = client.remove_space_member(user_name="john@example.com")
+print(f"Removed user from space: {result['space_name']}")
+
+# Remove a user from a specific space (by names)
+result = client.remove_space_member(
+    user_name="john@example.com", space_name="Production"
+)
+print(f"Removed user from space: {result['space_name']}")
+```
+
+______________________________________________________________________
+
+### `remove_space_member_by_id`
+
+```python
+result: dict = client.remove_space_member_by_id(
+    user_id: str,
+    space_id: Optional[str] = None
+)
+```
+
+Removes a user from a space using user ID and space ID directly.
+
+**Parameters**
+
+- `user_id` (str) – The ID of the user to remove
+- `space_id` (Optional[str]) – The ID of the space to remove the user from. If not provided, uses the current space.
+
+**Returns**
+
+A dictionary containing:
+
+- `space_id` (str): The ID of the space the user was removed from
+- `space_name` (str): The name of the space
+
+**Raises**
+
+- `ValueError` – If user_id is empty
+- `ArizeAPIException` – If there is an error removing the member
+
+**Example**
+
+```python
+# Remove a user from the current space
+result = client.remove_space_member_by_id(user_id="user_to_remove")
+print(f"Removed user from space: {result['space_name']}")
+
+# Remove a user from a specific space
+result = client.remove_space_member_by_id(
+    user_id="user_123", space_id="specific_space_id"
+)
+print(f"Removed user from space: {result['space_name']}")
+
+# Combine with get_user to look up ID first
+user = client.get_user(search="john@example.com")
+result = client.remove_space_member_by_id(user_id=user["id"])
 ```
 
 ______________________________________________________________________

@@ -624,7 +624,12 @@ class TestCreateNewSpaceMutation:
             CreateNewSpaceMutation.QueryException,
             match="Failed to create space",
         ):
-            CreateNewSpaceMutation.run_graphql_mutation(gql_client, accountOrganizationId="org_123", name="Test Space", private=True)
+            CreateNewSpaceMutation.run_graphql_mutation(
+                gql_client,
+                accountOrganizationId="org_123",
+                name="Test Space",
+                private=True,
+            )
 
         gql_client.execute.assert_called_once()
 
@@ -637,7 +642,12 @@ class TestCreateNewSpaceMutation:
             CreateNewSpaceMutation.QueryException,
             match="Failed to create space",
         ):
-            CreateNewSpaceMutation.run_graphql_mutation(gql_client, accountOrganizationId="org_123", name="Test Space", private=True)
+            CreateNewSpaceMutation.run_graphql_mutation(
+                gql_client,
+                accountOrganizationId="org_123",
+                name="Test Space",
+                private=True,
+            )
 
         gql_client.execute.assert_called_once()
 
