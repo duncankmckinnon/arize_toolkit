@@ -119,6 +119,7 @@ class Client:
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
+        _skip_org_space_lookup: bool = False,
     ):
         self.organization = organization
         self.space = space
@@ -131,7 +132,8 @@ class Client:
                 headers={"x-api-key": arize_developer_key},
             )
         )
-        self._set_org_and_space_id()
+        if not _skip_org_space_lookup:
+            self._set_org_and_space_id()
 
     def _set_org_and_space_id(self) -> None:
         if not self.organization:
@@ -153,6 +155,133 @@ class Client:
             self.org_id = results.organization_id
             self.space_id = results.space_id
         logger.info(f"Using organization: {self.organization} and space: {self.space}")
+
+    @classmethod
+    def create_with_new_organization(
+        cls,
+        org_name: str,
+        space_name: str,
+        org_description: Optional[str] = None,
+        space_private: bool = False,
+        arize_developer_key: Optional[str] = None,
+        arize_app_url: str = "https://app.arize.com",
+        sleep_time: int = 0,
+    ) -> "Client":
+        """Creates a new organization and space, returning a Client initialized to use them.
+
+        This factory method is useful when you need to create a new organization from scratch
+        and immediately get a client configured to work with it.
+
+        Args:
+            org_name (str): Name for the new organization
+            space_name (str): Name for the new space in the organization
+            org_description (Optional[str]): Description for the organization. Defaults to None.
+            space_private (bool): Whether the space should be private. Defaults to False.
+            arize_developer_key (Optional[str]): The API key. Falls back to ARIZE_DEVELOPER_KEY env var.
+            arize_app_url (str): The URL of the Arize API. Defaults to "https://app.arize.com".
+            sleep_time (int): Seconds to sleep between API requests. Defaults to 0.
+
+        Returns:
+            Client: A new Client instance configured to use the created organization and space
+
+        Raises:
+            ArizeAPIException: If there is an error creating the organization or space
+
+        Example:
+            >>> client = Client.create_with_new_organization(
+            ...     org_name="My New Org",
+            ...     space_name="Production",
+            ...     org_description="Organization for production models"
+            ... )
+            >>> print(client.organization)  # "My New Org"
+            >>> print(client.space)  # "Production"
+        """
+        client = cls(
+            organization=org_name,
+            space=space_name,
+            arize_developer_key=arize_developer_key,
+            arize_app_url=arize_app_url,
+            sleep_time=sleep_time,
+            _skip_org_space_lookup=True,
+        )
+
+        org_result = CreateNewOrganizationMutation.run_graphql_mutation(
+            client._graphql_client,
+            name=org_name,
+            description=org_description,
+        )
+        client.org_id = org_result.id
+
+        space_result = CreateNewSpaceMutation.run_graphql_mutation(
+            client._graphql_client,
+            accountOrganizationId=org_result.id,
+            name=space_name,
+            private=space_private,
+        )
+        client.space_id = space_result.id
+
+        logger.info(f"Created organization '{org_name}' and space '{space_name}'")
+        return client
+
+    @classmethod
+    def create_with_new_space(
+        cls,
+        organization: str,
+        space_name: str,
+        space_private: bool = True,
+        arize_developer_key: Optional[str] = None,
+        arize_app_url: str = "https://app.arize.com",
+        sleep_time: int = 0,
+    ) -> "Client":
+        """Creates a new space in an existing organization, returning a Client initialized to use it.
+
+        This factory method is useful when you have an existing organization and want to create
+        a new space and immediately get a client configured to work with it.
+
+        Args:
+            organization (str): Name of the existing organization
+            space_name (str): Name for the new space
+            space_private (bool): Whether the space should be private. Defaults to True.
+            arize_developer_key (Optional[str]): The API key. Falls back to ARIZE_DEVELOPER_KEY env var.
+            arize_app_url (str): The URL of the Arize API. Defaults to "https://app.arize.com".
+            sleep_time (int): Seconds to sleep between API requests. Defaults to 0.
+
+        Returns:
+            Client: A new Client instance configured to use the existing organization and new space
+
+        Raises:
+            ArizeAPIException: If the organization is not found or there is an error creating the space
+
+        Example:
+            >>> client = Client.create_with_new_space(
+            ...     organization="Existing Org",
+            ...     space_name="New Project Space",
+            ...     space_private=True
+            ... )
+            >>> print(client.space)  # "New Project Space"
+        """
+        client = cls(
+            organization=organization,
+            space=space_name,
+            arize_developer_key=arize_developer_key,
+            arize_app_url=arize_app_url,
+            sleep_time=sleep_time,
+            _skip_org_space_lookup=True,
+        )
+
+        result = OrgAndFirstSpaceQuery.run_graphql_query(client._graphql_client, organization=organization)
+        client.org_id = result.organization_id
+
+        space_result = CreateNewSpaceMutation.run_graphql_mutation(
+            client._graphql_client,
+            accountOrganizationId=client.org_id,
+            name=space_name,
+            private=space_private,
+        )
+        client.space_id = space_result.id
+
+        logger.info(f"Created space '{space_name}' in organization '{organization}'")
+        return client
 
     def set_sleep_time(self, sleep_time: int) -> "Client":
         """Updates the sleep time between API requests.

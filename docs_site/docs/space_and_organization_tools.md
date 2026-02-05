@@ -11,6 +11,8 @@ These tools and properties on the `Client` object help you manage the client's a
 
 | Operation | Helper Method/Property |
 |-----------------------------|-----------------------------|
+| Create Client with new Organization | [`Client.create_with_new_organization`](#create_with_new_organization) (Factory) |
+| Create Client with new Space | [`Client.create_with_new_space`](#create_with_new_space) (Factory) |
 | Switch active Space/Organization | [`switch_space`](#switch_space) |
 | Get all Organizations | [`get_all_organizations`](#get_all_organizations) |
 | Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
@@ -55,6 +57,133 @@ client.switch_space(space="my_space")
 - If no organization is provided, the client selects the first organization in your account
 - If no space is provided, the client selects the first space in the selected organization
 - This makes it easy to get started quickly while still allowing precise control when needed
+
+______________________________________________________________________
+
+## Factory Methods
+
+These class methods create a new `Client` instance while also creating new organizations or spaces. They are useful when you need to set up new infrastructure and immediately start working with it.
+
+______________________________________________________________________
+
+### `create_with_new_organization`
+
+```python
+client: Client = Client.create_with_new_organization(
+    org_name: str,
+    space_name: str,
+    org_description: Optional[str] = None,
+    space_private: bool = False,
+    arize_developer_key: Optional[str] = None,
+    arize_app_url: str = "https://app.arize.com",
+    sleep_time: int = 0
+)
+```
+
+Creates a new organization and space, returning a `Client` instance already configured to use them. This factory method is useful when you need to create a new organization from scratch and immediately get a client configured to work with it.
+
+**Parameters**
+
+- `org_name` (str) – Name for the new organization
+- `space_name` (str) – Name for the new space in the organization
+- `org_description` (Optional[str], optional) – Description for the organization. Defaults to None.
+- `space_private` (bool, optional) – Whether the space should be private. Defaults to False.
+- `arize_developer_key` (Optional[str], optional) – The API key. Falls back to ARIZE_DEVELOPER_KEY environment variable if not provided.
+- `arize_app_url` (str, optional) – The URL of the Arize API. Defaults to "https://app.arize.com".
+- `sleep_time` (int, optional) – Seconds to sleep between API requests. Defaults to 0.
+
+**Returns**
+
+- `Client` – A new Client instance configured to use the created organization and space
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error creating the organization or space
+
+**Example**
+
+```python
+# Create a new organization and space in one step
+client = Client.create_with_new_organization(
+    org_name="My New Organization",
+    space_name="Production",
+    org_description="Organization for production ML models",
+    arize_developer_key="your_api_key",
+)
+
+# The client is immediately ready to use
+print(f"Organization: {client.organization}")  # "My New Organization"
+print(f"Space: {client.space}")  # "Production"
+print(f"Space URL: {client.space_url}")
+
+# Start using the client right away
+models = client.get_all_models()
+```
+
+______________________________________________________________________
+
+### `create_with_new_space`
+
+```python
+client: Client = Client.create_with_new_space(
+    organization: str,
+    space_name: str,
+    space_private: bool = True,
+    arize_developer_key: Optional[str] = None,
+    arize_app_url: str = "https://app.arize.com",
+    sleep_time: int = 0
+)
+```
+
+Creates a new space in an existing organization, returning a `Client` instance already configured to use it. This factory method is useful when you have an existing organization and want to create a new space and immediately get a client configured to work with it.
+
+**Parameters**
+
+- `organization` (str) – Name of the existing organization
+- `space_name` (str) – Name for the new space
+- `space_private` (bool, optional) – Whether the space should be private. Defaults to True.
+- `arize_developer_key` (Optional[str], optional) – The API key. Falls back to ARIZE_DEVELOPER_KEY environment variable if not provided.
+- `arize_app_url` (str, optional) – The URL of the Arize API. Defaults to "https://app.arize.com".
+- `sleep_time` (int, optional) – Seconds to sleep between API requests. Defaults to 0.
+
+**Returns**
+
+- `Client` – A new Client instance configured to use the existing organization and new space
+
+**Raises**
+
+- `ArizeAPIException` – If the organization is not found or there is an error creating the space
+
+**Example**
+
+```python
+# Create a new space in an existing organization
+client = Client.create_with_new_space(
+    organization="Existing Organization",
+    space_name="New Project Space",
+    space_private=True,
+    arize_developer_key="your_api_key",
+)
+
+# The client is immediately ready to use
+print(f"Organization: {client.organization}")  # "Existing Organization"
+print(f"Space: {client.space}")  # "New Project Space"
+
+# Create multiple spaces for different projects
+dev_client = Client.create_with_new_space(
+    organization="My Company", space_name="Development", space_private=True
+)
+
+staging_client = Client.create_with_new_space(
+    organization="My Company", space_name="Staging", space_private=True
+)
+
+prod_client = Client.create_with_new_space(
+    organization="My Company",
+    space_name="Production",
+    space_private=False,  # Public for dashboards
+)
+```
 
 ______________________________________________________________________
 
