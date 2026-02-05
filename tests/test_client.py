@@ -1734,34 +1734,19 @@ class TestUtilityMethods:
         """Test creating a new private space (default behavior)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock responses for both create space mutation and switch space query
         create_space_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
-        switch_space_response = {
-            "account": {
-                "organizations": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "space_new_123"}}]},
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-
-        mock_graphql_client.return_value.execute.side_effect = [
-            create_space_response,
-            switch_space_response,
-        ]
+        mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Test Space")
 
         assert space_id == "space_new_123"
-        assert mock_graphql_client.return_value.execute.call_count == 2
+        assert mock_graphql_client.return_value.execute.call_count == 1
 
-        # Verify the mutation was called with correct parameters (check the first call)
+        # Verify client was updated
+        assert client.space == "Test Space"
+        assert client.space_id == "space_new_123"
+
+        # Verify the mutation was called with correct parameters
         call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
@@ -1772,34 +1757,15 @@ class TestUtilityMethods:
         """Test creating a new public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock responses for both create space mutation and switch space query
         create_space_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
-        switch_space_response = {
-            "account": {
-                "organizations": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "space_public_456"}}]},
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-
-        mock_graphql_client.return_value.execute.side_effect = [
-            create_space_response,
-            switch_space_response,
-        ]
+        mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Public Test Space", private=False)
 
         assert space_id == "space_public_456"
-        assert mock_graphql_client.return_value.execute.call_count == 2
+        assert mock_graphql_client.return_value.execute.call_count == 1
 
-        # Verify the mutation was called with correct parameters (check the first call)
+        # Verify the mutation was called with correct parameters
         call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
@@ -1810,34 +1776,15 @@ class TestUtilityMethods:
         """Test creating a new private space (explicitly set)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock responses for both create space mutation and switch space query
         create_space_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
-        switch_space_response = {
-            "account": {
-                "organizations": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "space_private_789"}}]},
-                            }
-                        }
-                    ]
-                }
-            }
-        }
-
-        mock_graphql_client.return_value.execute.side_effect = [
-            create_space_response,
-            switch_space_response,
-        ]
+        mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Private Test Space", private=True)
 
         assert space_id == "space_private_789"
-        assert mock_graphql_client.return_value.execute.call_count == 2
+        assert mock_graphql_client.return_value.execute.call_count == 1
 
-        # Verify the mutation was called with correct parameters (check the first call)
+        # Verify the mutation was called with correct parameters
         call_args = mock_graphql_client.return_value.execute.call_args_list[0]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
@@ -2548,6 +2495,139 @@ class TestUtilityMethods:
         # Test table_import_jobs_url
         expected = f"{client.space_url}/imports?selectedSubTab=dataWarehouse"
         assert client.table_import_jobs_url() == expected
+
+    def test_create_new_organization_and_space(self, client, mock_graphql_client):
+        """Test creating a new organization and space with default set_as_active=True"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Mock responses for create org and create space
+        create_org_response = {"createOrganization": {"organization": {"id": "org_new_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "New Space", "id": "space_new_456"}}}
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_org_response,
+            create_space_response,
+        ]
+
+        result_url = client.create_new_organization_and_space(
+            org_name="New Organization",
+            space_name="New Space",
+            org_description="A test organization",
+            space_private=True,
+        )
+
+        # Should return a URL
+        assert "org_new_123" in result_url
+        assert "space_new_456" in result_url
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+        # Verify client was updated to new org/space
+        assert client.org_id == "org_new_123"
+        assert client.organization == "New Organization"
+        assert client.space_id == "space_new_456"
+        assert client.space == "New Space"
+
+        # Verify the create org mutation was called with correct parameters
+        create_org_call = mock_graphql_client.return_value.execute.call_args_list[0]
+        org_variables = create_org_call[1]["variable_values"]["input"]
+        assert org_variables["name"] == "New Organization"
+        assert org_variables["description"] == "A test organization"
+
+        # Verify the create space mutation was called with correct parameters
+        create_space_call = mock_graphql_client.return_value.execute.call_args_list[1]
+        space_variables = create_space_call[1]["variable_values"]["input"]
+        assert space_variables["accountOrganizationId"] == "org_new_123"
+        assert space_variables["name"] == "New Space"
+        assert space_variables["private"] is True
+
+    def test_create_new_organization_and_space_no_switch(self, client, mock_graphql_client):
+        """Test creating a new organization and space without switching to it"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # Store original values
+        original_org_id = client.org_id
+        original_space_id = client.space_id
+
+        # Mock responses for create org and create space
+        create_org_response = {"createOrganization": {"organization": {"id": "org_new_789"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Another Space", "id": "space_new_012"}}}
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_org_response,
+            create_space_response,
+        ]
+
+        result_url = client.create_new_organization_and_space(
+            org_name="Another Organization",
+            space_name="Another Space",
+            set_as_active=False,
+        )
+
+        # Should return a URL
+        assert "org_new_789" in result_url
+        assert "space_new_012" in result_url
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+        # Client should NOT be updated when set_as_active=False
+        assert client.org_id == original_org_id
+        assert client.space_id == original_space_id
+
+    def test_create_new_organization_and_space_public_space(self, client, mock_graphql_client):
+        """Test creating a new organization with a public space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        create_org_response = {"createOrganization": {"organization": {"id": "org_public_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Public Space", "id": "space_public_456"}}}
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_org_response,
+            create_space_response,
+        ]
+
+        result_url = client.create_new_organization_and_space(
+            org_name="Public Organization",
+            space_name="Public Space",
+            space_private=False,
+        )
+
+        assert "org_public_123" in result_url
+        assert "space_public_456" in result_url
+
+        # Verify space was created with private=False
+        create_space_call = mock_graphql_client.return_value.execute.call_args_list[1]
+        space_variables = create_space_call[1]["variable_values"]["input"]
+        assert space_variables["private"] is False
+
+    def test_create_new_organization_and_space_minimal(self, client, mock_graphql_client):
+        """Test creating a new organization and space with minimal parameters"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        create_org_response = {"createOrganization": {"organization": {"id": "org_minimal_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Minimal Space", "id": "space_minimal_456"}}}
+
+        mock_graphql_client.return_value.execute.side_effect = [
+            create_org_response,
+            create_space_response,
+        ]
+
+        result_url = client.create_new_organization_and_space(
+            org_name="Minimal Organization",
+            space_name="Minimal Space",
+        )
+
+        assert "org_minimal_123" in result_url
+        assert "space_minimal_456" in result_url
+
+        # Verify org was created without description
+        create_org_call = mock_graphql_client.return_value.execute.call_args_list[0]
+        org_variables = create_org_call[1]["variable_values"]["input"]
+        assert org_variables["name"] == "Minimal Organization"
+        assert "description" not in org_variables or org_variables.get("description") is None
+
+        # Verify space was created with default private=False
+        create_space_call = mock_graphql_client.return_value.execute.call_args_list[1]
+        space_variables = create_space_call[1]["variable_values"]["input"]
+        assert space_variables["private"] is False
 
 
 class TestModelExtended:

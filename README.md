@@ -88,15 +88,15 @@ The `Client` class is the entrypoint for interacting with the toolkit. It provid
 
 ### API Key
 
-To create a client, you need to provide your Arize API key. Use this reference to [get your API key](https://docs.arize.com/arize/reference/authentication-and-security/api-keys) from the Arize UI.
+To create a client, you need to provide your Arize API key. Use this reference to [get your API key](https://arize.com/docs/ax/security-and-settings/api-keys) from the Arize UI.
 
 ![Arize UI Path](docs_site/docs/images/api_key_ref.png)
 
 ### Organization and Space
 
-You will also need to provide an `organization` name and `space` name. To give some context, models are scoped to a space, and the space is scoped to an organization. These can be found by navigating to the Arize UI and looking at the upper left path in the `Projects & Models` page. They will be in the format `organization/space`.
+You will also need to provide an `organization` name and `space` name. To give some context, models are scoped to a space, and the space is scoped to an organization. These can be found by navigating to the Arize UI and looking at the upper left dropdown from the landing page. You will first select an organization from the dropdown and then pick the space from the available spaces in that organization.
 
-For the example below, the organization is `Demo Models` and the space is `Demo Model Manager`.
+For the example below, the organization is `Demo Org` and the space is `Test Space`.
 
 ![Arize UI Path](docs_site/docs/images/path_ref.png)
 
