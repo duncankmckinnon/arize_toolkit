@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models.space_models import Organization, Space
+from arize_toolkit.models.space_models import AccountUser, Organization, Space, SpaceMember, SpaceMemberInput
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -288,3 +288,110 @@ class CreateSpaceAdminApiKeyMutation(BaseQuery):
             False,
             None,
         )
+
+
+class AssignSpaceMembershipMutation(BaseQuery):
+    graphql_query = (
+        """
+    mutation assignSpaceMembership($input: AssignSpaceMembershipMutationInput!) {
+        assignSpaceMembership(input: $input) {
+            spaceMemberships { """
+        + SpaceMember.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Assign multiple users to multiple spaces with appropriate roles"
+
+    class Variables(BaseVariables):
+        spaceMemberships: List[SpaceMemberInput]
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to assign space membership"
+
+    class QueryResponse(BaseResponse):
+        spaceMemberships: List[SpaceMember]
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "assignSpaceMembership" not in result or "spaceMemberships" not in result["assignSpaceMembership"]:
+            cls.raise_exception("Failed to assign space membership")
+        memberships = [SpaceMember(**m) for m in result["assignSpaceMembership"]["spaceMemberships"]]
+        return ([cls.QueryResponse(spaceMemberships=memberships)], False, None)
+
+
+class RemoveSpaceMemberMutation(BaseQuery):
+    graphql_query = """
+    mutation removeSpaceMember($input: RemoveSpaceMemberMutationInput!) {
+        removeSpaceMember(input: $input) {
+            space {
+                id
+                name
+            }
+        }
+    }
+    """
+    query_description = "Remove a user from a space"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        userId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to remove space member"
+
+    class QueryResponse(BaseResponse):
+        space_id: str
+        space_name: Optional[str] = None
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "removeSpaceMember" not in result or "space" not in result["removeSpaceMember"]:
+            cls.raise_exception("Failed to remove space member")
+        space = result["removeSpaceMember"]["space"]
+        return (
+            [cls.QueryResponse(space_id=space["id"], space_name=space.get("name"))],
+            False,
+            None,
+        )
+
+
+class GetUserQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getUser($search: String!) {
+        account {
+            users(search: $search, first: 1) {
+                edges {
+                    node { """
+        + AccountUser.to_graphql_fields()
+        + """
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Search for a user by name or email"
+
+    class Variables(BaseVariables):
+        search: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve user"
+
+    class QueryResponse(AccountUser):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "account" not in result or "users" not in result["account"] or "edges" not in result["account"]["users"]:
+            cls.raise_exception("Failed to retrieve user")
+        edges = result["account"]["users"]["edges"]
+        if len(edges) == 0:
+            cls.raise_exception("No user found matching the search criteria")
+        user = edges[0]["node"]
+        return ([cls.QueryResponse(**user)], False, None)

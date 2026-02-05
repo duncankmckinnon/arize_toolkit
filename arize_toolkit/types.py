@@ -596,3 +596,42 @@ class DashboardStatus(InputValidationEnum):
     active = "active", "Active"
     inactive = "inactive", "Inactive"
     deleted = "deleted", "Deleted"
+
+
+class SpaceMemberRole(InputValidationEnum):
+    """The role of a space member"""
+
+    admin = "admin", "Admin"
+    member = "member", "Member"
+    readOnly = "readOnly", "Read Only", "read_only"
+    annotator = "annotator", "Annotator"
+
+
+class SpaceMembership(InputValidationEnum):
+    """The way in which a particular user has access to a space"""
+
+    ACCOUNT_ADMIN = "ACCOUNT_ADMIN", "Account Admin"
+    ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN", "Organization Admin"
+    EXPLICIT_MEMBERSHIP = "EXPLICIT_MEMBERSHIP", "Explicit Membership"
+    PUBLIC_MEMBERSHIP = "PUBLIC_MEMBERSHIP", "Public Membership"
+
+
+class UserStatus(InputValidationEnum):
+    """The status of a user"""
+
+    active = "active", "Active"
+    inactive = "inactive", "Inactive"
+
+
+class AccountRole(InputValidationEnum):
+    """The role of the user with regards to the account"""
+
+    admin = "admin", "Admin"
+    member = "member", "Member"
+
+
+class UserType(InputValidationEnum):
+    """The type of user (human or bot)"""
+
+    human = "human", "Human"
+    bot = "bot", "Bot"
