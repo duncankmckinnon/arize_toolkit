@@ -45,6 +45,18 @@
 
 - [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
 - [**Integration Tests**](https://duncankmckinnon.github.io/arize_toolkit/developers/integration_test) - Running integration tests
+- [**Claude Code Skills**](https://duncankmckinnon.github.io/arize_toolkit/developers/claude_code_skills) - AI-assisted development workflows
+
+#### Claude Code Skills
+
+This repository includes [Claude Code](https://claude.ai/claude-code) skills for AI-assisted development:
+
+| Skill | Description |
+|-------|-------------|
+| `arize-graphql-analytics` | Query and explore the Arize GraphQL API, build and validate queries |
+| `new-query-workflow` | Complete workflow for adding new queries/mutations with models, types, tests, and docs |
+
+Use `/arize-graphql-analytics` or `/new-query-workflow` in Claude Code to invoke these skills.
 
 ## Disclaimer
 

@@ -39,6 +39,7 @@ nav:
   - For Developers:
     - Development: developers/development.md
     - Integration Tests: developers/integration_test.md
+    - Claude Code Skills: developers/claude_code_skills.md
 
 markdown_extensions:
   - pymdownx.highlight
