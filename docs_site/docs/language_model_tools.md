@@ -3,13 +3,16 @@
 ## Overview
 
 - **Prompts** – version-controlled chat / completion templates ( system + user + assistant messages, tools, variables … ). You can create new prompts, fetch existing ones, update metadata, or iterate through prior versions.
+- **Evaluators** – automated scoring systems that assess LLM outputs using either LLM-based templates or custom Python code. Evaluators can detect issues like hallucinations, check response quality, or apply custom business logic.
 - **Annotations** – labels or scores attached to individual inference records, typically produced by human evaluation or another model.
 
 For more information about prompts in Arize check out the **[documentation on Arize prompts](https://arize.com/docs/ax/develop/prompt-hub)**.
 
+For more information about evaluators in Arize check out the **[documentation on Arize evaluators](https://arize.com/docs/ax/evaluate/evaluators)**.
+
 For more information about annotations in Arize check out the **[documentation on Arize annotations](https://arize.com/docs/ax/evaluate/human-annotations)**.
 
-`arize_toolkit.Client` exposes helpers for both areas:
+`arize_toolkit.Client` exposes helpers for all three areas:
 
 | Area | Operation | Helper |
 |------|-----------|--------|
@@ -24,6 +27,8 @@ For more information about annotations in Arize check out the **[documentation o
 | | Update metadata (by name) | [`update_prompt`](#update_prompt) |
 | | Delete by *id* | [`delete_prompt_by_id`](#delete_prompt_by_id) |
 | | Delete by *name* | [`delete_prompt`](#delete_prompt) |
+| Evaluators | Create template evaluator | [`create_template_evaluator`](#create_template_evaluator) |
+| | Create code evaluator | [`create_code_evaluator`](#create_code_evaluator) |
 | Annotations | Create annotation | [`create_annotation`](#create_annotation) |
 
 ______________________________________________________________________
@@ -425,6 +430,175 @@ is_deleted = client.delete_prompt_by_id(
     prompt_id="******",
 )
 print("Deleted" if is_deleted else "Failed")
+```
+
+______________________________________________________________________
+
+## Evaluator Operations
+
+### `create_template_evaluator`
+
+```python
+evaluator: dict = client.create_template_evaluator(
+    name="Hallucination Detector",
+    template="Does the response contain factual errors?\n\nContext: {{context}}\nResponse: {{output}}",
+    metric_name="hallucination_score",
+    description="Detects hallucinations in LLM responses",
+    classification_choices={"Yes": 0, "No": 1},
+    direction="higher",
+    commit_message="Initial version",
+)
+```
+
+Creates a template (LLM-based) evaluator that uses an LLM with a prompt template to automatically evaluate LLM outputs.
+
+**Required parameters**
+
+- `name` – Display name for the evaluator in the Arize UI.
+- `template` – Prompt template with `{{variables}}` for the LLM evaluator. Variables like `{{context}}`, `{{output}}`, `{{input}}` will be filled from span attributes.
+- `metric_name` – Name of the evaluator metric/output (e.g., "hallucination_score").
+
+**Optional parameters**
+
+- `commit_message` – Version control message (default: "Initial version").
+- `description` – Human-readable description of what this evaluator does.
+- `classification_choices` – Dictionary mapping labels to scores for categorical evaluations (e.g., `{"Yes": 0, "No": 1}` or `{"Poor": 0, "Good": 0.5, "Excellent": 1}`).
+- `direction` – Whether higher or lower scores are better: "higher" or "lower" (default: "higher").
+- `data_granularity_type` – Evaluation granularity: "SPAN", "TRACE", or "SESSION" (default: "SPAN").
+- `include_explanations` – Whether to include explanations in the evaluation (default: `True`).
+- `use_function_calling` – Whether to use function calling if available (default: `True`).
+- `position` – Display position/order of the evaluator (default: 0).
+
+**Returns**
+
+A dictionary containing:
+
+- `id` – Unique evaluator ID
+- `name` – Evaluator display name
+- `description` – Evaluator description
+- `createdAt` – Creation timestamp
+- `createdBy` – User who created the evaluator
+
+**Examples**
+
+```python
+# Binary classification evaluator
+hallucination_eval = client.create_template_evaluator(
+    name="Hallucination Detector",
+    template="Does the response contain factual errors?\n\nContext: {{context}}\nResponse: {{output}}\n\nAnswer: Yes or No",
+    metric_name="hallucination_score",
+    description="Detects hallucinations in LLM responses",
+    classification_choices={"Yes": 0, "No": 1},
+    direction="higher",
+)
+
+# Multi-level quality evaluator
+quality_eval = client.create_template_evaluator(
+    name="Response Quality",
+    template="Rate the quality of this response:\n\nQuestion: {{input}}\nResponse: {{output}}\n\nRating: Poor, Fair, Good, or Excellent",
+    metric_name="quality_score",
+    classification_choices={"Poor": 0, "Fair": 0.33, "Good": 0.67, "Excellent": 1.0},
+    direction="higher",
+)
+```
+
+______________________________________________________________________
+
+### `create_code_evaluator`
+
+```python
+code = """class ResponseLengthEvaluator:
+    def evaluate(self, output, **kwargs):
+        length = len(output)
+        if length < 50:
+            return {"score": 0, "label": "too_short"}
+        elif length > 500:
+            return {"score": 0, "label": "too_long"}
+        else:
+            return {"score": 1, "label": "appropriate"}"""
+
+evaluator: dict = client.create_code_evaluator(
+    name="Response Length Checker",
+    code_block=code,
+    evaluation_class="ResponseLengthEvaluator",
+    metric_name="response_length_score",
+    span_attributes=["output"],
+    description="Checks if response length is appropriate",
+)
+```
+
+Creates a code (Python-based) evaluator that uses custom Python code to evaluate LLM outputs. This is useful for deterministic checks, business logic, or calculations that don't require an LLM.
+
+**Required parameters**
+
+- `name` – Display name for the evaluator in the Arize UI.
+- `code_block` – Python code defining the evaluator class. Must contain a class with an `evaluate` method that returns a dict with `score` and optionally `label`.
+- `evaluation_class` – Name of the evaluator class in the code block.
+- `metric_name` – Name of the evaluator metric/output (e.g., "response_length_score").
+- `span_attributes` – List of span attribute names to pass as inputs to the evaluate method (e.g., `["output", "input", "context"]`).
+
+**Optional parameters**
+
+- `commit_message` – Version control message (default: "Initial version").
+- `description` – Human-readable description of what this evaluator does.
+- `data_granularity_type` – Evaluation granularity: "SPAN", "TRACE", or "SESSION" (default: "SPAN").
+- `position` – Display position/order of the evaluator (default: 0).
+
+**Returns**
+
+A dictionary containing:
+
+- `id` – Unique evaluator ID
+- `name` – Evaluator display name
+- `description` – Evaluator description
+- `createdAt` – Creation timestamp
+- `createdBy` – User who created the evaluator
+
+**Examples**
+
+```python
+# Response length checker
+length_code = """class ResponseLengthEvaluator:
+    def evaluate(self, output, **kwargs):
+        length = len(output)
+        if length < 50:
+            return {"score": 0, "label": "too_short"}
+        elif length > 500:
+            return {"score": 0, "label": "too_long"}
+        else:
+            return {"score": 1, "label": "appropriate"}"""
+
+length_eval = client.create_code_evaluator(
+    name="Response Length Checker",
+    code_block=length_code,
+    evaluation_class="ResponseLengthEvaluator",
+    metric_name="response_length_score",
+    span_attributes=["output"],
+    description="Checks if response length is appropriate",
+)
+
+# Custom business logic evaluator
+business_code = """class PolicyComplianceEvaluator:
+    def evaluate(self, output, input, **kwargs):
+        # Check for prohibited terms
+        prohibited = ["guarantee", "promise", "always"]
+        violations = [term for term in prohibited if term in output.lower()]
+
+        if violations:
+            return {
+                "score": 0,
+                "label": f"violations: {', '.join(violations)}"
+            }
+        return {"score": 1, "label": "compliant"}"""
+
+policy_eval = client.create_code_evaluator(
+    name="Policy Compliance",
+    code_block=business_code,
+    evaluation_class="PolicyComplianceEvaluator",
+    metric_name="policy_compliance_score",
+    span_attributes=["output", "input"],
+    description="Ensures responses comply with company policies",
+)
 ```
 
 ______________________________________________________________________

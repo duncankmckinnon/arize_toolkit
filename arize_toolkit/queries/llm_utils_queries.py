@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models import CreatePromptMutationInput, CreatePromptVersionMutationInput, Prompt, PromptVersion, UpdateAnnotationsInput
+from arize_toolkit.models import CreatePromptMutationInput, CreatePromptVersionMutationInput, LlmIntegration, Prompt, PromptVersion, UpdateAnnotationsInput
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -356,3 +356,37 @@ class DeletePromptMutation(BaseQuery):
             False,
             None,
         )
+
+
+class GetLlmIntegrationsQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getLlmIntegrations($space_id: ID!) {
+        node(id: $space_id) {
+            ... on Space {
+                llmIntegrations {"""
+        + LlmIntegration.to_graphql_fields()
+        + """
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get LLM integrations available to a space"
+
+    class Variables(BaseVariables):
+        space_id: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting LLM integrations"
+
+    class QueryResponse(LlmIntegration):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or result["node"] is None:
+            cls.raise_exception("Space not found")
+        integrations = result["node"].get("llmIntegrations", [])
+        return [cls.QueryResponse(**i) for i in integrations], False, None

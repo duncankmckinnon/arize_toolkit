@@ -635,3 +635,35 @@ class UserType(InputValidationEnum):
 
     human = "human", "Human"
     bot = "bot", "Bot"
+
+
+class TemplateEvaluationConfigDirection(InputValidationEnum):
+    """The direction for template evaluation config scoring"""
+
+    maximize = "maximize", "Maximize", "higher", "HIGHER_IS_BETTER"
+    minimize = "minimize", "Minimize", "lower", "LOWER_IS_BETTER"
+
+
+class EvalDataGranularityType(InputValidationEnum):
+    """The data granularity type for evaluators (span, trace, or session)"""
+
+    span = "span", "Span", "SPAN"
+    trace = "trace", "Trace", "TRACE"
+    session = "session", "Session", "SESSION"
+
+
+class OnlineTaskType(InputValidationEnum):
+    """Types of online tasks"""
+
+    template_evaluation = "template_evaluation", "Template Evaluation"
+    code_evaluation = "code_evaluation", "Code Evaluation"
+    prompt_optimization = "prompt_optimization", "Prompt Optimization"
+    run_experiment = "run_experiment", "Run Experiment"
+
+
+class EvaluatorSortColumn(InputValidationEnum):
+    """Sort columns for evaluators"""
+
+    name = "name", "Name"
+    createdAt = "createdAt", "Created At"
+    updatedAt = "updatedAt", "Updated At"

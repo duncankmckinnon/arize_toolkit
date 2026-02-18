@@ -5823,3 +5823,188 @@ class TestDashboards:
 
         # Verify the correct number of calls (1 create dashboard + 3 get model + 2 create widget)
         assert mock_graphql_client.return_value.execute.call_count == 1
+
+
+class TestEvaluators:
+    """Test evaluator functionality"""
+
+    def test_create_template_evaluator(self, client, mock_graphql_client):
+        """Test creating a template (LLM-based) evaluator"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {
+                        "id": "integration1",
+                        "name": "My OpenAI",
+                        "provider": "openAI",
+                    },
+                ]
+            }
+        }
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Hallucination Detector",
+                    "description": "Detects hallucinations in LLM responses",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": {
+                        "id": "user123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [
+            mock_integrations_response,
+            mock_create_response,
+        ]
+
+        result = client.create_template_evaluator(
+            name="Hallucination Detector",
+            template="Does the response contain factual errors?\n\nContext: {{context}}\nResponse: {{output}}",
+            metric_name="hallucination_score",
+            description="Detects hallucinations in LLM responses",
+            classification_choices={"Yes": 0, "No": 1},
+            direction="higher",
+        )
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+
+    def test_create_template_evaluator_with_integration_name(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a specific LLM integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                    {"id": "integration2", "name": "My Bedrock", "provider": "awsBedrock"},
+                ]
+            }
+        }
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Test Evaluator",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [
+            mock_integrations_response,
+            mock_create_response,
+        ]
+
+        result = client.create_template_evaluator(
+            name="Test Evaluator",
+            template="Evaluate: {{output}}",
+            metric_name="test_score",
+            llm_integration_name="My Bedrock",
+            llm_model_name="claude-3-sonnet",
+        )
+
+        assert result["id"] == "eval123"
+
+    def test_create_template_evaluator_integration_not_found(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a non-existent integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                ]
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_integrations_response
+
+        with pytest.raises(ValueError, match="No LLM integration found with name 'Nonexistent'"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="Evaluate: {{output}}",
+                metric_name="test_score",
+                llm_integration_name="Nonexistent",
+            )
+
+    def test_create_code_evaluator(self, client, mock_graphql_client):
+        """Test creating a code (Python-based) evaluator"""
+        code_block = """class ResponseLengthEvaluator(CodeEvaluator):
+    def evaluate(self, *, dataset_row=None, **kwargs):
+        output = dataset_row.get("attributes.output.value") if dataset_row else None
+        length = len(output) if output else 0
+        if length < 50:
+            return EvaluationResult(score=0, label="too_short")
+        elif length > 500:
+            return EvaluationResult(score=0, label="too_long")
+        else:
+            return EvaluationResult(score=1, label="appropriate")"""
+
+        mock_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval456",
+                    "name": "Response Length Checker",
+                    "description": "Checks if response length is appropriate",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.create_code_evaluator(
+            name="Response Length Checker",
+            code_block=code_block,
+            evaluation_class="ResponseLengthEvaluator",
+            metric_name="response_length_score",
+            span_attributes=["output"],
+            description="Checks if response length is appropriate",
+        )
+
+        assert result["id"] == "eval456"
+        assert result["name"] == "Response Length Checker"
+        assert result["description"] == "Checks if response length is appropriate"
+
+    def test_create_template_evaluator_missing_name(self, client):
+        """Test creating template evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_template_evaluator(
+                name="",
+                template="Test template",
+                metric_name="test_score",
+            )
+
+    def test_create_template_evaluator_missing_template(self, client):
+        """Test creating template evaluator without template raises error"""
+        with pytest.raises(ValueError, match="template is required"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="",
+                metric_name="test_score",
+            )
+
+    def test_create_code_evaluator_missing_name(self, client):
+        """Test creating code evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_code_evaluator(
+                name="",
+                metric_name="test_score",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )
+
+    def test_create_code_evaluator_missing_metric_name(self, client):
+        """Test creating code evaluator without metric_name raises error"""
+        with pytest.raises(ValueError, match="metric_name is required"):
+            client.create_code_evaluator(
+                name="Test Evaluator",
+                metric_name="",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )

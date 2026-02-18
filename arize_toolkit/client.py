@@ -47,6 +47,7 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
+from arize_toolkit.queries.evaluator_queries import CreateEvaluatorMutation, CreateEvaluatorVersionMutation, DeleteEvaluatorMutation, EditEvaluatorMutation, GetEvaluatorByNameQuery, GetEvaluatorsQuery
 from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
@@ -54,6 +55,7 @@ from arize_toolkit.queries.llm_utils_queries import (
     DeletePromptMutation,
     GetAllPromptsQuery,
     GetAllPromptVersionsQuery,
+    GetLlmIntegrationsQuery,
     GetPromptByIDQuery,
     GetPromptQuery,
     UpdatePromptMutation,
@@ -1538,6 +1540,530 @@ class Client:
         """
         prompt_id = self.get_prompt(prompt_name)["id"]
         return self.delete_prompt_by_id(prompt_id)
+
+    def get_llm_integrations(self) -> List[dict]:
+        """Get all LLM integrations available to this space.
+
+        Returns:
+            List[dict]: List of LLM integrations with id, name, provider, modelNames, etc.
+
+        Example:
+            ```python
+            integrations = client.get_llm_integrations()
+            ```
+        """
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            space_id=self.space_id,
+        )
+        return [r.to_dict() for r in results]
+
+    def _resolve_llm_integration_id(self, llm_integration_name: Optional[str] = None) -> Optional[str]:
+        """Resolve an LLM integration name to its relay global ID.
+
+        If a name is provided, looks up that specific integration.
+        If no name is provided, returns the first available integration in the space.
+        Returns None if no integrations are available.
+
+        Args:
+            llm_integration_name: The name of the LLM integration to look up.
+                If None, defaults to the first available integration.
+
+        Returns:
+            Optional[str]: The relay global ID of the integration, or None if unavailable.
+
+        Raises:
+            ValueError: If a name is provided but no matching integration is found.
+        """
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            space_id=self.space_id,
+        )
+        if not results:
+            return None
+        if llm_integration_name is None:
+            return results[0].id
+        for integration in results:
+            if integration.name == llm_integration_name:
+                return integration.id
+        available = [r.name for r in results]
+        raise ValueError(f"No LLM integration found with name '{llm_integration_name}'. " f"Available integrations: {available}")
+
+    def get_evaluators(
+        self,
+        search: Optional[str] = None,
+        name: Optional[str] = None,
+        task_type: Optional[str] = None,
+    ) -> List[dict]:
+        """Get all evaluators in the space.
+
+        Args:
+            search (Optional[str]): Search string to filter evaluators
+            name (Optional[str]): Exact name to filter by
+            task_type (Optional[str]): Filter by task type ("template_evaluation" or "code_evaluation")
+
+        Returns:
+            List[dict]: List of evaluators with id, name, description, taskType, etc.
+
+        Example:
+            ```python
+            evaluators = client.get_evaluators()
+            template_evals = client.get_evaluators(task_type="template_evaluation")
+            ```
+        """
+        results = GetEvaluatorsQuery.iterate_over_pages(
+            self._graphql_client,
+            space_id=self.space_id,
+            search=search,
+            name=name,
+            taskType=task_type,
+        )
+        return [r.to_dict() for r in results]
+
+    def get_evaluator(self, name: str) -> dict:
+        """Get an evaluator by name.
+
+        Args:
+            name (str): The name of the evaluator
+
+        Returns:
+            dict: The evaluator with id, name, description, taskType, etc.
+
+        Raises:
+            ArizeAPIException: If the evaluator is not found
+
+        Example:
+            ```python
+            evaluator = client.get_evaluator("Hallucination Detector")
+            ```
+        """
+        result = GetEvaluatorByNameQuery.run_graphql_query(
+            self._graphql_client,
+            space_id=self.space_id,
+            name=name,
+        )
+        return result.to_dict()
+
+    def create_template_evaluator(
+        self,
+        name: str,
+        template: str,
+        metric_name: str,
+        commit_message: str = "Initial version",
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        classification_choices: Optional[Dict[str, float]] = None,
+        direction: str = "maximize",
+        data_granularity_type: str = "span",
+        include_explanations: bool = True,
+        use_function_calling: bool = False,
+        position: int = 0,
+        rails: Optional[List[str]] = None,
+        query_filter: Optional[str] = None,
+        llm_integration_name: Optional[str] = None,
+        llm_model_name: Optional[str] = None,
+        llm_invocation_parameters: Optional[dict] = None,
+        llm_provider_parameters: Optional[dict] = None,
+    ) -> dict:
+        """Create a template (LLM-based) evaluator.
+
+        Args:
+            name (str): The name of the evaluator (displayed in UI)
+            template (str): The prompt template with {{variables}} for the LLM evaluator
+            metric_name (str): The name of the evaluator metric/output
+            commit_message (str): Version control message for this evaluator (default: "Initial version")
+            description (Optional[str]): Description of the evaluator
+            tags (Optional[List[str]]): Tags for the evaluator
+            classification_choices (Optional[Dict[str, float]]): Maps labels to scores for categorical evaluations
+                Example: {"Yes": 0, "No": 1} or {"Poor": 0, "Good": 0.5, "Excellent": 1}
+            direction (str): Whether higher or lower scores are better ("maximize" or "minimize", default: "maximize")
+            data_granularity_type (str): The granularity level ("span", "trace", or "session", default: "span")
+            include_explanations (bool): Whether to include explanations in the evaluation (default: True)
+            use_function_calling (bool): Whether to use function calling if available (default: False)
+            position (int): The position/order of the evaluator (default: 0)
+            rails (Optional[List[str]]): Rails associated with the config
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+            llm_integration_name (Optional[str]): The name of the LLM integration to use.
+                If not provided, defaults to the first available integration in the space.
+            llm_model_name (Optional[str]): The LLM model name (e.g. "gpt-4o")
+            llm_invocation_parameters (Optional[dict]): Parameters used when running the LLM (e.g. {"temperature": 0.0})
+            llm_provider_parameters (Optional[dict]): Parameters used to initialize the LLM provider
+
+        Returns:
+            dict: The created evaluator with id, name, description, createdAt, etc.
+
+        Raises:
+            ValueError: If required parameters are missing or invalid
+            ArizeAPIException: If the evaluator creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_template_evaluator(
+                name="Hallucination Detector",
+                template="Does the response contain factual errors?\\n\\nContext: {{context}}\\nResponse: {{output}}",
+                metric_name="hallucination_score",
+                description="Detects hallucinations in LLM responses",
+                classification_choices={"Yes": 0, "No": 1},
+                direction="maximize",
+                llm_integration_name="My OpenAI Integration",
+                llm_model_name="gpt-4o",
+            )
+            ```
+        """
+        if not name:
+            raise ValueError("name is required")
+        if not template:
+            raise ValueError("template is required")
+        if not metric_name:
+            raise ValueError("metric_name is required")
+
+        llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
+        llm_config = None
+        if llm_integration_id is not None:
+            llm_config = {
+                "integrationId": llm_integration_id,
+                "modelName": llm_model_name or "",
+                "invocationParameters": llm_invocation_parameters or {},
+                "providerParameters": llm_provider_parameters or {},
+            }
+
+        template_config = {
+            "name": metric_name,
+            "template": template,
+            "position": position,
+            "includeExplanations": include_explanations,
+            "useFunctionCallingIfAvailable": use_function_calling,
+            "classificationChoices": classification_choices,
+            "direction": direction,
+            "dataGranularityType": data_granularity_type,
+            "rails": rails,
+            "queryFilter": query_filter,
+            "llmConfig": llm_config,
+        }
+
+        result = CreateEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=self.space_id,
+            name=name,
+            description=description,
+            tags=tags,
+            commitMessage=commit_message,
+            templateEvaluator=template_config,
+        )
+        return result.to_dict()
+
+    def create_code_evaluator(
+        self,
+        name: str,
+        metric_name: str,
+        code_block: str,
+        evaluation_class: str,
+        span_attributes: List[str],
+        commit_message: str = "Initial version",
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        data_granularity_type: str = "span",
+        position: int = 0,
+        package_imports: Optional[str] = None,
+        evaluation_input_params: Optional[dict] = None,
+        query_filter: Optional[str] = None,
+    ) -> dict:
+        """Create a code (Python-based) evaluator.
+
+        The code_block must define a class extending CodeEvaluator with an evaluate method.
+
+        Args:
+            name (str): The name of the evaluator (displayed in UI)
+            metric_name (str): The name of the evaluator metric/output
+            code_block (str): Python code defining the evaluator class (must extend CodeEvaluator)
+            evaluation_class (str): The name of the evaluator class in the code block
+            span_attributes (List[str]): Which span fields to pass as inputs (e.g., ["output", "input"])
+            commit_message (str): Version control message for this evaluator (default: "Initial version")
+            description (Optional[str]): Description of the evaluator
+            tags (Optional[List[str]]): Tags for the evaluator
+            data_granularity_type (str): The granularity level ("span", "trace", or "session", default: "span")
+            position (int): The position/order of the evaluator (default: 0)
+            package_imports (Optional[str]): Package imports for the evaluation class (must be valid Python imports)
+            evaluation_input_params (Optional[dict]): Evaluation input parameters (JSON object)
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+
+        Returns:
+            dict: The created evaluator with id, name, description, createdAt, etc.
+
+        Raises:
+            ValueError: If required parameters are missing or code block format is invalid
+            ArizeAPIException: If the evaluator creation fails
+
+        Example:
+            ```python
+            code = '''class ResponseLengthEvaluator(CodeEvaluator):
+                def evaluate(self, *, dataset_row=None, **kwargs):
+                    output = dataset_row.get("attributes.output.value") if dataset_row else None
+                    length = len(output) if output else 0
+                    if length < 50:
+                        return EvaluationResult(score=0, label="too_short")
+                    elif length > 500:
+                        return EvaluationResult(score=0, label="too_long")
+                    else:
+                        return EvaluationResult(score=1, label="appropriate")'''
+
+            evaluator = client.create_code_evaluator(
+                name="Response Length Checker",
+                code_block=code,
+                evaluation_class="ResponseLengthEvaluator",
+                metric_name="response_length_score",
+                span_attributes=["output"],
+                description="Checks if response length is appropriate",
+            )
+            ```
+        """
+        if not name:
+            raise ValueError("name is required")
+        if not metric_name:
+            raise ValueError("metric_name is required")
+
+        code_config = {
+            "name": metric_name,
+            "evalClassCodeBlock": code_block,
+            "evaluationClass": evaluation_class,
+            "position": position,
+            "spanAttributes": span_attributes,
+            "dataGranularityType": data_granularity_type,
+            "packageImports": package_imports,
+            "evaluationInputParams": evaluation_input_params,
+            "queryFilter": query_filter,
+        }
+
+        result = CreateEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=self.space_id,
+            name=name,
+            description=description,
+            tags=tags,
+            commitMessage=commit_message,
+            codeEvaluator=code_config,
+        )
+        return result.to_dict()
+
+    def create_template_evaluator_version(
+        self,
+        evaluator_id: str,
+        metric_name: str,
+        template: str,
+        commit_message: Optional[str] = None,
+        position: int = 0,
+        include_explanations: bool = True,
+        use_function_calling: bool = False,
+        rails: Optional[List[str]] = None,
+        query_filter: Optional[str] = None,
+        classification_choices: Optional[Dict[str, float]] = None,
+        direction: Optional[str] = None,
+        data_granularity_type: Optional[str] = None,
+        llm_integration_name: Optional[str] = None,
+        llm_model_name: Optional[str] = None,
+        llm_invocation_parameters: Optional[dict] = None,
+        llm_provider_parameters: Optional[dict] = None,
+    ) -> dict:
+        """Create a new version of a template evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to version
+            metric_name (str): The name of the evaluator metric
+            template (str): The prompt template with {{variables}}
+            commit_message (Optional[str]): Version control message
+            position (int): The position/order of the evaluator (default: 0)
+            include_explanations (bool): Whether to include explanations (default: True)
+            use_function_calling (bool): Whether to use function calling if available (default: False)
+            rails (Optional[List[str]]): Rails associated with the config
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+            classification_choices (Optional[Dict[str, float]]): Maps labels to scores
+            direction (Optional[str]): "maximize" or "minimize"
+            data_granularity_type (Optional[str]): "span", "trace", or "session"
+            llm_integration_name (Optional[str]): The name of the LLM integration to use.
+                If not provided, defaults to the first available integration in the space.
+            llm_model_name (Optional[str]): The LLM model name
+            llm_invocation_parameters (Optional[dict]): Parameters for running the LLM
+            llm_provider_parameters (Optional[dict]): Parameters for initializing the LLM provider
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ArizeAPIException: If the version creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_template_evaluator_version(
+                evaluator_id="eval123",
+                metric_name="hallucination_score",
+                template="Updated prompt: {{output}}",
+                commit_message="Improved prompt",
+                llm_integration_name="My OpenAI Integration",
+                llm_model_name="gpt-4o",
+            )
+            ```
+        """
+        llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
+        llm_config = None
+        if llm_integration_id is not None:
+            llm_config = {
+                "integrationId": llm_integration_id,
+                "modelName": llm_model_name or "",
+                "invocationParameters": llm_invocation_parameters or {},
+                "providerParameters": llm_provider_parameters or {},
+            }
+
+        template_config = {
+            "name": metric_name,
+            "template": template,
+            "position": position,
+            "includeExplanations": include_explanations,
+            "useFunctionCallingIfAvailable": use_function_calling,
+            "classificationChoices": classification_choices,
+            "direction": direction,
+            "dataGranularityType": data_granularity_type,
+            "rails": rails,
+            "queryFilter": query_filter,
+            "llmConfig": llm_config,
+        }
+
+        result = CreateEvaluatorVersionMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            commitMessage=commit_message,
+            templateEvaluator=template_config,
+        )
+        return result.to_dict()
+
+    def create_code_evaluator_version(
+        self,
+        evaluator_id: str,
+        metric_name: str,
+        code_block: str,
+        evaluation_class: str,
+        span_attributes: List[str],
+        commit_message: Optional[str] = None,
+        position: int = 0,
+        data_granularity_type: Optional[str] = None,
+        package_imports: Optional[str] = None,
+        evaluation_input_params: Optional[dict] = None,
+        query_filter: Optional[str] = None,
+    ) -> dict:
+        """Create a new version of a code evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to version
+            metric_name (str): The name of the evaluator metric
+            code_block (str): Python code defining the evaluator class (must extend CodeEvaluator)
+            evaluation_class (str): The name of the evaluator class in the code block
+            span_attributes (List[str]): Which span fields to pass as inputs
+            commit_message (Optional[str]): Version control message
+            position (int): The position/order of the evaluator (default: 0)
+            data_granularity_type (Optional[str]): "span", "trace", or "session"
+            package_imports (Optional[str]): Package imports for the evaluation class (must be valid Python imports)
+            evaluation_input_params (Optional[dict]): Evaluation input parameters (JSON object)
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ValueError: If code block format is invalid
+            ArizeAPIException: If the version creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_code_evaluator_version(
+                evaluator_id="eval123",
+                metric_name="response_length_score",
+                code_block="class Eval(CodeEvaluator):\\n    def evaluate(self, **kwargs):\\n        pass",
+                evaluation_class="Eval",
+                span_attributes=["output"],
+                commit_message="Updated code",
+            )
+            ```
+        """
+        code_config = {
+            "name": metric_name,
+            "evalClassCodeBlock": code_block,
+            "evaluationClass": evaluation_class,
+            "position": position,
+            "spanAttributes": span_attributes,
+            "dataGranularityType": data_granularity_type,
+            "packageImports": package_imports,
+            "evaluationInputParams": evaluation_input_params,
+            "queryFilter": query_filter,
+        }
+
+        result = CreateEvaluatorVersionMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            commitMessage=commit_message,
+            codeEvaluator=code_config,
+        )
+        return result.to_dict()
+
+    def edit_evaluator(
+        self,
+        evaluator_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> dict:
+        """Edit an evaluator's metadata (name, description, tags).
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to edit
+            name (Optional[str]): New name for the evaluator
+            description (Optional[str]): New description
+            tags (Optional[List[str]]): New tags
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ArizeAPIException: If the edit fails
+
+        Example:
+            ```python
+            evaluator = client.edit_evaluator(
+                evaluator_id="eval123",
+                name="Updated Name",
+                tags=["production", "llm"],
+            )
+            ```
+        """
+        result = EditEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            name=name,
+            description=description,
+            tags=tags,
+        )
+        return result.to_dict()
+
+    def delete_evaluator(self, evaluator_id: str) -> bool:
+        """Delete an evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to delete
+
+        Returns:
+            bool: True if deletion was successful
+
+        Raises:
+            ArizeAPIException: If the deletion fails
+
+        Example:
+            ```python
+            client.delete_evaluator("eval123")
+            ```
+        """
+        result = DeleteEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+        )
+        return result.success
 
     def get_all_custom_metrics(self, model_name: Optional[str] = None) -> Union[List[dict], Dict[str, List[dict]]]:
         """Retrieves all custom metrics for all models in the space.

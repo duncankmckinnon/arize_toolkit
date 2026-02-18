@@ -9,6 +9,7 @@ from arize_toolkit.queries.llm_utils_queries import (
     CreatePromptVersionMutation,
     DeletePromptMutation,
     GetAllPromptVersionsQuery,
+    GetLlmIntegrationsQuery,
     GetPromptByIDQuery,
     GetPromptQuery,
     GetPromptVersionByIDQuery,
@@ -482,3 +483,80 @@ class TestDeletePromptMutation:
         gql_client.execute.return_value = mock_response
         with pytest.raises(ArizeAPIException, match="Error in deleting a prompt"):
             DeletePromptMutation.run_graphql_mutation(gql_client, spaceId="123", promptId="123")
+
+
+class TestGetLlmIntegrationsQuery:
+    def test_get_llm_integrations_success(self, gql_client):
+        """Test listing LLM integrations for a space."""
+        mock_response = {
+            "node": {
+                "llmIntegrations": [
+                    {
+                        "id": "integration1",
+                        "name": "My OpenAI",
+                        "provider": "openAI",
+                        "hasApiKey": True,
+                        "baseUrl": None,
+                        "modelNames": ["gpt-4o", "gpt-4o-mini"],
+                        "enableDefaultModels": True,
+                        "functionCallingEnabled": True,
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "updatedAt": "2024-01-02T00:00:00Z",
+                        "creator": {"id": "user1", "name": "Test User", "email": "test@test.com"},
+                    },
+                    {
+                        "id": "integration2",
+                        "name": "My Bedrock",
+                        "provider": "awsBedrock",
+                        "hasApiKey": False,
+                        "baseUrl": None,
+                        "modelNames": None,
+                        "enableDefaultModels": False,
+                        "functionCallingEnabled": False,
+                        "createdAt": "2024-02-01T00:00:00Z",
+                        "updatedAt": "2024-02-01T00:00:00Z",
+                        "creator": None,
+                    },
+                ]
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            gql_client,
+            space_id="space123",
+        )
+
+        assert len(results) == 2
+        assert results[0].id == "integration1"
+        assert results[0].name == "My OpenAI"
+        assert results[0].provider == LLMIntegrationProvider.openAI
+        assert results[0].hasApiKey is True
+        assert results[0].modelNames == ["gpt-4o", "gpt-4o-mini"]
+        assert results[0].creator.name == "Test User"
+        assert results[1].id == "integration2"
+        assert results[1].name == "My Bedrock"
+        assert results[1].provider == LLMIntegrationProvider.awsBedrock
+
+    def test_get_llm_integrations_empty(self, gql_client):
+        """Test listing LLM integrations when none exist."""
+        mock_response = {"node": {"llmIntegrations": []}}
+        gql_client.execute.return_value = mock_response
+
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            gql_client,
+            space_id="space123",
+        )
+
+        assert len(results) == 0
+
+    def test_get_llm_integrations_space_not_found(self, gql_client):
+        """Test listing LLM integrations when space not found."""
+        mock_response = {"node": None}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error getting LLM integrations"):
+            GetLlmIntegrationsQuery.run_graphql_query_to_list(
+                gql_client,
+                space_id="bad_space",
+            )
