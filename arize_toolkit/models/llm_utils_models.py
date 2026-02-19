@@ -10,6 +10,22 @@ from arize_toolkit.utils import FormattedPrompt, GraphQLModel
 ## Language Model GraphQL Models ##
 
 
+class LlmIntegration(GraphQLModel):
+    """An LLM integration configured in a space"""
+
+    id: str = Field(description="The relay global ID of the integration")
+    name: str = Field(description="The name of the integration")
+    provider: LLMIntegrationProvider = Field(description="The LLM provider (e.g. openAI, awsBedrock)")
+    hasApiKey: Optional[bool] = Field(default=None, description="Whether this integration has an API key set")
+    baseUrl: Optional[str] = Field(default=None, description="The base URL for the integration")
+    modelNames: Optional[List[str]] = Field(default=None, description="Available model names")
+    enableDefaultModels: Optional[bool] = Field(default=None, description="Whether default models are enabled")
+    functionCallingEnabled: Optional[bool] = Field(default=None, description="Whether function calling is enabled")
+    createdAt: Optional[datetime] = Field(default=None, description="When the integration was created")
+    updatedAt: Optional[datetime] = Field(default=None, description="When the integration was last updated")
+    creator: Optional[User] = Field(default=None, description="The user who created the integration")
+
+
 class NoteInput(GraphQLModel):
     text: str
 

@@ -21,12 +21,7 @@ from arize_toolkit.models import (
     UpdateAnnotationsInput,
     User,
 )
-from arize_toolkit.types import (
-    ExternalLLMProviderModel,
-    LLMIntegrationProvider,
-    ModelEnvironment,
-    PromptVersionInputVariableFormatEnum,
-)
+from arize_toolkit.types import ExternalLLMProviderModel, LLMIntegrationProvider, ModelEnvironment, PromptVersionInputVariableFormatEnum
 from arize_toolkit.utils import FormattedPrompt
 
 
@@ -54,10 +49,7 @@ class TestPromptVersion:
         assert prompt_version.commitMessage == "Initial version"
         assert prompt_version.messages[0]["role"] == "system"
         assert prompt_version.messages[1]["content"] == "Tell me about {topic}"
-        assert (
-            prompt_version.inputVariableFormat
-            == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert prompt_version.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert prompt_version.llmParameters == {"temperature": 0.7}
         assert prompt_version.provider == LLMIntegrationProvider.openAI
         assert prompt_version.modelName == ExternalLLMProviderModel.GPT_4o_MINI
@@ -82,21 +74,14 @@ class TestPromptVersion:
             createdAt=datetime(2023, 1, 1, tzinfo=timezone.utc),
         )
 
-        formatted_prompt = prompt_version.format(
-            topic="machine learning", format="simple terms"
-        )
+        formatted_prompt = prompt_version.format(topic="machine learning", format="simple terms")
 
         assert isinstance(formatted_prompt, FormattedPrompt)
         assert formatted_prompt.messages[0]["role"] == "system"
         assert formatted_prompt.messages[0]["content"] == "You are a helpful assistant."
         assert formatted_prompt.messages[1]["role"] == "user"
-        assert (
-            formatted_prompt.messages[1]["content"]
-            == "Tell me about machine learning in simple terms"
-        )
-        assert formatted_prompt.kwargs == {
-            "model": ExternalLLMProviderModel.GPT_4o_MINI
-        }
+        assert formatted_prompt.messages[1]["content"] == "Tell me about machine learning in simple terms"
+        assert formatted_prompt.kwargs == {"model": ExternalLLMProviderModel.GPT_4o_MINI}
 
 
 class TestPrompt:
@@ -131,9 +116,7 @@ class TestPrompt:
         assert prompt.commitMessage == "Initial version"
         assert prompt.messages[0]["role"] == "system"
         assert prompt.messages[1]["content"] == "Tell me about {topic}"
-        assert (
-            prompt.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
-        )
+        assert prompt.inputVariableFormat == PromptVersionInputVariableFormatEnum.F_STRING
         assert prompt.llmParameters == {"temperature": 0.7}
         assert prompt.provider == LLMIntegrationProvider.openAI
         assert prompt.modelName == ExternalLLMProviderModel.GPT_4o_MINI
@@ -163,18 +146,13 @@ class TestPrompt:
             updatedAt=datetime(2023, 1, 2, tzinfo=timezone.utc),
         )
 
-        formatted_prompt = prompt.format(
-            topic="machine learning", format="simple terms"
-        )
+        formatted_prompt = prompt.format(topic="machine learning", format="simple terms")
 
         assert isinstance(formatted_prompt, FormattedPrompt)
         assert formatted_prompt.messages[0]["role"] == "system"
         assert formatted_prompt.messages[0]["content"] == "You are a helpful assistant."
         assert formatted_prompt.messages[1]["role"] == "user"
-        assert (
-            formatted_prompt.messages[1]["content"]
-            == "Tell me about machine learning in simple terms"
-        )
+        assert formatted_prompt.messages[1]["content"] == "Tell me about machine learning in simple terms"
 
 
 class TestFormattedPrompt:
@@ -202,9 +180,7 @@ class TestFormattedPrompt:
         assert "temperature" in keys
 
         # Test unpacking for LLM provider use
-        kwargs = {
-            key: formatted_prompt[key] for key in formatted_prompt if key != "messages"
-        }
+        kwargs = {key: formatted_prompt[key] for key in formatted_prompt if key != "messages"}
         assert kwargs == {"model": "gpt-4", "temperature": 0.7}
 
 
@@ -347,9 +323,7 @@ class TestLanguageModelInputs:
         # Test with tool
         tool = ToolInput(
             id="tool123",
-            function=FunctionDetailsInput(
-                name="get_weather", arguments='{"location": "SF"}'
-            ),
+            function=FunctionDetailsInput(name="get_weather", arguments='{"location": "SF"}'),
         )
         tool_choice2 = ToolChoiceInput(tool=tool)
         assert tool_choice2.tool.id == "tool123"
@@ -358,21 +332,11 @@ class TestLanguageModelInputs:
     def test_tool_config_input(self):
         """Test ToolConfigInput model."""
         tools = [
-            ToolInput(
-                function=FunctionDetailsInput(
-                    name="tool1", description="First tool", arguments="{}"
-                )
-            ),
-            ToolInput(
-                function=FunctionDetailsInput(
-                    name="tool2", description="Second tool", arguments="{}"
-                )
-            ),
+            ToolInput(function=FunctionDetailsInput(name="tool1", description="First tool", arguments="{}")),
+            ToolInput(function=FunctionDetailsInput(name="tool2", description="Second tool", arguments="{}")),
         ]
 
-        tool_config = ToolConfigInput(
-            tools=tools, toolChoice=ToolChoiceInput(choice="required")
-        )
+        tool_config = ToolConfigInput(tools=tools, toolChoice=ToolChoiceInput(choice="required"))
 
         assert len(tool_config.tools) == 2
         assert tool_config.tools[0].function.name == "tool1"
@@ -509,9 +473,7 @@ class TestLanguageModelInputs:
         assert annotation.score is None
 
         # Test validation - text required for text type
-        with pytest.raises(
-            ValueError, match="Text is required for text annotation type"
-        ):
+        with pytest.raises(ValueError, match="Text is required for text annotation type"):
             AnnotationInput(
                 name="feedback",
                 updatedBy="user123",

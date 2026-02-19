@@ -1,12 +1,6 @@
 import pytest
 
-from arize_toolkit.queries.model_queries import (
-    DeleteDataMutation,
-    GetAllModelsQuery,
-    GetModelQuery,
-    GetModelVolumeQuery,
-    GetPerformanceMetricValuesQuery,
-)
+from arize_toolkit.queries.model_queries import DeleteDataMutation, GetAllModelsQuery, GetModelQuery, GetModelVolumeQuery, GetPerformanceMetricValuesQuery
 
 
 class TestGetAllModelsQuery:
@@ -70,9 +64,7 @@ class TestGetAllModelsQuery:
         gql_client.execute.return_value = mock_response
 
         # Execute the query
-        result, has_next_page, end_cursor = GetAllModelsQuery._graphql_query(
-            gql_client, space_id="123"
-        )
+        result, has_next_page, end_cursor = GetAllModelsQuery._graphql_query(gql_client, space_id="123")
 
         # Assertions
         assert has_next_page is False
@@ -112,9 +104,7 @@ class TestGetModelQuery:
         gql_client.execute.return_value = mock_response
 
         # Execute the query
-        result = GetModelQuery.run_graphql_query(
-            gql_client, model_name="Model1", space_id="123"
-        )
+        result = GetModelQuery.run_graphql_query(gql_client, model_name="Model1", space_id="123")
 
         # Assertions
         assert result.id == "1"
@@ -129,12 +119,8 @@ class TestGetModelQuery:
 
         # Execute the query and expect an exception
         result = None
-        with pytest.raises(
-            GetModelQuery.QueryException, match="No model found with the given name"
-        ):
-            result = GetModelQuery.run_graphql_query(
-                gql_client, model_name="Model1", space_id="123"
-            )
+        with pytest.raises(GetModelQuery.QueryException, match="No model found with the given name"):
+            result = GetModelQuery.run_graphql_query(gql_client, model_name="Model1", space_id="123")
         assert result is None
 
 
@@ -155,13 +141,7 @@ class TestGetModelVolumeQuery:
         assert result.totalVolume == 100
 
     def test_get_model_volume_query_no_model(self, gql_client):
-        mock_response = {
-            "node": {
-                "errors": [
-                    {"message": "No model prediction volume found with the given id"}
-                ]
-            }
-        }
+        mock_response = {"node": {"errors": [{"message": "No model prediction volume found with the given id"}]}}
         gql_client.execute.return_value = mock_response
 
         # Execute the query and expect an exception
@@ -200,9 +180,7 @@ class TestDeleteDataMutation:
 
         # Execute the query and expect an exception
         result = None
-        with pytest.raises(
-            DeleteDataMutation.QueryException, match="No model found with the given id"
-        ):
+        with pytest.raises(DeleteDataMutation.QueryException, match="No model found with the given id"):
             result = DeleteDataMutation.run_graphql_mutation(
                 gql_client,
                 modelId="123",

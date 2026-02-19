@@ -18,9 +18,7 @@ def mock_graphql_client():
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "test_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
                             }
                         }
                     ]
@@ -33,9 +31,7 @@ def mock_graphql_client():
 @pytest.fixture
 def client(mock_graphql_client):
     """Create a test client with mocked GraphQL client"""
-    return Client(
-        organization="test_org", space="test_space", arize_developer_key="test_token"
-    )
+    return Client(organization="test_org", space="test_space", arize_developer_key="test_token")
 
 
 class TestClientInitialization:
@@ -66,12 +62,8 @@ class TestClientInitialization:
         mock_graphql_client.return_value.execute.reset_mock()
 
         # Mock responses for create org and create space mutations
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "new_org_123"}}
-        }
-        create_space_response = {
-            "createSpace": {"space": {"name": "New Space", "id": "new_space_456"}}
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "new_org_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "New Space", "id": "new_space_456"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -112,14 +104,8 @@ class TestClientInitialization:
         """Test factory method with minimal parameters"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "minimal_org_123"}}
-        }
-        create_space_response = {
-            "createSpace": {
-                "space": {"name": "Minimal Space", "id": "minimal_space_456"}
-            }
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "minimal_org_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Minimal Space", "id": "minimal_space_456"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -170,9 +156,7 @@ class TestClientInitialization:
                 }
             }
         }
-        create_space_response = {
-            "createSpace": {"space": {"name": "New Space", "id": "new_space_789"}}
-        }
+        create_space_response = {"createSpace": {"space": {"name": "New Space", "id": "new_space_789"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             org_lookup_response,
@@ -229,9 +213,7 @@ class TestClientInitialization:
                 }
             }
         }
-        create_space_response = {
-            "createSpace": {"space": {"name": "Public Space", "id": "public_space_123"}}
-        }
+        create_space_response = {"createSpace": {"space": {"name": "Public Space", "id": "public_space_123"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             org_lookup_response,
@@ -302,9 +284,7 @@ class TestModel:
         assert not result["isDemoModel"]
 
         # Test model not found
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {"models": {"edges": []}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"models": {"edges": []}}}
 
         with pytest.raises(ArizeAPIException) as exc_info:
             client.get_model("non_existent_model")
@@ -435,9 +415,7 @@ class TestModel:
 
     def test_delete_data_by_id(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
-        mock_graphql_client.return_value.execute.return_value = {
-            "deleteData": {"clientMutationId": None}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"deleteData": {"clientMutationId": None}}
         result = client.delete_data_by_id("test_model_id", "2021-01-01T00:00:00Z")
         assert result
 
@@ -464,9 +442,7 @@ class TestModel:
             },
             {"deleteData": {"clientMutationId": None}},
         ]
-        result = client.delete_data(
-            "test_model", "2021-01-01", "2021-01-02", "preproduction"
-        )
+        result = client.delete_data("test_model", "2021-01-01", "2021-01-02", "preproduction")
         assert result
         assert mock_graphql_client.return_value.execute.call_count == 2
 
@@ -530,9 +506,7 @@ class TestCustomMetrics:
             },
         ]
 
-        mock_graphql_client.return_value.execute.side_effect = (
-            mock_custom_metrics_response
-        )
+        mock_graphql_client.return_value.execute.side_effect = mock_custom_metrics_response
 
         results = client.get_all_custom_metrics(model_name="test_model")
         assert len(results) == 20
@@ -601,9 +575,7 @@ class TestCustomMetrics:
             current_metric_name="custom_metric_1",
             new_model_name="new_model",
         )
-        assert new_metric_id == client.custom_metric_url(
-            "test_model_id", "new_custom_metric_id"
-        )
+        assert new_metric_id == client.custom_metric_url("test_model_id", "new_custom_metric_id")
         assert mock_graphql_client.return_value.execute.call_count == 3
 
 
@@ -815,9 +787,7 @@ class TestMonitors:
             ),
         ],
     )
-    def test_create_performance_monitor_validation(
-        self, client, mock_graphql_client, input, expected_error
-    ):
+    def test_create_performance_monitor_validation(self, client, mock_graphql_client, input, expected_error):
         """Test creating a performance metric monitor with invalid parameters"""
         # Reset mock for this test
         mock_graphql_client.return_value.execute.reset_mock()
@@ -914,9 +884,7 @@ class TestLanguageModel:
         assert annotation_result is True
         assert mock_graphql_client.return_value.execute.call_count == 2
 
-    def test_create_annotation_with_model_name_lookup(
-        self, client, mock_graphql_client
-    ):
+    def test_create_annotation_with_model_name_lookup(self, client, mock_graphql_client):
         """Test creating annotation using model_name (requires model lookup)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -961,9 +929,7 @@ class TestLanguageModel:
 
     def test_create_annotation_missing_model_error(self, client, mock_graphql_client):
         """Test error when neither model_id nor model_name is provided"""
-        with pytest.raises(
-            ValueError, match="Either model_id or model_name must be provided"
-        ):
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
             client.create_annotation(
                 name="test_annotation",
                 label="test_label",
@@ -978,15 +944,11 @@ class TestLanguageModel:
         mock_graphql_client.return_value.execute.reset_mock()
 
         mock_response = {
-            "updateAnnotations": {
-                "result": {"message": "Annotation configuration not found"}
-            },
+            "updateAnnotations": {"result": {"message": "Annotation configuration not found"}},
         }
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        with pytest.raises(
-            ArizeAPIException, match="Error in creating an annotation for a model"
-        ):
+        with pytest.raises(ArizeAPIException, match="Error in creating an annotation for a model"):
             client.create_annotation(
                 name="test_annotation",
                 label="test_label",
@@ -1280,9 +1242,7 @@ class TestLanguageModel:
         }
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        formatted_prompt = client.get_formatted_prompt(
-            "prompt_id", variable_1="John", variable_2="a software engineer"
-        )
+        formatted_prompt = client.get_formatted_prompt("prompt_id", variable_1="John", variable_2="a software engineer")
         assert formatted_prompt.messages == [
             {
                 "id": "message_id",
@@ -1478,9 +1438,7 @@ class TestLanguageModel:
 
     def test_delete_monitor_not_found(self, client, mock_graphql_client):
         """Test deleting a monitor that doesn't exist"""
-        mock_graphql_client.return_value.execute.side_effect = Exception(
-            "Monitor not found"
-        )
+        mock_graphql_client.return_value.execute.side_effect = Exception("Monitor not found")
 
         with pytest.raises(Exception, match="Monitor not found"):
             client.delete_monitor("test_monitor", "test_model")
@@ -1605,9 +1563,7 @@ class TestDataImportJobs:
         assert result["jobId"] == "job789"
         assert result["jobStatus"] == "active"
 
-    def test_create_table_import_job_snowflake_schema_alias(
-        self, client, mock_graphql_client
-    ):
+    def test_create_table_import_job_snowflake_schema_alias(self, client, mock_graphql_client):
         """Test creating a Snowflake table import job with schema alias"""
         mock_response = {
             "createTableImportJob": {
@@ -1699,10 +1655,7 @@ class TestUtilityMethods:
         assert client.organization == "new_org"
         assert client.space_id == "new_space_id"
         assert client.org_id == "new_org_id"
-        assert (
-            new_url
-            == f"{client.arize_app_url}/organizations/new_org_id/spaces/new_space_id"
-        )
+        assert new_url == f"{client.arize_app_url}/organizations/new_org_id/spaces/new_space_id"
 
         # Test switching space within same org
         client.switch_space("another_space")
@@ -1737,9 +1690,7 @@ class TestUtilityMethods:
             }
         }
 
-        mock_graphql_client.return_value.execute.return_value = (
-            mock_org_first_space_response
-        )
+        mock_graphql_client.return_value.execute.return_value = mock_org_first_space_response
 
         # Switch to organization only - should get first space
         url = client.switch_space(organization="test_org_only")
@@ -1747,18 +1698,13 @@ class TestUtilityMethods:
         assert client.space_id == "first_space_id"
         assert client.organization == "test_org_only"
         assert client.space == "First Space"
-        assert (
-            url
-            == f"{client.arize_app_url}/organizations/org_only_id/spaces/first_space_id"
-        )
+        assert url == f"{client.arize_app_url}/organizations/org_only_id/spaces/first_space_id"
 
         # Test no parameters - when both space and organization are None,
         # the organization parameter becomes None and causes validation error.
         # This appears to be a bug in the implementation, but for now we test actual behavior.
         # The implementation should probably check for both being None at the start.
-        with pytest.raises(
-            Exception
-        ):  # Expecting validation error when organization is None
+        with pytest.raises(Exception):  # Expecting validation error when organization is None
             client.switch_space()
 
     def test_switch_space_same_space_optimization(self, client, mock_graphql_client):
@@ -1967,9 +1913,7 @@ class TestUtilityMethods:
         """Test creating a new private space (default behavior)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_space_response = {
-            "createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}
-        }
+        create_space_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
         mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Test Space")
@@ -1992,11 +1936,7 @@ class TestUtilityMethods:
         """Test creating a new public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_space_response = {
-            "createSpace": {
-                "space": {"name": "Public Test Space", "id": "space_public_456"}
-            }
-        }
+        create_space_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
         mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Public Test Space", private=False)
@@ -2015,11 +1955,7 @@ class TestUtilityMethods:
         """Test creating a new private space (explicitly set)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_space_response = {
-            "createSpace": {
-                "space": {"name": "Private Test Space", "id": "space_private_789"}
-            }
-        }
+        create_space_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
         mock_graphql_client.return_value.execute.return_value = create_space_response
 
         space_id = client.create_new_space("Private Test Space", private=True)
@@ -2060,9 +1996,7 @@ class TestUtilityMethods:
         assert variables["name"] == "Admin Key"
         assert variables["spaceId"] == "test_space_id"
 
-    def test_create_space_admin_api_key_no_expiration(
-        self, client, mock_graphql_client
-    ):
+    def test_create_space_admin_api_key_no_expiration(self, client, mock_graphql_client):
         """Test creating a space admin API key without expiration"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2177,9 +2111,7 @@ class TestUtilityMethods:
         assert client.space_id == "space2"
         assert client.organization == "Development Org"
 
-    def test_assign_space_membership_by_id_single_user(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_by_id_single_user(self, client, mock_graphql_client):
         """Test assigning a single user to the current space by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2216,9 +2148,7 @@ class TestUtilityMethods:
         assert variables["spaceMemberships"][0]["spaceId"] == "test_space_id"
         assert variables["spaceMemberships"][0]["role"] == "member"
 
-    def test_assign_space_membership_by_id_multiple_users_and_spaces(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_by_id_multiple_users_and_spaces(self, client, mock_graphql_client):
         """Test assigning multiple users to multiple spaces by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2280,17 +2210,13 @@ class TestUtilityMethods:
         variables = call_args[1]["variable_values"]["input"]
         assert len(variables["spaceMemberships"]) == 4
         # Check that all combinations are present
-        user_space_pairs = [
-            (m["userId"], m["spaceId"]) for m in variables["spaceMemberships"]
-        ]
+        user_space_pairs = [(m["userId"], m["spaceId"]) for m in variables["spaceMemberships"]]
         assert ("user_1", "space_a") in user_space_pairs
         assert ("user_1", "space_b") in user_space_pairs
         assert ("user_2", "space_a") in user_space_pairs
         assert ("user_2", "space_b") in user_space_pairs
 
-    def test_assign_space_membership_by_id_with_custom_role(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_by_id_with_custom_role(self, client, mock_graphql_client):
         """Test assigning membership with a custom role ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2325,9 +2251,7 @@ class TestUtilityMethods:
         assert variables["spaceMemberships"][0]["customRoleId"] == "custom_role_xyz"
         assert "role" not in variables["spaceMemberships"][0]
 
-    def test_assign_space_membership_by_id_empty_user_ids_raises(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_by_id_empty_user_ids_raises(self, client, mock_graphql_client):
         """Test that empty user_ids raises ValueError"""
         with pytest.raises(ValueError, match="user_ids must not be empty"):
             client.assign_space_membership_by_id(user_ids=[])
@@ -2358,9 +2282,7 @@ class TestUtilityMethods:
         assert variables["spaceId"] == "test_space_id"
         assert variables["userId"] == "user_to_remove"
 
-    def test_remove_space_member_by_id_from_specific_space(
-        self, client, mock_graphql_client
-    ):
+    def test_remove_space_member_by_id_from_specific_space(self, client, mock_graphql_client):
         """Test removing a user from a specific space by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2375,9 +2297,7 @@ class TestUtilityMethods:
 
         mock_graphql_client.return_value.execute.return_value = mock_response
 
-        result = client.remove_space_member_by_id(
-            user_id="user_123", space_id="other_space_id"
-        )
+        result = client.remove_space_member_by_id(user_id="user_123", space_id="other_space_id")
 
         assert result["space_id"] == "other_space_id"
 
@@ -2387,9 +2307,7 @@ class TestUtilityMethods:
         assert variables["spaceId"] == "other_space_id"
         assert variables["userId"] == "user_123"
 
-    def test_remove_space_member_by_id_empty_user_id_raises(
-        self, client, mock_graphql_client
-    ):
+    def test_remove_space_member_by_id_empty_user_id_raises(self, client, mock_graphql_client):
         """Test that empty user_id raises ValueError"""
         with pytest.raises(ValueError, match="user_id must not be empty"):
             client.remove_space_member_by_id(user_id="")
@@ -2446,9 +2364,7 @@ class TestUtilityMethods:
         assert result[0]["id"] == "membership_123"
         assert result[0]["user"]["email"] == "test@example.com"
 
-    def test_assign_space_membership_by_name_with_space_name(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_by_name_with_space_name(self, client, mock_graphql_client):
         """Test assigning a user to a specific space by names"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2480,9 +2396,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "target_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "target_space_id"}}]},
                             }
                         }
                     ]
@@ -2521,9 +2435,7 @@ class TestUtilityMethods:
         assert len(result) == 1
         assert result[0]["role"] == "admin"
 
-    def test_assign_space_membership_empty_user_names_raises(
-        self, client, mock_graphql_client
-    ):
+    def test_assign_space_membership_empty_user_names_raises(self, client, mock_graphql_client):
         """Test that empty user_names raises ValueError"""
         with pytest.raises(ValueError, match="user_names must not be empty"):
             client.assign_space_membership(user_names=[])
@@ -2572,9 +2484,7 @@ class TestUtilityMethods:
         assert result["space_id"] == "test_space_id"
         assert result["space_name"] == "Test Space"
 
-    def test_remove_space_member_by_name_with_space_name(
-        self, client, mock_graphql_client
-    ):
+    def test_remove_space_member_by_name_with_space_name(self, client, mock_graphql_client):
         """Test removing a user from a specific space by names"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2606,9 +2516,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "other_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "other_space_id"}}]},
                             }
                         }
                     ]
@@ -2631,16 +2539,12 @@ class TestUtilityMethods:
             remove_response,
         ]
 
-        result = client.remove_space_member(
-            user_name="remove@example.com", space_name="Other Space"
-        )
+        result = client.remove_space_member(user_name="remove@example.com", space_name="Other Space")
 
         assert result["space_id"] == "other_space_id"
         assert result["space_name"] == "Other Space"
 
-    def test_remove_space_member_empty_user_name_raises(
-        self, client, mock_graphql_client
-    ):
+    def test_remove_space_member_empty_user_name_raises(self, client, mock_graphql_client):
         """Test that empty user_name raises ValueError"""
         with pytest.raises(ValueError, match="user_name must not be empty"):
             client.remove_space_member(user_name="")
@@ -2752,16 +2656,11 @@ class TestUtilityMethods:
 
         # Test monitor_url
         monitor_id = "monitor789"
-        assert (
-            client.monitor_url(monitor_id)
-            == f"{client.space_url}/monitors/{monitor_id}"
-        )
+        assert client.monitor_url(monitor_id) == f"{client.space_url}/monitors/{monitor_id}"
 
         # Test prompt_url
         prompt_id = "prompt123"
-        assert (
-            client.prompt_url(prompt_id) == f"{client.space_url}/prompt-hub/{prompt_id}"
-        )
+        assert client.prompt_url(prompt_id) == f"{client.space_url}/prompt-hub/{prompt_id}"
 
         # Test prompt_version_url
         version_id = "version456"
@@ -2781,12 +2680,8 @@ class TestUtilityMethods:
         mock_graphql_client.return_value.execute.reset_mock()
 
         # Mock responses for create org and create space
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "org_new_123"}}
-        }
-        create_space_response = {
-            "createSpace": {"space": {"name": "New Space", "id": "space_new_456"}}
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "org_new_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "New Space", "id": "space_new_456"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -2824,9 +2719,7 @@ class TestUtilityMethods:
         assert space_variables["name"] == "New Space"
         assert space_variables["private"] is True
 
-    def test_create_new_organization_and_space_no_switch(
-        self, client, mock_graphql_client
-    ):
+    def test_create_new_organization_and_space_no_switch(self, client, mock_graphql_client):
         """Test creating a new organization and space without switching to it"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -2835,12 +2728,8 @@ class TestUtilityMethods:
         original_space_id = client.space_id
 
         # Mock responses for create org and create space
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "org_new_789"}}
-        }
-        create_space_response = {
-            "createSpace": {"space": {"name": "Another Space", "id": "space_new_012"}}
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "org_new_789"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Another Space", "id": "space_new_012"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -2862,18 +2751,12 @@ class TestUtilityMethods:
         assert client.org_id == original_org_id
         assert client.space_id == original_space_id
 
-    def test_create_new_organization_and_space_public_space(
-        self, client, mock_graphql_client
-    ):
+    def test_create_new_organization_and_space_public_space(self, client, mock_graphql_client):
         """Test creating a new organization with a public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "org_public_123"}}
-        }
-        create_space_response = {
-            "createSpace": {"space": {"name": "Public Space", "id": "space_public_456"}}
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "org_public_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Public Space", "id": "space_public_456"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -2894,20 +2777,12 @@ class TestUtilityMethods:
         space_variables = create_space_call[1]["variable_values"]["input"]
         assert space_variables["private"] is False
 
-    def test_create_new_organization_and_space_minimal(
-        self, client, mock_graphql_client
-    ):
+    def test_create_new_organization_and_space_minimal(self, client, mock_graphql_client):
         """Test creating a new organization and space with minimal parameters"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        create_org_response = {
-            "createOrganization": {"organization": {"id": "org_minimal_123"}}
-        }
-        create_space_response = {
-            "createSpace": {
-                "space": {"name": "Minimal Space", "id": "space_minimal_456"}
-            }
-        }
+        create_org_response = {"createOrganization": {"organization": {"id": "org_minimal_123"}}}
+        create_space_response = {"createSpace": {"space": {"name": "Minimal Space", "id": "space_minimal_456"}}}
 
         mock_graphql_client.return_value.execute.side_effect = [
             create_org_response,
@@ -2926,10 +2801,7 @@ class TestUtilityMethods:
         create_org_call = mock_graphql_client.return_value.execute.call_args_list[0]
         org_variables = create_org_call[1]["variable_values"]["input"]
         assert org_variables["name"] == "Minimal Organization"
-        assert (
-            "description" not in org_variables
-            or org_variables.get("description") is None
-        )
+        assert "description" not in org_variables or org_variables.get("description") is None
 
         # Verify space was created with default private=False
         create_space_call = mock_graphql_client.return_value.execute.call_args_list[1]
@@ -2971,9 +2843,7 @@ class TestModelExtended:
         mock_graphql_client.return_value.execute.reset_mock()
 
         # Mock volume response
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {"modelPredictionVolume": {"totalVolume": 1500}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"modelPredictionVolume": {"totalVolume": 1500}}}
 
         # Test with datetime objects
         from datetime import datetime, timezone
@@ -2995,9 +2865,7 @@ class TestModelExtended:
     def test_get_performance_metric_validation(self, client, mock_graphql_client):
         """Test validation for performance metrics"""
         # Test missing model parameters
-        with pytest.raises(
-            ValueError, match="Either model_id or model_name must be provided"
-        ):
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
             client.get_performance_metric_over_time(
                 metric="accuracy",
                 environment="production",
@@ -3038,9 +2906,7 @@ class TestPromptsExtended:
                                                         }
                                                     ],
                                                     "inputVariableFormat": "f_string",
-                                                    "llmParameters": {
-                                                        "temperature": 0.5
-                                                    },
+                                                    "llmParameters": {"temperature": 0.5},
                                                     "createdAt": "2024-01-01T00:00:00Z",
                                                 }
                                             }
@@ -3077,9 +2943,7 @@ class TestPromptsExtended:
                                                         }
                                                     ],
                                                     "inputVariableFormat": "f_string",
-                                                    "llmParameters": {
-                                                        "temperature": 0.7
-                                                    },
+                                                    "llmParameters": {"temperature": 0.7},
                                                     "createdAt": "2024-01-02T00:00:00Z",
                                                 }
                                             }
@@ -3208,9 +3072,7 @@ class TestPromptsExtended:
         """Test deleting a prompt by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_graphql_client.return_value.execute.return_value = {
-            "deletePrompt": {"clientMutationId": None, "success": True}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"deletePrompt": {"clientMutationId": None, "success": True}}
 
         result = client.delete_prompt_by_id("prompt123")
         assert result is True
@@ -3494,9 +3356,7 @@ class TestCustomMetricsExtended:
         """Test deleting a custom metric by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_graphql_client.return_value.execute.return_value = {
-            "deleteCustomMetric": {"model": {"id": "model123"}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"deleteCustomMetric": {"model": {"id": "model123"}}}
 
         result = client.delete_custom_metric_by_id("metric123", "model123")
         assert result is True
@@ -3890,9 +3750,7 @@ class TestMonitorsExtended:
         """Test deleting a monitor by ID"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_graphql_client.return_value.execute.return_value = {
-            "deleteMonitor": {"monitor": {"id": "monitor123"}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"deleteMonitor": {"monitor": {"id": "monitor123"}}}
 
         result = client.delete_monitor_by_id("monitor123")
         assert result is True
@@ -4106,9 +3964,7 @@ class TestMonitorsExtended:
         # Verify the GraphQL call was made
         mock_graphql_client.return_value.execute.assert_called_once()
 
-    def test_get_monitor_metric_values_with_string_dates(
-        self, client, mock_graphql_client
-    ):
+    def test_get_monitor_metric_values_with_string_dates(self, client, mock_graphql_client):
         """Test getting monitor metric values with string dates"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -4164,9 +4020,7 @@ class TestMonitorsExtended:
         assert result["dataPoints"][1]["y"] == 0.08
         assert result["thresholdDataPoints"] is None
 
-    def test_get_monitor_metric_values_different_granularities(
-        self, client, mock_graphql_client
-    ):
+    def test_get_monitor_metric_values_different_granularities(self, client, mock_graphql_client):
         """Test getting monitor metric values with different granularities"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -4235,21 +4089,7 @@ class TestMonitorsExtended:
         mock_graphql_client.return_value.execute.reset_mock()
 
         # Mock response with no metric history
-        mock_response = {
-            "node": {
-                "models": {
-                    "edges": [
-                        {
-                            "node": {
-                                "monitors": {
-                                    "edges": [{"node": {"metricHistory": None}}]
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        }
+        mock_response = {"node": {"models": {"edges": [{"node": {"monitors": {"edges": [{"node": {"metricHistory": None}}]}}}]}}}
         mock_graphql_client.return_value.execute.return_value = mock_response
 
         # Test should raise exception when no data
@@ -4357,9 +4197,7 @@ class TestMonitorsExtended:
         # Verify timestamps are datetime objects
         assert df["timestamp"].dtype.name.startswith("datetime")
 
-    def test_get_monitor_metric_values_df_no_threshold(
-        self, client, mock_graphql_client
-    ):
+    def test_get_monitor_metric_values_df_no_threshold(self, client, mock_graphql_client):
         """Test getting monitor metric values as DataFrame without threshold data"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -4416,9 +4254,7 @@ class TestMonitorsExtended:
         assert df["metric_value"].tolist() == [1000, 1200]
         assert df["threshold_value"].isna().all()
 
-    def test_get_monitor_metric_values_df_with_null_values(
-        self, client, mock_graphql_client
-    ):
+    def test_get_monitor_metric_values_df_with_null_values(self, client, mock_graphql_client):
         """Test getting monitor metric values as DataFrame with null values"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -4532,9 +4368,7 @@ class TestMonitorsExtended:
         "granularity",
         ["hour", "day", "week", "month"],
     )
-    def test_get_monitor_metric_values_all_granularities(
-        self, client, mock_graphql_client, granularity
-    ):
+    def test_get_monitor_metric_values_all_granularities(self, client, mock_graphql_client, granularity):
         """Test getting monitor metric values with all supported granularities"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -4844,9 +4678,7 @@ class TestDataImportExtended:
         mock_graphql_client.return_value.execute.reset_mock()
 
         # Mock empty response
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {"importJobs": {"edges": []}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"importJobs": {"edges": []}}}
 
         with pytest.raises(ArizeAPIException, match="No import jobs found"):
             client.update_file_import_job(job_id="nonexistent", model_schema={})
@@ -5387,10 +5219,7 @@ class TestDashboards:
         assert result["lineChartWidgets"][0]["yAxisLabel"] == "Accuracy"
 
         assert len(result["textWidgets"]) == 1
-        assert (
-            result["textWidgets"][0]["content"]
-            == "This dashboard shows model performance metrics."
-        )
+        assert result["textWidgets"][0]["content"] == "This dashboard shows model performance metrics."
 
         assert len(result["barChartWidgets"]) == 2
         assert result["barChartWidgets"][0]["title"] == "Feature Performance"
@@ -5415,15 +5244,7 @@ class TestDashboards:
         # Mock responses: first for name lookup, then dashboard details
         mock_responses = [
             # Dashboard name lookup - GetDashboardQuery
-            {
-                "node": {
-                    "dashboards": {
-                        "edges": [
-                            {"node": {"id": "dashboard_123", "name": "Test Dashboard"}}
-                        ]
-                    }
-                }
-            },
+            {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard_123", "name": "Test Dashboard"}}]}}},
             # Dashboard basis - GetDashboardByIdQuery
             {
                 "node": {
@@ -5479,16 +5300,8 @@ class TestDashboards:
                     }
                 }
             },
-            {
-                "node": {
-                    "textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}
-                }
-            },
-            {
-                "node": {
-                    "barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}
-                }
-            },
+            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
             # Models - Need at least one to avoid "No models found" error
             {
                 "node": {
@@ -5523,9 +5336,7 @@ class TestDashboards:
     def test_get_dashboard_not_found(self, client, mock_graphql_client):
         """Test dashboard not found by name"""
         mock_graphql_client.return_value.execute.reset_mock()
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {"dashboards": {"edges": []}}
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"dashboards": {"edges": []}}}
 
         with pytest.raises(ArizeAPIException) as exc_info:
             client.get_dashboard("Non-existent Dashboard")
@@ -5590,9 +5401,7 @@ class TestDashboards:
         results = client.get_all_dashboards()
         assert len(results) == 0
 
-    def test_get_dashboard_by_id_with_complex_widgets(
-        self, client, mock_graphql_client
-    ):
+    def test_get_dashboard_by_id_with_complex_widgets(self, client, mock_graphql_client):
         """Test getting dashboard with complex widget configurations"""
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -5726,16 +5535,8 @@ class TestDashboards:
                     }
                 }
             },
-            {
-                "node": {
-                    "textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}
-                }
-            },
-            {
-                "node": {
-                    "barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}
-                }
-            },
+            {"node": {"textWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
+            {"node": {"barChartWidgets": {"pageInfo": {"hasNextPage": False}, "edges": []}}},
             # Models - Need at least one to avoid "No models found" error
             {
                 "node": {
@@ -5781,20 +5582,9 @@ class TestDashboards:
 
     def test_get_dashboard_url_simple_client(self, mock_graphql_client):
         client = Client(organization="test_org", space="test_space")
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {
-                "dashboards": {
-                    "edges": [
-                        {"node": {"id": "dashboard123", "name": "Test Dashboard"}}
-                    ]
-                }
-            }
-        }
+        mock_graphql_client.return_value.execute.return_value = {"node": {"dashboards": {"edges": [{"node": {"id": "dashboard123", "name": "Test Dashboard"}}]}}}
         url = client.get_dashboard_url("Test Dashboard")
-        assert (
-            url
-            == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
-        )
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
 
     def test_create_dashboard(self, mock_graphql_client):
         """Test creating a new dashboard"""
@@ -5812,10 +5602,7 @@ class TestDashboards:
         }
 
         dashboard_url = client.create_dashboard("New Dashboard")
-        assert (
-            dashboard_url
-            == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/new_dashboard_id"
-        )
+        assert dashboard_url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/new_dashboard_id"
 
         # Verify the mutation was called correctly
         call_args = mock_graphql_client.return_value.execute.call_args
@@ -5833,9 +5620,7 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "test_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
                             }
                         }
                     ]
@@ -5922,10 +5707,7 @@ class TestDashboards:
         mock_graphql_client.return_value.execute.side_effect = mock_responses
 
         url = client.create_model_volume_dashboard("Model Volume Dashboard")
-        assert (
-            url
-            == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
-        )
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
 
         # Verify all mutations were called
         assert mock_graphql_client.return_value.execute.call_count == 4
@@ -5940,9 +5722,7 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {
-                                    "edges": [{"node": {"id": "test_space_id"}}]
-                                },
+                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
                             }
                         }
                     ]
@@ -6038,13 +5818,253 @@ class TestDashboards:
 
         mock_graphql_client.return_value.execute.side_effect = mock_responses
 
-        url = client.create_model_volume_dashboard(
-            "Selected Models Dashboard", model_names=["Model A", "Model B", "Model C"]
-        )
-        assert (
-            url
-            == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
-        )
+        url = client.create_model_volume_dashboard("Selected Models Dashboard", model_names=["Model A", "Model B", "Model C"])
+        assert url == "https://app.arize.com/organizations/test_org_id/spaces/test_space_id/dashboards/dashboard123"
 
         # Verify the correct number of calls (1 create dashboard + 3 get model + 2 create widget)
         assert mock_graphql_client.return_value.execute.call_count == 1
+
+
+class TestGetEvaluatorById:
+    """Test get_evaluator_by_id functionality"""
+
+    def test_get_evaluator_by_id_success(self, client, mock_graphql_client):
+        """Test getting an evaluator by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval123",
+                "name": "Hallucination Detector",
+                "description": "Detects hallucinations in LLM responses",
+                "taskType": "template_evaluation",
+                "commitHash": "abc123",
+                "commitMessage": "Initial version",
+                "tags": ["llm", "quality"],
+                "createdAt": "2024-01-01T00:00:00Z",
+                "updatedAt": "2024-01-02T00:00:00Z",
+                "createdBy": {
+                    "id": "user123",
+                    "name": "Test User",
+                    "email": "test@example.com",
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval123")
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+        assert result["tags"] == ["llm", "quality"]
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_evaluator_by_id_not_found(self, client, mock_graphql_client):
+        """Test getting an evaluator that doesn't exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {"node": None}
+
+        with pytest.raises(ArizeAPIException, match="Error getting evaluator by id"):
+            client.get_evaluator_by_id("nonexistent")
+
+    def test_get_evaluator_by_id_minimal(self, client, mock_graphql_client):
+        """Test getting an evaluator with minimal fields"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval_min",
+                "name": "Minimal Evaluator",
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval_min")
+
+        assert result["id"] == "eval_min"
+        assert result["name"] == "Minimal Evaluator"
+        assert result.get("description") is None
+
+
+class TestEvaluators:
+    """Test evaluator functionality"""
+
+    def test_create_template_evaluator(self, client, mock_graphql_client):
+        """Test creating a template (LLM-based) evaluator"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {
+                        "id": "integration1",
+                        "name": "My OpenAI",
+                        "provider": "openAI",
+                    },
+                ]
+            }
+        }
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Hallucination Detector",
+                    "description": "Detects hallucinations in LLM responses",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": {
+                        "id": "user123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [
+            mock_integrations_response,
+            mock_create_response,
+        ]
+
+        result = client.create_template_evaluator(
+            name="Hallucination Detector",
+            template="Does the response contain factual errors?\n\nContext: {{context}}\nResponse: {{output}}",
+            metric_name="hallucination_score",
+            description="Detects hallucinations in LLM responses",
+            classification_choices={"Yes": 0, "No": 1},
+            direction="higher",
+        )
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+
+    def test_create_template_evaluator_with_integration_name(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a specific LLM integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                    {"id": "integration2", "name": "My Bedrock", "provider": "awsBedrock"},
+                ]
+            }
+        }
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Test Evaluator",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [
+            mock_integrations_response,
+            mock_create_response,
+        ]
+
+        result = client.create_template_evaluator(
+            name="Test Evaluator",
+            template="Evaluate: {{output}}",
+            metric_name="test_score",
+            llm_integration_name="My Bedrock",
+            llm_model_name="claude-3-sonnet",
+        )
+
+        assert result["id"] == "eval123"
+
+    def test_create_template_evaluator_integration_not_found(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a non-existent integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                ]
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_integrations_response
+
+        with pytest.raises(ValueError, match="No LLM integration found with name 'Nonexistent'"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="Evaluate: {{output}}",
+                metric_name="test_score",
+                llm_integration_name="Nonexistent",
+            )
+
+    def test_create_code_evaluator(self, client, mock_graphql_client):
+        """Test creating a code (Python-based) evaluator"""
+        code_block = """class ResponseLengthEvaluator(CodeEvaluator):
+    def evaluate(self, *, dataset_row=None, **kwargs):
+        output = dataset_row.get("attributes.output.value") if dataset_row else None
+        length = len(output) if output else 0
+        if length < 50:
+            return EvaluationResult(score=0, label="too_short")
+        elif length > 500:
+            return EvaluationResult(score=0, label="too_long")
+        else:
+            return EvaluationResult(score=1, label="appropriate")"""
+
+        mock_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval456",
+                    "name": "Response Length Checker",
+                    "description": "Checks if response length is appropriate",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.create_code_evaluator(
+            name="Response Length Checker",
+            code_block=code_block,
+            evaluation_class="ResponseLengthEvaluator",
+            metric_name="response_length_score",
+            span_attributes=["output"],
+            description="Checks if response length is appropriate",
+        )
+
+        assert result["id"] == "eval456"
+        assert result["name"] == "Response Length Checker"
+        assert result["description"] == "Checks if response length is appropriate"
+
+    def test_create_template_evaluator_missing_name(self, client):
+        """Test creating template evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_template_evaluator(
+                name="",
+                template="Test template",
+                metric_name="test_score",
+            )
+
+    def test_create_template_evaluator_missing_template(self, client):
+        """Test creating template evaluator without template raises error"""
+        with pytest.raises(ValueError, match="template is required"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="",
+                metric_name="test_score",
+            )
+
+    def test_create_code_evaluator_missing_name(self, client):
+        """Test creating code evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_code_evaluator(
+                name="",
+                metric_name="test_score",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )
+
+    def test_create_code_evaluator_missing_metric_name(self, client):
+        """Test creating code evaluator without metric_name raises error"""
+        with pytest.raises(ValueError, match="metric_name is required"):
+            client.create_code_evaluator(
+                name="Test Evaluator",
+                metric_name="",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )

@@ -17,9 +17,7 @@ class TestTiktokenSplitter:
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
         # Import after patching
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         # Test default model
         splitter = TiktokenSplitter()
@@ -38,9 +36,7 @@ class TestTiktokenSplitter:
         mock_encoder.encode.side_effect = lambda text: list(range(len(text)))
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 
@@ -67,9 +63,7 @@ class TestTiktokenSplitter:
         mock_encoder.encode.side_effect = lambda text: list(range(len(str(text))))
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 
@@ -104,9 +98,7 @@ class TestTiktokenSplitter:
         mock_encoder.encode.side_effect = lambda text: list(range(len(str(text))))
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 
@@ -151,9 +143,7 @@ class TestTiktokenSplitter:
         mock_encoder = MagicMock()
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 
@@ -170,9 +160,7 @@ class TestTiktokenSplitter:
         mock_encoder.encode.side_effect = lambda text: list(range(len(str(text))))
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 
@@ -217,9 +205,7 @@ class TestTiktokenSplitter:
         mock_encoder.encode.return_value = [1, 2, 3]
         mock_tiktoken.encoding_for_model.return_value = mock_encoder
 
-        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import (
-            TiktokenSplitter,
-        )
+        from arize_toolkit.extensions.prompt_optimizer.tiktoken_splitter import TiktokenSplitter
 
         splitter = TiktokenSplitter()
 

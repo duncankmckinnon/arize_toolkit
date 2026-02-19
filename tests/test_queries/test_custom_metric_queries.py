@@ -78,9 +78,7 @@ class TestGetAllCustomMetricsQuery:
         gql_client.execute.side_effect = mock_response
 
         # Execute the query
-        result = GetAllCustomMetricsQuery.iterate_over_pages(
-            gql_client, space_id="123", model_name="test_model"
-        )
+        result = GetAllCustomMetricsQuery.iterate_over_pages(gql_client, space_id="123", model_name="test_model")
 
         # Assertions
         assert len(result) == 2
@@ -109,9 +107,7 @@ class TestGetAllCustomMetricsQuery:
             GetAllCustomMetricsQuery.QueryException,
             match="No model found with the given name",
         ):
-            GetAllCustomMetricsQuery.iterate_over_pages(
-                gql_client, space_id="123", model_name="test_model"
-            )
+            GetAllCustomMetricsQuery.iterate_over_pages(gql_client, space_id="123", model_name="test_model")
 
     def test_get_all_custom_metrics_query_no_metrics(self, gql_client):
         # Simulate a GraphQL response with no custom metrics
@@ -141,9 +137,7 @@ class TestGetAllCustomMetricsQuery:
             GetAllCustomMetricsQuery.QueryException,
             match="No custom metric found with the given name",
         ):
-            GetAllCustomMetricsQuery.iterate_over_pages(
-                gql_client, space_id="123", model_name="test_model"
-            )
+            GetAllCustomMetricsQuery.iterate_over_pages(gql_client, space_id="123", model_name="test_model")
 
 
 class TestGetCustomMetricQuery:
@@ -241,9 +235,7 @@ class TestGetCustomMetricQuery:
         assert not result.requiresPositiveClass
 
     def test_get_custom_metric_query_no_metric(self, gql_client):
-        mock_response = {
-            "node": {"models": {"edges": [{"node": {"customMetrics": {"edges": []}}}]}}
-        }
+        mock_response = {"node": {"models": {"edges": [{"node": {"customMetrics": {"edges": []}}}]}}}
         gql_client.execute.return_value = mock_response
 
         # Execute the query and expect an exception
@@ -261,9 +253,7 @@ class TestGetCustomMetricQuery:
 
 class TestCreateCustomMetricMutation:
     def test_create_custom_metric_mutation_success(self, gql_client):
-        mock_response = {
-            "createCustomMetric": {"customMetric": {"id": "new_metric_id"}}
-        }
+        mock_response = {"createCustomMetric": {"customMetric": {"id": "new_metric_id"}}}
         gql_client.execute.return_value = mock_response
 
         # Execute the mutation

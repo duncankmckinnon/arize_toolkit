@@ -3,11 +3,7 @@
 import pandas as pd
 import pytest
 
-from arize_toolkit.extensions.prompt_optimizer.constants import (
-    END_DELIM,
-    META_PROMPT_TEMPLATE,
-    START_DELIM,
-)
+from arize_toolkit.extensions.prompt_optimizer.constants import END_DELIM, META_PROMPT_TEMPLATE, START_DELIM
 from arize_toolkit.extensions.prompt_optimizer.meta_prompt import MetaPrompt
 
 
@@ -132,9 +128,7 @@ class TestMetaPrompt:
         # Verify delimiters are replaced with spaces in the examples section
         # Note: The template itself contains {baseline_prompt} and {examples} which are expected
         # We need to check that our test data delimiters were replaced
-        examples_section = content.split(
-            "************* start example data *************"
-        )[-1]
+        examples_section = content.split("************* start example data *************")[-1]
         assert "test  var  text" in examples_section
         assert "output  result " in examples_section
         assert "feedback  good " in examples_section
@@ -147,9 +141,7 @@ class TestMetaPrompt:
         template_variables = ["name", "age", "location"]
         variable_values = {"name": "John", "age": 25, "location": "NYC"}
 
-        result = meta_prompt.format_template_with_vars(
-            template, template_variables, variable_values
-        )
+        result = meta_prompt.format_template_with_vars(template, template_variables, variable_values)
 
         assert result == "Hello John, your age is 25 and location is NYC."
 
@@ -161,9 +153,7 @@ class TestMetaPrompt:
         template_variables = ["input"]
         variable_values = {"input": f"test{START_DELIM}value{END_DELIM}"}
 
-        result = meta_prompt.format_template_with_vars(
-            template, template_variables, variable_values
-        )
+        result = meta_prompt.format_template_with_vars(template, template_variables, variable_values)
 
         # Delimiters in values should be replaced with spaces
         assert result == "Process test value  data"
@@ -178,9 +168,7 @@ class TestMetaPrompt:
 
         # Should raise KeyError when trying to access missing variable
         with pytest.raises(KeyError):
-            meta_prompt.format_template_with_vars(
-                template, template_variables, variable_values
-            )
+            meta_prompt.format_template_with_vars(template, template_variables, variable_values)
 
     def test_construct_content_empty_dataframe(self):
         """Test content construction with empty dataframe."""
@@ -229,9 +217,7 @@ class TestMetaPrompt:
         """Test that the meta prompt template structure is preserved."""
         meta_prompt = MetaPrompt()
 
-        df = pd.DataFrame(
-            {"input": ["test"], "output": ["result"], "feedback": ["good"]}
-        )
+        df = pd.DataFrame({"input": ["test"], "output": ["result"], "feedback": ["good"]})
 
         content = meta_prompt.construct_content(
             batch_df=df,

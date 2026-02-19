@@ -1,27 +1,7 @@
 from datetime import datetime, timezone
 
-from arize_toolkit.models import (
-    CustomMetric,
-    Dimension,
-    DimensionFilterInput,
-    DynamicAutoThreshold,
-    IntegrationKey,
-    MetricFilterItem,
-    MetricWindow,
-    Monitor,
-    MonitorContact,
-    User,
-)
-from arize_toolkit.types import (
-    ComparisonOperator,
-    DataQualityMetric,
-    DimensionCategory,
-    DriftMetric,
-    FilterRowType,
-    ModelEnvironment,
-    MonitorCategory,
-    PerformanceMetric,
-)
+from arize_toolkit.models import CustomMetric, Dimension, DimensionFilterInput, DynamicAutoThreshold, IntegrationKey, MetricFilterItem, MetricWindow, Monitor, MonitorContact, User
+from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DriftMetric, FilterRowType, ModelEnvironment, MonitorCategory, PerformanceMetric
 
 
 class TestMonitorModels:
@@ -30,18 +10,14 @@ class TestMonitorModels:
         from arize_toolkit.models import MonitorContactInput
 
         # Email contact
-        email_contact = MonitorContactInput(
-            notificationChannelType="email", emailAddress="user@example.com"
-        )
+        email_contact = MonitorContactInput(notificationChannelType="email", emailAddress="user@example.com")
 
         assert email_contact.notificationChannelType == "email"
         assert email_contact.emailAddress == "user@example.com"
         assert email_contact.integrationKeyId is None
 
         # Integration contact
-        integration_contact = MonitorContactInput(
-            notificationChannelType="integration", integrationKeyId="key123"
-        )
+        integration_contact = MonitorContactInput(notificationChannelType="integration", integrationKeyId="key123")
 
         assert integration_contact.notificationChannelType == "integration"
         assert integration_contact.integrationKeyId == "key123"
@@ -127,9 +103,7 @@ class TestMonitorDetailedModels:
         assert email_contact.emailAddress == "user@example.com"
 
         # Integration contact
-        integration = IntegrationKey(
-            id="key123", name="PagerDuty", providerName="pagerduty"
-        )
+        integration = IntegrationKey(id="key123", name="PagerDuty", providerName="pagerduty")
 
         integration_contact = MonitorContact(
             id="contact2",
@@ -232,9 +206,7 @@ class TestMonitorDetailedModels:
             metric="custom_formula",
             requiresPositiveClass=False,
         )
-        metric_window = MetricWindow(
-            id="window123", type="moving", windowLengthMs=86400000
-        )
+        metric_window = MetricWindow(id="window123", type="moving", windowLengthMs=86400000)
 
         monitor = Monitor(
             id="monitor123",
@@ -546,18 +518,10 @@ class TestTimeSeriesModels:
         from arize_toolkit.models import DataPoint, TimeSeriesWithThresholdDataType
 
         # Create data points
-        data_points = [
-            DataPoint(
-                x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.9 + i * 0.01
-            )
-            for i in range(5)
-        ]
+        data_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.9 + i * 0.01) for i in range(5)]
 
         # Create threshold data points
-        threshold_points = [
-            DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.85)
-            for i in range(5)
-        ]
+        threshold_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=0.85) for i in range(5)]
 
         # Test with all fields
         time_series = TimeSeriesWithThresholdDataType(
@@ -577,16 +541,9 @@ class TestTimeSeriesModels:
         from arize_toolkit.models import DataPoint, TimeSeriesWithThresholdDataType
 
         # Create only data points (no threshold)
-        data_points = [
-            DataPoint(
-                x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=100 + i * 10
-            )
-            for i in range(3)
-        ]
+        data_points = [DataPoint(x=datetime(2024, 1, 1, i, 0, 0, tzinfo=timezone.utc), y=100 + i * 10) for i in range(3)]
 
-        time_series = TimeSeriesWithThresholdDataType(
-            key="volume_metric", dataPoints=data_points, thresholdDataPoints=None
-        )
+        time_series = TimeSeriesWithThresholdDataType(key="volume_metric", dataPoints=data_points, thresholdDataPoints=None)
 
         assert time_series.key == "volume_metric"
         assert len(time_series.dataPoints) == 3
@@ -615,9 +572,7 @@ class TestTimeSeriesModels:
             DataPoint(x=datetime(2024, 1, 1, 3, 0, 0, tzinfo=timezone.utc), y=None),
         ]
 
-        time_series = TimeSeriesWithThresholdDataType(
-            key="sparse_metric", dataPoints=data_points
-        )
+        time_series = TimeSeriesWithThresholdDataType(key="sparse_metric", dataPoints=data_points)
 
         assert len(time_series.dataPoints) == 4
         assert time_series.dataPoints[0].y == 0.9

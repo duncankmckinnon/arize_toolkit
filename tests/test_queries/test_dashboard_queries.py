@@ -1,10 +1,6 @@
 import pytest
 
-from arize_toolkit.queries.dashboard_queries import (
-    CreateDashboardMutation,
-    CreateLineChartWidgetMutation,
-    GetDashboardPerformanceSlicesQuery,
-)
+from arize_toolkit.queries.dashboard_queries import CreateDashboardMutation, CreateLineChartWidgetMutation, GetDashboardPerformanceSlicesQuery
 from arize_toolkit.types import WidgetCreationStatus
 
 
@@ -22,9 +18,7 @@ class TestDashboardQueries:
                 }
             }
         }
-        result = GetDashboardPerformanceSlicesQuery.iterate_over_pages(
-            gql_client, dashboardId=dashboard_id
-        )
+        result = GetDashboardPerformanceSlicesQuery.iterate_over_pages(gql_client, dashboardId=dashboard_id)
         assert len(result) == 2
         assert result[0].id == "slice1"
         assert result[1].id == "slice2"
@@ -62,9 +56,7 @@ class TestDashboardMutations:
         gql_client.execute.return_value = {"createDashboard": {}}
 
         with pytest.raises(CreateDashboardMutation.QueryException):
-            CreateDashboardMutation.run_graphql_mutation(
-                gql_client, name="Test Dashboard", spaceId="test_space_id"
-            )
+            CreateDashboardMutation.run_graphql_mutation(gql_client, name="Test Dashboard", spaceId="test_space_id")
 
     def test_create_line_chart_widget_mutation(self, gql_client):
         """Test creating a line chart widget"""
