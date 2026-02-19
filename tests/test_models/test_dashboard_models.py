@@ -256,12 +256,10 @@ class TestWidgetModel:
         """Test WidgetModel initialization"""
         widget_model = WidgetModel(
             id="widget_model_123",
-            externalModelId="external_123",
             createdAt=datetime.now(),
             modelType=ModelType.score_categorical,
         )
         assert widget_model.id == "widget_model_123"
-        assert widget_model.externalModelId == "external_123"
         assert widget_model.modelType == ModelType.score_categorical
         assert widget_model.createdAt is not None
 
@@ -269,7 +267,6 @@ class TestWidgetModel:
         """Test WidgetModel with optional fields"""
         widget_model = WidgetModel()
         assert widget_model.id is None
-        assert widget_model.externalModelId is None
         assert widget_model.createdAt is None
         assert widget_model.modelType is None
 
