@@ -29,6 +29,7 @@ For more information about annotations in Arize check out the **[documentation o
 | | Delete by *name* | [`delete_prompt`](#delete_prompt) |
 | Evaluators | List all evaluators | [`get_evaluators`](#get_evaluators) |
 | | Retrieve by *name* | [`get_evaluator`](#get_evaluator) |
+| | Retrieve by *id* | [`get_evaluator_by_id`](#get_evaluator_by_id) |
 | | Create template evaluator | [`create_template_evaluator`](#create_template_evaluator) |
 | | Create code evaluator | [`create_code_evaluator`](#create_code_evaluator) |
 | | Version a template evaluator | [`create_template_evaluator_version`](#create_template_evaluator_version) |
@@ -519,6 +520,42 @@ A dictionary containing:
 ```python
 evaluator = client.get_evaluator("Hallucination Detector")
 print(evaluator["id"], evaluator["taskType"])
+```
+
+______________________________________________________________________
+
+### `get_evaluator_by_id`
+
+```python
+evaluator: dict = client.get_evaluator_by_id(id: str)
+```
+
+Fetch a single evaluator by its canonical ID.
+
+**Parameters**
+
+- `id` – The evaluator's canonical ID.
+
+**Returns**
+
+A dictionary containing:
+
+- `id` – Unique evaluator ID
+- `name` – Evaluator display name
+- `description` – Evaluator description
+- `taskType` – `"template_evaluation"` or `"code_evaluation"`
+- `commitHash` – Latest version commit hash
+- `commitMessage` – Latest version commit message
+- `tags` – List of tags
+- `createdAt` – Creation timestamp
+- `updatedAt` – Last update timestamp
+- `createdBy` – User who created the evaluator
+
+**Example**
+
+```python
+evaluator = client.get_evaluator_by_id("eval123")
+print(evaluator["name"], evaluator["taskType"])
 ```
 
 ______________________________________________________________________

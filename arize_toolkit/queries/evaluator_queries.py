@@ -53,6 +53,37 @@ class GetEvaluatorsQuery(BaseQuery):
         return evaluators, pageInfo.get("hasNextPage", False), pageInfo.get("endCursor")
 
 
+class GetEvaluatorQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getEvaluator($eval_id: ID!) {
+        node(id: $eval_id) {
+            ... on Evaluator {"""
+        + Evaluator.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get an evaluator by id"
+
+    class Variables(BaseVariables):
+        eval_id: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error getting evaluator by id"
+
+    class QueryResponse(Evaluator):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or result["node"] is None:
+            cls.raise_exception("Evaluator not found")
+        return [cls.QueryResponse(**result["node"])], False, None
+
+
 class GetEvaluatorByNameQuery(BaseQuery):
     graphql_query = (
         """

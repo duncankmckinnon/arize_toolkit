@@ -47,7 +47,15 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
-from arize_toolkit.queries.evaluator_queries import CreateEvaluatorMutation, CreateEvaluatorVersionMutation, DeleteEvaluatorMutation, EditEvaluatorMutation, GetEvaluatorByNameQuery, GetEvaluatorsQuery
+from arize_toolkit.queries.evaluator_queries import (
+    CreateEvaluatorMutation,
+    CreateEvaluatorVersionMutation,
+    DeleteEvaluatorMutation,
+    EditEvaluatorMutation,
+    GetEvaluatorByNameQuery,
+    GetEvaluatorQuery,
+    GetEvaluatorsQuery,
+)
 from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
@@ -1620,6 +1628,29 @@ class Client:
         )
         return [r.to_dict() for r in results]
 
+    def get_evaluator_by_id(self, id: str) -> dict:
+        """Get an evaluator by id.
+
+        Args:
+            id (str): The id of the evaluator
+
+        Returns:
+            dict: The evaluator with id, name, description, taskType, etc.
+
+        Raises:
+            ArizeAPIException: If the evaluator is not found
+
+        Example:
+            ```python
+            evaluator = client.get_evaluator_by_id("eval_id")
+            ```
+        """
+        result = GetEvaluatorQuery.run_graphql_query(
+            self._graphql_client,
+            eval_id=id,
+        )
+        return result.to_dict()
+
     def get_evaluator(self, name: str) -> dict:
         """Get an evaluator by name.
 
@@ -2237,24 +2268,25 @@ class Client:
         self,
         metric: str,
         metric_name: str,
+        metric_environment: str = "production",
         model_id: Optional[str] = None,
         model_name: Optional[str] = None,
         metric_description: Optional[str] = None,
-        metric_environment: Optional[str] = None,
     ) -> str:
         """Creates a new custom metric for a model.
 
         Args:
             metric (str): The metric expression/formula (e.g. "select avg(prediction) from model")
             metric_name (str): Name for the new metric
+            metric_environment (Optional[str]): Environment name for the metric.
+                Valid values are: "tracing", "production", "staging", "development"
+                Defaults to "production" if not specified.
+                For generative use cases, only use "tracing"
             model_id (Optional[str]): ID of the model to create metric for.
                 Either model_id or model_name must be provided.
             model_name (Optional[str]): Name of the model to create metric for.
                 Used to look up model_id if not provided.
             metric_description (Optional[str]): Description of what the metric measures
-            metric_environment (Optional[str]): Environment name for the metric.
-                Valid values are: "production", "staging", "development"
-                Defaults to "production" if not specified.
 
         Returns:
             str: The path to the newly created custom metric

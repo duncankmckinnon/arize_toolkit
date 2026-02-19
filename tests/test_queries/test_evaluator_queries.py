@@ -4,7 +4,15 @@ import pytest
 
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.models.evaluator_models import CodeEvaluationConfig
-from arize_toolkit.queries.evaluator_queries import CreateEvaluatorMutation, CreateEvaluatorVersionMutation, DeleteEvaluatorMutation, EditEvaluatorMutation, GetEvaluatorByNameQuery, GetEvaluatorsQuery
+from arize_toolkit.queries.evaluator_queries import (
+    CreateEvaluatorMutation,
+    CreateEvaluatorVersionMutation,
+    DeleteEvaluatorMutation,
+    EditEvaluatorMutation,
+    GetEvaluatorByNameQuery,
+    GetEvaluatorQuery,
+    GetEvaluatorsQuery,
+)
 from arize_toolkit.types import EvalDataGranularityType, TemplateEvaluationConfigDirection
 
 
@@ -131,6 +139,77 @@ class TestGetEvaluatorsQuery:
             GetEvaluatorsQuery.iterate_over_pages(
                 gql_client,
                 space_id="bad_space",
+            )
+
+
+class TestGetEvaluatorQuery:
+    def test_query_structure(self):
+        """Test that the query structure includes expected elements."""
+        query = GetEvaluatorQuery.graphql_query
+        assert "query getEvaluator" in query
+        assert "$eval_id: ID!" in query
+        assert "node(id: $eval_id)" in query
+        assert "... on Evaluator" in query
+        assert "id" in query
+        assert "name" in query
+
+    def test_get_evaluator_success(self, gql_client, mock_evaluator):
+        """Test getting an evaluator by ID."""
+        mock_response = {"node": mock_evaluator}
+        gql_client.execute.return_value = mock_response
+
+        result = GetEvaluatorQuery.run_graphql_query(
+            gql_client,
+            eval_id="eval123",
+        )
+
+        assert result.id == "eval123"
+        assert result.name == "Hallucination Detector"
+        assert result.description == "Detects hallucinations in LLM responses"
+        assert result.taskType.name == "template_evaluation"
+        assert result.commitHash == "abc123"
+        assert result.commitMessage == "Initial version"
+        assert result.tags == ["llm", "quality"]
+        assert isinstance(result.createdAt, datetime)
+        assert result.createdBy.id == "user123"
+        assert result.createdBy.name == "Test User"
+        gql_client.execute.assert_called_once()
+
+    def test_get_evaluator_minimal_fields(self, gql_client):
+        """Test getting an evaluator with only required fields."""
+        mock_response = {"node": {"id": "eval_min", "name": "Minimal Evaluator"}}
+        gql_client.execute.return_value = mock_response
+
+        result = GetEvaluatorQuery.run_graphql_query(
+            gql_client,
+            eval_id="eval_min",
+        )
+
+        assert result.id == "eval_min"
+        assert result.name == "Minimal Evaluator"
+        assert result.description is None
+        assert result.tags is None
+
+    def test_get_evaluator_not_found(self, gql_client):
+        """Test error when evaluator node is None."""
+        mock_response = {"node": None}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error getting evaluator by id"):
+            GetEvaluatorQuery.run_graphql_query(
+                gql_client,
+                eval_id="nonexistent",
+            )
+
+    def test_get_evaluator_missing_node(self, gql_client):
+        """Test error when node key is missing from response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(ArizeAPIException, match="Error getting evaluator by id"):
+            GetEvaluatorQuery.run_graphql_query(
+                gql_client,
+                eval_id="nonexistent",
             )
 
 

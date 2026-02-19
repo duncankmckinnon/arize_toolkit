@@ -5825,6 +5825,66 @@ class TestDashboards:
         assert mock_graphql_client.return_value.execute.call_count == 1
 
 
+class TestGetEvaluatorById:
+    """Test get_evaluator_by_id functionality"""
+
+    def test_get_evaluator_by_id_success(self, client, mock_graphql_client):
+        """Test getting an evaluator by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval123",
+                "name": "Hallucination Detector",
+                "description": "Detects hallucinations in LLM responses",
+                "taskType": "template_evaluation",
+                "commitHash": "abc123",
+                "commitMessage": "Initial version",
+                "tags": ["llm", "quality"],
+                "createdAt": "2024-01-01T00:00:00Z",
+                "updatedAt": "2024-01-02T00:00:00Z",
+                "createdBy": {
+                    "id": "user123",
+                    "name": "Test User",
+                    "email": "test@example.com",
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval123")
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+        assert result["tags"] == ["llm", "quality"]
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_evaluator_by_id_not_found(self, client, mock_graphql_client):
+        """Test getting an evaluator that doesn't exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {"node": None}
+
+        with pytest.raises(ArizeAPIException, match="Error getting evaluator by id"):
+            client.get_evaluator_by_id("nonexistent")
+
+    def test_get_evaluator_by_id_minimal(self, client, mock_graphql_client):
+        """Test getting an evaluator with minimal fields"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval_min",
+                "name": "Minimal Evaluator",
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval_min")
+
+        assert result["id"] == "eval_min"
+        assert result["name"] == "Minimal Evaluator"
+        assert result.get("description") is None
+
+
 class TestEvaluators:
     """Test evaluator functionality"""
 
