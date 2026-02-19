@@ -22,7 +22,10 @@ class TestFileImportModels:
 
     def test_classification_schema_input(self):
         """Test ClassificationSchemaInput model."""
-        from arize_toolkit.models import ClassificationSchemaInput, EmbeddingFeatureInput
+        from arize_toolkit.models import (
+            ClassificationSchemaInput,
+            EmbeddingFeatureInput,
+        )
 
         schema = ClassificationSchemaInput(
             predictionLabel="prediction",
@@ -101,7 +104,9 @@ class TestTableImportModels:
         """Test BigQueryTableConfig model."""
         from arize_toolkit.models import BigQueryTableConfig
 
-        config = BigQueryTableConfig(projectId="my-project", dataset="my-dataset", tableName="my-table")
+        config = BigQueryTableConfig(
+            projectId="my-project", dataset="my-dataset", tableName="my-table"
+        )
 
         assert config.projectId == "my-project"
         assert config.dataset == "my-dataset"
@@ -131,13 +136,19 @@ class TestTableImportModels:
 
     def test_table_import_job_input_validation(self):
         """Test TableImportJobInput validation."""
-        from arize_toolkit.models import BigQueryTableConfig, FullSchema, TableImportJobInput
+        from arize_toolkit.models import (
+            BigQueryTableConfig,
+            FullSchema,
+            TableImportJobInput,
+        )
         from arize_toolkit.types import ModelEnvironment, ModelType, TableStore
 
         # Valid case with BigQuery
         job_input = TableImportJobInput(
             tableStore=TableStore.BigQuery,
-            bigQueryTableConfig=BigQueryTableConfig(projectId="project", dataset="dataset", tableName="table"),
+            bigQueryTableConfig=BigQueryTableConfig(
+                projectId="project", dataset="dataset", tableName="table"
+            ),
             spaceId="space123",
             modelName="model",
             modelType=ModelType.score_categorical,
@@ -154,7 +165,9 @@ class TestTableImportModels:
         from arize_toolkit.types import ModelEnvironment, ModelType, TableStore
 
         # Invalid case - missing required config
-        with pytest.raises(ValueError, match="bigQueryTableConfig is required for BigQuery table store"):
+        with pytest.raises(
+            ValueError, match="bigQueryTableConfig is required for BigQuery table store"
+        ):
             TableImportJobInput(
                 tableStore=TableStore.BigQuery,
                 # Missing bigQueryTableConfig
@@ -225,7 +238,10 @@ class TestSchemaInputModels:
 
     def test_object_detection_schema_input(self):
         """Test ObjectDetectionSchemaInput model."""
-        from arize_toolkit.models import ObjectDetectionInput, ObjectDetectionSchemaInput
+        from arize_toolkit.models import (
+            ObjectDetectionInput,
+            ObjectDetectionSchemaInput,
+        )
 
         pred_detection = ObjectDetectionInput(
             boundingBoxesCoordinatesColumnName="pred_coords",
@@ -243,8 +259,14 @@ class TestSchemaInputModels:
             actualObjectDetection=actual_detection,
         )
 
-        assert schema.predictionObjectDetection.boundingBoxesCoordinatesColumnName == "pred_coords"
-        assert schema.predictionObjectDetection.boundingBoxesScoresColumnName == "pred_scores"
+        assert (
+            schema.predictionObjectDetection.boundingBoxesCoordinatesColumnName
+            == "pred_coords"
+        )
+        assert (
+            schema.predictionObjectDetection.boundingBoxesScoresColumnName
+            == "pred_scores"
+        )
         assert schema.actualObjectDetection.boundingBoxesScoresColumnName is None
 
     def test_full_schema_flexibility(self):
@@ -356,7 +378,11 @@ class TestImportJobModels:
 
     def test_table_import_job(self):
         """Test TableImportJob model."""
-        from arize_toolkit.models import FullSchema, TableImportJob, TableIngestionParameters
+        from arize_toolkit.models import (
+            FullSchema,
+            TableImportJob,
+            TableIngestionParameters,
+        )
         from arize_toolkit.types import ModelEnvironment, ModelType, TableStore
 
         created_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -378,7 +404,9 @@ class TestImportJobModels:
             totalQueriesSuccessCount=50,
             totalQueriesFailedCount=0,
             totalQueriesPendingCount=10,
-            tableIngestionParameters=TableIngestionParameters(refreshIntervalSeconds=3600, queryWindowSizeSeconds=86400),
+            tableIngestionParameters=TableIngestionParameters(
+                refreshIntervalSeconds=3600, queryWindowSizeSeconds=86400
+            ),
         )
 
         assert job.id == "job789"
@@ -393,7 +421,9 @@ class TestImportJobModels:
         """Test AzureStorageIdentifierInput model."""
         from arize_toolkit.models import AzureStorageIdentifierInput
 
-        azure_id = AzureStorageIdentifierInput(tenantId="tenant123", storageAccountName="mystorageaccount")
+        azure_id = AzureStorageIdentifierInput(
+            tenantId="tenant123", storageAccountName="mystorageaccount"
+        )
 
         assert azure_id.tenantId == "tenant123"
         assert azure_id.storageAccountName == "mystorageaccount"

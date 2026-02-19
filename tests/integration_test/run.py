@@ -117,7 +117,9 @@ def run_integration_tests():
                 print(f"Running get_prompt query for prompt: {prompt_name}...")
                 prompt = client.get_prompt(prompt_name=prompt_name)
                 print(f"Prompt ID for {prompt_name}: {prompt['id']}")
-                prompt_versions = client.get_all_prompt_versions(prompt_name=prompt_name)
+                prompt_versions = client.get_all_prompt_versions(
+                    prompt_name=prompt_name
+                )
                 print("Prompt Versions:", [pv["id"] for pv in prompt_versions])
         except Exception as e:
             print(f"Prompts Error: {e}")
@@ -142,13 +144,25 @@ def run_integration_tests():
 
                 # Print widget counts and details
                 widget_counts = {
-                    "statisticWidgets": len(detailed_dashboard.get("statisticWidgets", [])),
-                    "lineChartWidgets": len(detailed_dashboard.get("lineChartWidgets", [])),
-                    "experimentChartWidgets": len(detailed_dashboard.get("experimentChartWidgets", [])),
-                    "driftLineChartWidgets": len(detailed_dashboard.get("driftLineChartWidgets", [])),
-                    "monitorLineChartWidgets": len(detailed_dashboard.get("monitorLineChartWidgets", [])),
+                    "statisticWidgets": len(
+                        detailed_dashboard.get("statisticWidgets", [])
+                    ),
+                    "lineChartWidgets": len(
+                        detailed_dashboard.get("lineChartWidgets", [])
+                    ),
+                    "experimentChartWidgets": len(
+                        detailed_dashboard.get("experimentChartWidgets", [])
+                    ),
+                    "driftLineChartWidgets": len(
+                        detailed_dashboard.get("driftLineChartWidgets", [])
+                    ),
+                    "monitorLineChartWidgets": len(
+                        detailed_dashboard.get("monitorLineChartWidgets", [])
+                    ),
                     "textWidgets": len(detailed_dashboard.get("textWidgets", [])),
-                    "barChartWidgets": len(detailed_dashboard.get("barChartWidgets", [])),
+                    "barChartWidgets": len(
+                        detailed_dashboard.get("barChartWidgets", [])
+                    ),
                 }
 
                 print(f"Dashboard '{dashboard_name}' widget counts:")
@@ -159,18 +173,26 @@ def run_integration_tests():
                 models_in_dashboard = detailed_dashboard.get("models", [])
                 print(f"  Models referenced: {len(models_in_dashboard)}")
                 for model in models_in_dashboard:
-                    print(f"    Model: {model.get('name', 'Unknown')} (ID: {model.get('id', 'Unknown')})")
+                    print(
+                        f"    Model: {model.get('name', 'Unknown')} (ID: {model.get('id', 'Unknown')})"
+                    )
 
                 # Print some sample widget details if available
                 if detailed_dashboard.get("statisticWidgets"):
                     print("  Sample statistic widgets:")
-                    for widget in detailed_dashboard["statisticWidgets"][:3]:  # Show first 3
+                    for widget in detailed_dashboard["statisticWidgets"][
+                        :3
+                    ]:  # Show first 3
                         print(f"    Widget: {widget.get('title', 'Untitled')}")
                         print(f"      Metric: {widget.get('performanceMetric', 'N/A')}")
-                        print(f"      Environment: {widget.get('modelEnvironmentName', 'N/A')}")
+                        print(
+                            f"      Environment: {widget.get('modelEnvironmentName', 'N/A')}"
+                        )
 
                 # Test 3: Retrieve the URL for the dashboard
-                print(f"Running get_dashboard_url query for dashboard: {dashboard_name}...")
+                print(
+                    f"Running get_dashboard_url query for dashboard: {dashboard_name}..."
+                )
                 dashboard_url = client.get_dashboard_url(dashboard_name)
                 print(f"Dashboard URL: {dashboard_url}")
 
@@ -179,7 +201,9 @@ def run_integration_tests():
                 print(f"Direct dashboard URL: {direct_url}")
 
                 # Test get_dashboard_by_id as well
-                print(f"Running get_dashboard_by_id query for dashboard ID: {dashboard_id}...")
+                print(
+                    f"Running get_dashboard_by_id query for dashboard ID: {dashboard_id}..."
+                )
                 dashboard_by_id = client.get_dashboard_by_id(dashboard_id)
                 print(f"Dashboard by ID name: {dashboard_by_id['name']}")
 
@@ -192,11 +216,17 @@ def run_integration_tests():
         if monitors:
             monitor_name = monitors.pop(0)["name"]  # Get the first monitor name
             print(f"Running get_monitor query for monitor: {monitor_name}...")
-            monitor = client.get_monitor(model_name=model_name, monitor_name=monitor_name)
+            monitor = client.get_monitor(
+                model_name=model_name, monitor_name=monitor_name
+            )
             print(f"Monitor ID for {monitor_name}: {monitor['id']}")
-            print(f"Monitor Category for {monitor_name}: {monitor.get('monitorCategory')}")
+            print(
+                f"Monitor Category for {monitor_name}: {monitor.get('monitorCategory')}"
+            )
             try:
-                print(f"Running get_monitor_metric_values query for monitor: {monitor_name}...")
+                print(
+                    f"Running get_monitor_metric_values query for monitor: {monitor_name}..."
+                )
                 monitor_metric_values = client.get_monitor_metric_values(
                     model_name=model_name,
                     monitor_name=monitor_name,
@@ -205,7 +235,9 @@ def run_integration_tests():
                     to_dataframe=True,
                 )
                 print(f"Monitor Metric Values: {monitor_metric_values}")
-                print(f"Running get_latest_monitor_value query for monitor: {monitor_name}...")
+                print(
+                    f"Running get_latest_monitor_value query for monitor: {monitor_name}..."
+                )
                 latest_monitor_value = client.get_latest_monitor_value(
                     model_name=model_name,
                     monitor_name=monitor_name,
@@ -223,8 +255,16 @@ def run_integration_tests():
                 print(f"Monitor Creator: {monitor_creator.to_dict(exclude_none=True)}")
                 old_id = client.delete_monitor_by_id(monitor_id=monitor["id"])
                 print(f"Deleted monitor with ID: {old_id}")
-                email_addresses = [email.emailAddress for email in monitor_creator.contacts if email.notificationChannelType == "email"]
-                integration_key_ids = [integration_key.integrationKeyId for integration_key in monitor_creator.contacts if integration_key.notificationChannelType == "integration"]
+                email_addresses = [
+                    email.emailAddress
+                    for email in monitor_creator.contacts
+                    if email.notificationChannelType == "email"
+                ]
+                integration_key_ids = [
+                    integration_key.integrationKeyId
+                    for integration_key in monitor_creator.contacts
+                    if integration_key.notificationChannelType == "integration"
+                ]
                 if isinstance(monitor_creator, PerformanceMonitor):
                     performance_monitor = client.create_performance_monitor(
                         name=monitor_creator.name,
@@ -239,7 +279,11 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Performance Monitor: {performance_monitor}")
                 elif isinstance(monitor_creator, DataQualityMonitor):
@@ -255,7 +299,11 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Data Quality Monitor: {data_quality_monitor}")
                 elif isinstance(monitor_creator, DriftMonitor):
@@ -270,7 +318,11 @@ def run_integration_tests():
                         threshold_mode=monitor_creator.thresholdMode,
                         email_addresses=email_addresses,
                         integration_key_ids=integration_key_ids,
-                        std_dev_multiplier=(monitor_creator.dynamicAutoThreshold.stdDevMultiplier if monitor_creator.dynamicAutoThreshold else None),
+                        std_dev_multiplier=(
+                            monitor_creator.dynamicAutoThreshold.stdDevMultiplier
+                            if monitor_creator.dynamicAutoThreshold
+                            else None
+                        ),
                     )
                     print(f"Drift Monitor: {drift_monitor}")
 
@@ -280,8 +332,12 @@ def run_integration_tests():
             print(f"All Spaces: {get_all_spaces}")
             create_space = client.create_new_space(name="integration_test_space")
             print(f"Created Space: {create_space}")
-            create_space_admin_api_key = client.create_space_admin_api_key(name="integration_test_space_admin_api_key")
-            print(f"Created Space Admin API Key - ID: {create_space_admin_api_key['id']}")
+            create_space_admin_api_key = client.create_space_admin_api_key(
+                name="integration_test_space_admin_api_key"
+            )
+            print(
+                f"Created Space Admin API Key - ID: {create_space_admin_api_key['id']}"
+            )
 
         # Add more client queries as needed
     except Exception as e:

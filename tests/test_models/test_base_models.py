@@ -88,7 +88,9 @@ class TestAnnotationInput:
     def test_score_annotation(self):
         """Test score annotation type validation."""
         # Valid score annotation
-        annotation = AnnotationInput(name="quality", updatedBy="user123", score=0.95, annotationType="score")
+        annotation = AnnotationInput(
+            name="quality", updatedBy="user123", score=0.95, annotationType="score"
+        )
 
         assert annotation.name == "quality"
         assert annotation.score == 0.95
@@ -96,7 +98,9 @@ class TestAnnotationInput:
 
     def test_validation_label_missing(self):
         """Test that label is required for label annotation type."""
-        with pytest.raises(ValueError, match="Label is required for label annotation type"):
+        with pytest.raises(
+            ValueError, match="Label is required for label annotation type"
+        ):
             AnnotationInput(
                 name="sentiment",
                 updatedBy="user123",
@@ -106,7 +110,9 @@ class TestAnnotationInput:
 
     def test_validation_score_missing(self):
         """Test that score is required for score annotation type."""
-        with pytest.raises(ValueError, match="Score is required for score annotation type"):
+        with pytest.raises(
+            ValueError, match="Score is required for score annotation type"
+        ):
             AnnotationInput(
                 name="quality",
                 updatedBy="user123",

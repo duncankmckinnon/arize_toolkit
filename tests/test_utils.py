@@ -123,31 +123,65 @@ class TestConvertToDictTest:
 
 class TestParseDatetimeTest:
     def test_parse_datetime(self):
-        assert parse_datetime("2023-04-01T12:30:45Z") == datetime(2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc)
-        assert parse_datetime("04/01/2023 12:30:45") == datetime(2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc)
-        assert parse_datetime("2023-04-01 12:30:45") == datetime(2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc)
-        assert parse_datetime("04/01/2023 12:30") == datetime(2023, 4, 1, 12, 30, tzinfo=timezone.utc)
+        assert parse_datetime("2023-04-01T12:30:45Z") == datetime(
+            2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc
+        )
+        assert parse_datetime("04/01/2023 12:30:45") == datetime(
+            2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc
+        )
+        assert parse_datetime("2023-04-01 12:30:45") == datetime(
+            2023, 4, 1, 12, 30, 45, tzinfo=timezone.utc
+        )
+        assert parse_datetime("04/01/2023 12:30") == datetime(
+            2023, 4, 1, 12, 30, tzinfo=timezone.utc
+        )
         assert parse_datetime("2023-04-01") == datetime(2023, 4, 1, tzinfo=timezone.utc)
         assert parse_datetime("04/01/2023") == datetime(2023, 4, 1, tzinfo=timezone.utc)
-        assert parse_datetime("2023-04-01 12:30") == datetime(2023, 4, 1, 12, 30, tzinfo=timezone.utc)
-        assert parse_datetime("2023-04-01 12:30:45.123Z") == datetime(2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc)
-        assert parse_datetime("2023-04-01 12:30:45.123+00:00") == datetime(2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc)
-        assert parse_datetime("2023-04-01 12:30:45.123-00:00") == datetime(2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc)
-        assert parse_datetime(1712923200) == datetime(2024, 4, 12, 12, 0, 0, tzinfo=timezone.utc)
-        assert parse_datetime(1712923200.123) == datetime(2024, 4, 12, 12, 0, 0, 123000, tzinfo=timezone.utc)
-        assert parse_datetime(1712923200.123456) == datetime(2024, 4, 12, 12, 0, 0, 123456, tzinfo=timezone.utc)
-        assert parse_datetime(1712923200.123456789) == datetime(2024, 4, 12, 12, 0, 0, 123457, tzinfo=timezone.utc)
-        assert parse_datetime(datetime(2024, 4, 12, 12, 0, 0, 123456)) == datetime(2024, 4, 12, 12, 0, 0, 123456)
+        assert parse_datetime("2023-04-01 12:30") == datetime(
+            2023, 4, 1, 12, 30, tzinfo=timezone.utc
+        )
+        assert parse_datetime("2023-04-01 12:30:45.123Z") == datetime(
+            2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc
+        )
+        assert parse_datetime("2023-04-01 12:30:45.123+00:00") == datetime(
+            2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc
+        )
+        assert parse_datetime("2023-04-01 12:30:45.123-00:00") == datetime(
+            2023, 4, 1, 12, 30, 45, 123000, tzinfo=timezone.utc
+        )
+        assert parse_datetime(1712923200) == datetime(
+            2024, 4, 12, 12, 0, 0, tzinfo=timezone.utc
+        )
+        assert parse_datetime(1712923200.123) == datetime(
+            2024, 4, 12, 12, 0, 0, 123000, tzinfo=timezone.utc
+        )
+        assert parse_datetime(1712923200.123456) == datetime(
+            2024, 4, 12, 12, 0, 0, 123456, tzinfo=timezone.utc
+        )
+        assert parse_datetime(1712923200.123456789) == datetime(
+            2024, 4, 12, 12, 0, 0, 123457, tzinfo=timezone.utc
+        )
+        assert parse_datetime(datetime(2024, 4, 12, 12, 0, 0, 123456)) == datetime(
+            2024, 4, 12, 12, 0, 0, 123456
+        )
 
     def test_parse_datetime_errors(self):
-        with pytest.raises(ValueError, match="Invalid datetime string, could not parse: abc"):
+        with pytest.raises(
+            ValueError, match="Invalid datetime string, could not parse: abc"
+        ):
             parse_datetime("abc")
 
-        with pytest.raises(ValueError, match="Invalid datetime string, could not parse: 12.2024.10"):
+        with pytest.raises(
+            ValueError, match="Invalid datetime string, could not parse: 12.2024.10"
+        ):
             parse_datetime("12.2024.10")
 
-        with pytest.raises(ValueError, match="Invalid datetime string, could not parse: 12/2024/10"):
+        with pytest.raises(
+            ValueError, match="Invalid datetime string, could not parse: 12/2024/10"
+        ):
             parse_datetime("12/2024/10")
 
-        with pytest.raises(ValueError, match="Invalid datetime string, could not parse: 12-2024-10"):
+        with pytest.raises(
+            ValueError, match="Invalid datetime string, could not parse: 12-2024-10"
+        ):
             parse_datetime("12-2024-10")
