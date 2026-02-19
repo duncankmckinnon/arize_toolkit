@@ -8,6 +8,8 @@ from arize_toolkit.queries.space_queries import (
     CreateSpaceAdminApiKeyMutation,
     GetAllOrganizationsQuery,
     GetAllSpacesQuery,
+    GetSpaceByIdQuery,
+    GetSpaceByNameQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
 )
@@ -163,6 +165,148 @@ class TestOrgAndFirstSpaceQuery:
         # Test valid variables
         variables = OrgAndFirstSpaceQuery.Variables(organization="test_org")
         assert variables.organization == "test_org"
+
+
+class TestGetSpaceByNameQuery:
+    """Test the GetSpaceByNameQuery class."""
+
+    def test_query_structure(self):
+        """Test that the query structure is correct."""
+        query = GetSpaceByNameQuery.graphql_query
+        assert "query getSpaceByName" in query
+        assert "$organization_id: ID!" in query
+        assert "$spaceName: String!" in query
+        assert "node(id: $organization_id)" in query
+        assert "spaces(search: $spaceName, first: 1)" in query
+
+    def test_successful_query(self, gql_client):
+        """Test successful space retrieval by name."""
+        mock_response = {
+            "node": {
+                "spaces": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "space_123",
+                                "name": "Production Space",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "description": "Main production space",
+                                "private": False,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetSpaceByNameQuery.run_graphql_query(gql_client, organization_id="org_123", spaceName="Production Space")
+
+        assert result.id == "space_123"
+        assert result.name == "Production Space"
+        assert result.description == "Main production space"
+        assert result.private is False
+        gql_client.execute.assert_called_once()
+
+    def test_space_not_found(self, gql_client):
+        """Test error when no space matches the name."""
+        mock_response = {"node": {"spaces": {"edges": []}}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetSpaceByNameQuery.QueryException,
+            match="No space found matching the given name",
+        ):
+            GetSpaceByNameQuery.run_graphql_query(gql_client, organization_id="org_123", spaceName="nonexistent")
+
+        gql_client.execute.assert_called_once()
+
+    def test_missing_spaces_structure(self, gql_client):
+        """Test error when spaces structure is missing."""
+        mock_response = {"node": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetSpaceByNameQuery.QueryException,
+            match="No spaces found",
+        ):
+            GetSpaceByNameQuery.run_graphql_query(gql_client, organization_id="org_123", spaceName="test")
+
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for required variables."""
+        # Test missing organization_id
+        with pytest.raises(Exception) as exc_info:
+            GetSpaceByNameQuery.Variables(spaceName="test")
+        assert "organization_id" in str(exc_info.value)
+
+        # Test missing spaceName
+        with pytest.raises(Exception) as exc_info:
+            GetSpaceByNameQuery.Variables(organization_id="org_123")
+        assert "spaceName" in str(exc_info.value)
+
+        # Test valid variables
+        variables = GetSpaceByNameQuery.Variables(organization_id="org_123", spaceName="test")
+        assert variables.organization_id == "org_123"
+        assert variables.spaceName == "test"
+
+
+class TestGetSpaceByIdQuery:
+    """Test the GetSpaceByIdQuery class."""
+
+    def test_query_structure(self):
+        """Test that the query structure is correct."""
+        query = GetSpaceByIdQuery.graphql_query
+        assert "query getSpaceById" in query
+        assert "$spaceId: ID!" in query
+        assert "node(id: $spaceId)" in query
+        assert "... on Space" in query
+
+    def test_successful_query(self, gql_client):
+        """Test successful space retrieval by ID."""
+        mock_response = {
+            "node": {
+                "id": "space_456",
+                "name": "Dev Space",
+                "createdAt": "2024-02-01T00:00:00Z",
+                "description": "Development space",
+                "private": True,
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetSpaceByIdQuery.run_graphql_query(gql_client, spaceId="space_456")
+
+        assert result.id == "space_456"
+        assert result.name == "Dev Space"
+        assert result.description == "Development space"
+        assert result.private is True
+        gql_client.execute.assert_called_once()
+
+    def test_space_not_found(self, gql_client):
+        """Test error when space ID does not exist."""
+        mock_response = {"node": None}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetSpaceByIdQuery.QueryException,
+            match="Object not found",
+        ):
+            GetSpaceByIdQuery.run_graphql_query(gql_client, spaceId="nonexistent_id")
+
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for required variables."""
+        # Test missing spaceId
+        with pytest.raises(Exception) as exc_info:
+            GetSpaceByIdQuery.Variables()
+        assert "spaceId" in str(exc_info.value)
+
+        # Test valid variables
+        variables = GetSpaceByIdQuery.Variables(spaceId="space_456")
+        assert variables.spaceId == "space_456"
 
 
 class TestGetAllSpacesQuery:
