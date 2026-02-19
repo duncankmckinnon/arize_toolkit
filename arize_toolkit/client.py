@@ -86,6 +86,8 @@ from arize_toolkit.queries.space_queries import (
     CreateSpaceAdminApiKeyMutation,
     GetAllOrganizationsQuery,
     GetAllSpacesQuery,
+    GetSpaceByIdQuery,
+    GetSpaceByNameQuery,
     GetUserQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
@@ -413,8 +415,48 @@ class Client:
         )
         return [result.to_dict() for result in results]
 
+    def get_space(self, name: str) -> dict:
+        """Retrieves a space by name within the current organization.
+
+        Args:
+            name (str): Name of the space to retrieve.
+
+        Returns:
+            dict: Space data containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If the space is not found
+        """
+        result = GetSpaceByNameQuery.run_graphql_query(self._graphql_client, organization_id=self.org_id, spaceName=name)
+        return result.to_dict()
+
+    def get_space_by_id(self, space_id: str) -> dict:
+        """Retrieves a space by its ID.
+
+        Args:
+            space_id (str): ID of the space to retrieve.
+
+        Returns:
+            dict: Space data containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If the space is not found
+        """
+        result = GetSpaceByIdQuery.run_graphql_query(self._graphql_client, spaceId=space_id)
+        return result.to_dict()
+
     def create_new_space(self, name: str, private: bool = True, set_as_active: bool = True) -> str:
-        """Creates a new space in the current organization.
+        """Creates a new space in the current organization, or returns the existing space if one with the same name already exists.
 
         Args:
             name (str): Name for the new space
@@ -422,11 +464,19 @@ class Client:
             set_as_active (bool, optional): Whether to set the new space as the active space. Defaults to True.
 
         Returns:
-            str: The unique identifier (ID) of the newly created space
+            str: The unique identifier (ID) of the created or existing space
 
         Raises:
             ArizeAPIException: If there is an error creating the space
         """
+        try:
+            existing = GetSpaceByNameQuery.run_graphql_query(self._graphql_client, organization_id=self.org_id, spaceName=name)
+            if set_as_active:
+                self.space = existing.name
+                self.space_id = existing.id
+            return existing.id
+        except ArizeAPIException:
+            pass
         result = CreateNewSpaceMutation.run_graphql_mutation(
             self._graphql_client,
             accountOrganizationId=self.org_id,

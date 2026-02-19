@@ -113,6 +113,73 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
         )
 
 
+class GetSpaceByNameQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceByName($organization_id: ID!, $spaceName: String!) {
+        node(id: $organization_id) {
+            ... on AccountOrganization {
+                spaces(search: $spaceName, first: 1) {
+                    edges {
+                        node { """
+        + Space.to_graphql_fields()
+        + """
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a space by name within an organization"
+
+    class Variables(BaseVariables):
+        organization_id: str
+        spaceName: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space by name"
+
+    class QueryResponse(Space):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or "spaces" not in result["node"] or "edges" not in result["node"]["spaces"]:
+            cls.raise_exception("No spaces found")
+        edges = result["node"]["spaces"]["edges"]
+        if len(edges) == 0:
+            cls.raise_exception("No space found matching the given name")
+        space = edges[0]["node"]
+        return ([cls.QueryResponse(**space)], False, None)
+
+
+class GetSpaceByIdQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceById($spaceId: ID!) {
+        node(id: $spaceId) {
+            ... on Space { """
+        + Space.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a space by its ID"
+
+    class Variables(BaseVariables):
+        spaceId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space by ID"
+
+    class QueryResponse(Space):
+        pass
+
+
 class GetAllSpacesQuery(BaseQuery):
     graphql_query = (
         """
