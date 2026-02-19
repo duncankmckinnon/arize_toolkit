@@ -26,11 +26,11 @@
 
 | Tool Category | Description |
 |--------------|-------------|
-| [**Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage models, retrieve performance metrics and inference volumes |
+| [**Project/Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage projects/models, retrieve performance metrics and traces/inference volumes |
 | [**Monitor Tools**](https://duncankmckinnon.github.io/arize_toolkit/monitor_tools) | Create, copy, and manage monitors and alerting |
 | [**Custom Metrics Tools**](https://duncankmckinnon.github.io/arize_toolkit/custom_metrics_tools) | Create and manage custom metrics |
-| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, and LLM features |
-| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and models |
+| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, evaluations, and LLM features |
+| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and projects |
 | [**Data Import Tools**](https://duncankmckinnon.github.io/arize_toolkit/data_import_tools) | Import data from cloud storage and databases |
 | [**Dashboard Tools**](https://duncankmckinnon.github.io/arize_toolkit/dashboard_tools) | Create and manage dashboards |
 | [**Utility Tools**](https://duncankmckinnon.github.io/arize_toolkit/utility_tools) | Client configuration and utility functions |
