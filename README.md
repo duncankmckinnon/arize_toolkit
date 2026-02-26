@@ -64,6 +64,22 @@ claude plugin install arize-toolkit-dev@arize-toolkit
 
 See the [Plugin Marketplace docs](https://duncankmckinnon.github.io/arize_toolkit/plugins/) for full details.
 
+#### Arize Claude Code Tracing
+
+For automatic tracing of Claude Code sessions to Arize AX or Phoenix, install the tracing plugin from the [Arize Claude Code Plugin](https://github.com/Arize-ai/arize-claude-code-plugin) marketplace:
+
+```shell
+# Add the Arize plugin marketplace
+claude plugin marketplace add Arize-ai/arize-claude-code-plugin
+
+# Install the tracing plugin
+claude plugin install claude-code-tracing@arize-claude-plugin
+```
+
+| Plugin | Skills | Description |
+|--------|--------|-------------|
+| **claude-code-tracing** | `setup-claude-code-tracing` | Automatic tracing of Claude Code sessions with OpenInference spans (9 lifecycle hooks) |
+
 ### For Developers
 
 - [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
