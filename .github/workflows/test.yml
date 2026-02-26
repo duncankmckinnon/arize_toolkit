@@ -30,7 +30,7 @@ jobs:
     - name: Create virtual environment and install dependencies
       run: |
         uv venv
-        uv pip install -e ".[dev,prompt_optimizer]"
+        uv pip install -e ".[dev,cli,prompt_optimizer]"
     
     - name: Run tests (Python < 3.12)
       if: ${{ !contains(fromJSON('["3.12", "3.13", "3.14"]'), matrix.python-version) }}
