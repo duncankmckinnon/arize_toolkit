@@ -159,6 +159,16 @@ arize_toolkit dashboards create NAME                         # Create empty dash
 arize_toolkit dashboards create-volume NAME [--model M...]   # Create volume dashboard
 ```
 
+## Traces
+
+```bash
+arize_toolkit traces list --model-name NAME [--model-id ID] [--start-time T] [--end-time T] \
+  [--count N] [--sort {desc,asc}] [--csv PATH]                                      # List traces
+arize_toolkit traces get TRACE_ID --model-name NAME [--model-id ID] [--start-time T] [--end-time T] \
+  [--columns COLS] [--all] [--count N] [--csv PATH]                                  # Get trace spans
+arize_toolkit traces columns --model-name NAME [--model-id ID] [--start-time T] [--end-time T] # List available columns
+```
+
 ## Imports
 
 ### File Imports (S3, GCS, Azure)

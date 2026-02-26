@@ -1,6 +1,6 @@
 import pytest
 
-from arize_toolkit.queries.trace_queries import GetTraceDetailQuery, ListTracesQuery
+from arize_toolkit.queries.trace_queries import GetSpanColumnsQuery, GetTraceDetailQuery, ListTracesQuery
 
 DATASET = {
     "startTime": "2025-01-01T00:00:00Z",
@@ -30,6 +30,20 @@ class TestListTracesQuery:
                                 "traceId": "trace-1",
                                 "spanId": "span-1",
                                 "attributes": '{"openinference.span.kind": "LLM", "input.value": "hello"}',
+                                "traceTokenCounts": {
+                                    "aggregatePromptTokenCount": 100.0,
+                                    "aggregateCompletionTokenCount": 50.0,
+                                    "aggregateTotalTokenCount": 150.0,
+                                },
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {
+                                            "__typename": "CategoricalDimensionValue",
+                                            "stringValue": "hello",
+                                        },
+                                    },
+                                ],
                             }
                         },
                         {
@@ -43,6 +57,8 @@ class TestListTracesQuery:
                                 "traceId": "trace-2",
                                 "spanId": "span-2",
                                 "attributes": '{"openinference.span.kind": "RETRIEVER"}',
+                                "traceTokenCounts": None,
+                                "columns": [],
                             }
                         },
                     ],
@@ -65,9 +81,14 @@ class TestListTracesQuery:
         assert result[0].latencyMs == 150.5
         assert result[0].attributes is not None
         assert '"input.value": "hello"' in result[0].attributes
+        assert result[0].traceTokenCounts is not None
+        assert result[0].traceTokenCounts.aggregateTotalTokenCount == 150.0
+        assert len(result[0].columns) == 1
+        assert result[0].columns[0].name == "attributes.input.value"
         assert result[1].traceId == "trace-2"
         assert result[1].spanKind.name == "RETRIEVER"
         assert result[1].attributes is not None
+        assert result[1].traceTokenCounts is None
 
     def test_pagination(self, gql_client):
         page1 = {
@@ -310,3 +331,151 @@ class TestGetTraceDetailQuery:
             includeRootSpans=True,
         )
         assert result[0].columns[0].value.resolved_value == 1500.0
+
+
+class TestGetSpanColumnsQuery:
+    def test_success(self, gql_client):
+        mock_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "dimension": {
+                                        "name": "attributes.input.value",
+                                        "dataType": "STRING",
+                                        "category": "spanProperty",
+                                    }
+                                }
+                            },
+                            {
+                                "node": {
+                                    "dimension": {
+                                        "name": "attributes.output.value",
+                                        "dataType": "STRING",
+                                        "category": "spanProperty",
+                                    }
+                                }
+                            },
+                        ],
+                    }
+                },
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetSpanColumnsQuery.iterate_over_pages(
+            gql_client,
+            id="model-123",
+            startTime="2025-01-01T00:00:00.000000Z",
+            endTime="2025-01-08T00:00:00.000000Z",
+            count=20,
+        )
+        assert len(result) == 2
+        assert result[0].dimension.name == "attributes.input.value"
+        assert result[0].dimension.dataType == "STRING"
+        assert result[1].dimension.name == "attributes.output.value"
+
+    def test_pagination(self, gql_client):
+        page1 = {
+            "node": {
+                "__typename": "Model",
+                "id": "m1",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor1"},
+                        "edges": [
+                            {
+                                "node": {
+                                    "dimension": {
+                                        "name": "attributes.input.value",
+                                        "dataType": "STRING",
+                                        "category": "spanProperty",
+                                    }
+                                }
+                            },
+                        ],
+                    }
+                },
+            }
+        }
+        page2 = {
+            "node": {
+                "__typename": "Model",
+                "id": "m1",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "dimension": {
+                                        "name": "attributes.output.value",
+                                        "dataType": "STRING",
+                                        "category": "spanProperty",
+                                    }
+                                }
+                            },
+                        ],
+                    }
+                },
+            }
+        }
+        gql_client.execute.side_effect = [page1, page2]
+
+        result = GetSpanColumnsQuery.iterate_over_pages(
+            gql_client,
+            id="m1",
+            startTime="2025-01-01T00:00:00.000000Z",
+            endTime="2025-01-08T00:00:00.000000Z",
+            count=1,
+        )
+        assert len(result) == 2
+        assert result[0].dimension.name == "attributes.input.value"
+        assert result[1].dimension.name == "attributes.output.value"
+
+    def test_empty(self, gql_client):
+        mock_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "m1",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [],
+                    }
+                },
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetSpanColumnsQuery.iterate_over_pages(
+            gql_client,
+            id="m1",
+            startTime="2025-01-01T00:00:00.000000Z",
+            endTime="2025-01-08T00:00:00.000000Z",
+            count=20,
+        )
+        assert len(result) == 0
+
+    def test_no_tracing_schema(self, gql_client):
+        mock_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "m1",
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetSpanColumnsQuery.iterate_over_pages(
+            gql_client,
+            id="m1",
+            startTime="2025-01-01T00:00:00.000000Z",
+            endTime="2025-01-08T00:00:00.000000Z",
+            count=20,
+        )
+        assert len(result) == 0

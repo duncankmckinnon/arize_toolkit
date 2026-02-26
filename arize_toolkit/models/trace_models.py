@@ -103,6 +103,36 @@ class SpanColumn(GraphQLModel):
     value: Optional[SpanColumnValue] = Field(default=None, description="Column value")
 
 
+class TraceTokenCounts(GraphQLModel):
+    """Aggregate token counts for a trace."""
+
+    aggregatePromptTokenCount: Optional[float] = Field(default=None)
+    aggregateCompletionTokenCount: Optional[float] = Field(default=None)
+    aggregateTotalTokenCount: Optional[float] = Field(default=None)
+
+
+class TotalCost(GraphQLModel):
+    """Aggregate costs for a trace."""
+
+    aggregateTotalCost: Optional[float] = Field(default=None)
+    aggregatePromptCost: Optional[float] = Field(default=None)
+    aggregateCompletionCost: Optional[float] = Field(default=None)
+
+
+class SpanPropertyDimension(GraphQLModel):
+    """Dimension info from tracingSchema.spanProperties."""
+
+    name: str = Field(description="Column name (e.g. 'attributes.input.value')")
+    dataType: str = Field(description="Data type (STRING, DOUBLE, LONG, etc.)")
+    category: Optional[str] = Field(default=None, description="Category (e.g. spanProperty)")
+
+
+class SpanPropertyEntry(GraphQLModel):
+    """A single entry from the spanProperties edge list."""
+
+    dimension: SpanPropertyDimension = Field(description="Dimension details")
+
+
 class SpanRecord(GraphQLModel):
     """A single span record from the ``spanRecordsPublic`` API."""
 
@@ -116,3 +146,5 @@ class SpanRecord(GraphQLModel):
     spanId: Optional[str] = Field(default=None, description="Span ID")
     attributes: Optional[str] = Field(default=None, description="All span attributes as a JSON string")
     columns: Optional[List[SpanColumn]] = Field(default=None, description="Requested column values")
+    traceTokenCounts: Optional[TraceTokenCounts] = Field(default=None, description="Aggregate token counts")
+    totalCost: Optional[TotalCost] = Field(default=None, description="Aggregate costs")

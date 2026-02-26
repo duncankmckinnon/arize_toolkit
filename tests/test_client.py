@@ -6256,6 +6256,83 @@ class TestTraces:
     def test_get_trace(self, client, mock_graphql_client):
         """Test getting trace detail by trace ID"""
         mock_graphql_client.return_value.execute.reset_mock()
+        span_columns_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {"node": {"dimension": {"name": "attributes.input.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.output.value", "dataType": "STRING", "category": "spanProperty"}}},
+                        ],
+                    }
+                },
+            }
+        }
+        trace_detail_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello", "output.value": "world"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
+                                ],
+                            }
+                        },
+                        {
+                            "span": {
+                                "name": "Retriever",
+                                "spanKind": "RETRIEVER",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:01Z",
+                                "parentId": "span-1",
+                                "latencyMs": 50.0,
+                                "traceId": "trace-1",
+                                "spanId": "span-2",
+                                "attributes": '{"input.value": "query text"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "query text"},
+                                    },
+                                ],
+                            }
+                        },
+                    ],
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [span_columns_response, trace_detail_response]
+
+        result = client.get_trace(trace_id="trace-1", model_id="model-123")
+        assert len(result) == 2
+        assert result[0]["traceId"] == "trace-1"
+        assert result[0]["spanId"] == "span-1"
+        assert result[0]["attributes"] is not None
+        assert result[1]["parentId"] == "span-1"
+        assert result[1]["attributes"] is not None
+
+    def test_get_trace_with_column_names(self, client, mock_graphql_client):
+        """Test that column_names are passed to the API query and get_span_columns is skipped"""
+        mock_graphql_client.return_value.execute.reset_mock()
         mock_graphql_client.return_value.execute.return_value = {
             "node": {
                 "__typename": "Model",
@@ -6277,71 +6354,13 @@ class TestTraces:
                                 "columns": [
                                     {
                                         "name": "attributes.input.value",
-                                        "value": {
-                                            "__typename": "CategoricalDimensionValue",
-                                            "stringValue": "hello",
-                                        },
-                                    }
-                                ],
-                            }
-                        },
-                        {
-                            "span": {
-                                "name": "Retriever",
-                                "spanKind": "RETRIEVER",
-                                "statusCode": "OK",
-                                "startTime": "2025-01-01T00:00:01Z",
-                                "parentId": "span-1",
-                                "latencyMs": 50.0,
-                                "traceId": "trace-1",
-                                "spanId": "span-2",
-                                "attributes": '{"input.value": "query text"}',
-                                "columns": [
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
                                     {
-                                        "name": "attributes.input.value",
-                                        "value": {
-                                            "__typename": "CategoricalDimensionValue",
-                                            "stringValue": "query text",
-                                        },
-                                    }
+                                        "name": "attributes.output.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "world"},
+                                    },
                                 ],
-                            }
-                        },
-                    ],
-                },
-            }
-        }
-
-        result = client.get_trace(trace_id="trace-1", model_id="model-123")
-        assert len(result) == 2
-        assert result[0]["traceId"] == "trace-1"
-        assert result[0]["spanId"] == "span-1"
-        assert result[0]["attributes"] is not None
-        assert result[1]["parentId"] == "span-1"
-        assert result[1]["attributes"] is not None
-
-    def test_get_trace_with_column_names_filter(self, client, mock_graphql_client):
-        """Test that column_names filters the attributes JSON"""
-        mock_graphql_client.return_value.execute.reset_mock()
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {
-                "__typename": "Model",
-                "id": "model-123",
-                "spans": {
-                    "pageInfo": {"hasNextPage": False, "endCursor": None},
-                    "edges": [
-                        {
-                            "span": {
-                                "name": "LLMChain",
-                                "spanKind": "LLM",
-                                "statusCode": "OK",
-                                "startTime": "2025-01-01T00:00:00Z",
-                                "parentId": None,
-                                "latencyMs": 150.5,
-                                "traceId": "trace-1",
-                                "spanId": "span-1",
-                                "attributes": '{"input.value": "hello", "output.value": "world", "llm.model_name": "gpt-4"}',
-                                "columns": [],
                             }
                         }
                     ],
@@ -6349,17 +6368,15 @@ class TestTraces:
             }
         }
 
-        import json
-
         result = client.get_trace(
             trace_id="trace-1",
             model_id="model-123",
-            column_names=["input.value", "output.value"],
+            column_names=["attributes.input.value", "attributes.output.value"],
         )
-        attrs = json.loads(result[0]["attributes"])
-        assert "input.value" in attrs
-        assert "output.value" in attrs
-        assert "llm.model_name" not in attrs
+        assert len(result) == 1
+        assert result[0]["traceId"] == "trace-1"
+        # Only one execute call (no get_span_columns call since column_names was provided)
+        assert mock_graphql_client.return_value.execute.call_count == 1
 
     def test_list_traces_to_dataframe(self, client, mock_graphql_client):
         """Test list_traces with to_dataframe=True returns a DataFrame with flattened attributes"""
@@ -6403,7 +6420,23 @@ class TestTraces:
     def test_get_trace_to_dataframe(self, client, mock_graphql_client):
         """Test get_trace with to_dataframe=True returns a DataFrame with flattened attributes"""
         mock_graphql_client.return_value.execute.reset_mock()
-        mock_graphql_client.return_value.execute.return_value = {
+        span_columns_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {"node": {"dimension": {"name": "attributes.input.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.output.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.llm.model_name", "dataType": "STRING", "category": "spanProperty"}}},
+                        ],
+                    }
+                },
+            }
+        }
+        trace_detail_response = {
             "node": {
                 "__typename": "Model",
                 "id": "model-123",
@@ -6428,6 +6461,7 @@ class TestTraces:
                 },
             }
         }
+        mock_graphql_client.return_value.execute.side_effect = [span_columns_response, trace_detail_response]
 
         from pandas import DataFrame
 
@@ -6444,7 +6478,7 @@ class TestTraces:
         assert "columns" not in result.columns
 
     def test_get_trace_to_dataframe_with_column_names(self, client, mock_graphql_client):
-        """Test get_trace with to_dataframe=True and column_names filters attributes"""
+        """Test get_trace with to_dataframe=True and column_names passes through to API"""
         mock_graphql_client.return_value.execute.reset_mock()
         mock_graphql_client.return_value.execute.return_value = {
             "node": {
@@ -6463,8 +6497,13 @@ class TestTraces:
                                 "latencyMs": 150.5,
                                 "traceId": "trace-1",
                                 "spanId": "span-1",
-                                "attributes": '{"input.value": "hello", "output.value": "world", "llm.model_name": "gpt-4"}',
-                                "columns": [],
+                                "attributes": '{"input.value": "hello"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
+                                ],
                             }
                         }
                     ],
@@ -6477,13 +6516,12 @@ class TestTraces:
         result = client.get_trace(
             trace_id="trace-1",
             model_id="model-123",
-            column_names=["input.value"],
+            column_names=["attributes.input.value"],
             to_dataframe=True,
         )
         assert isinstance(result, DataFrame)
         assert "attributes.input.value" in result.columns
-        assert "attributes.output.value" not in result.columns
-        assert "attributes.llm.model_name" not in result.columns
+        assert result.iloc[0]["attributes.input.value"] == "hello"
 
     def test_get_trace_missing_model(self, client):
         """Test that ValueError is raised when neither model_name nor model_id is given"""

@@ -1,4 +1,17 @@
-from arize_toolkit.models.trace_models import DimensionInput, DimensionValueInput, FilterItemInput, ModelDatasetInput, SpanColumn, SpanColumnValue, SpanRecord, SpanSortInput
+from arize_toolkit.models.trace_models import (
+    DimensionInput,
+    DimensionValueInput,
+    FilterItemInput,
+    ModelDatasetInput,
+    SpanColumn,
+    SpanColumnValue,
+    SpanPropertyDimension,
+    SpanPropertyEntry,
+    SpanRecord,
+    SpanSortInput,
+    TotalCost,
+    TraceTokenCounts,
+)
 
 
 class TestSpanColumnValue:
@@ -117,6 +130,85 @@ class TestSpanRecord:
         assert d["name"] == "test"
         assert d["traceId"] == "t1"
         assert d["attributes"] == '{"key": "val"}'
+
+    def test_with_trace_token_counts(self):
+        span = SpanRecord(
+            name="LLM",
+            traceId="t1",
+            spanId="s1",
+            traceTokenCounts={
+                "aggregatePromptTokenCount": 100.0,
+                "aggregateCompletionTokenCount": 50.0,
+                "aggregateTotalTokenCount": 150.0,
+            },
+        )
+        assert span.traceTokenCounts is not None
+        assert span.traceTokenCounts.aggregatePromptTokenCount == 100.0
+        assert span.traceTokenCounts.aggregateCompletionTokenCount == 50.0
+        assert span.traceTokenCounts.aggregateTotalTokenCount == 150.0
+
+    def test_with_total_cost(self):
+        span = SpanRecord(
+            name="LLM",
+            traceId="t1",
+            spanId="s1",
+            totalCost={
+                "aggregateTotalCost": 0.05,
+                "aggregatePromptCost": 0.03,
+                "aggregateCompletionCost": 0.02,
+            },
+        )
+        assert span.totalCost is not None
+        assert span.totalCost.aggregateTotalCost == 0.05
+
+
+class TestTraceTokenCounts:
+    def test_basic(self):
+        counts = TraceTokenCounts(
+            aggregatePromptTokenCount=100.0,
+            aggregateCompletionTokenCount=50.0,
+            aggregateTotalTokenCount=150.0,
+        )
+        assert counts.aggregatePromptTokenCount == 100.0
+        assert counts.aggregateTotalTokenCount == 150.0
+
+    def test_optional_fields(self):
+        counts = TraceTokenCounts()
+        assert counts.aggregatePromptTokenCount is None
+        assert counts.aggregateCompletionTokenCount is None
+        assert counts.aggregateTotalTokenCount is None
+
+
+class TestTotalCost:
+    def test_basic(self):
+        cost = TotalCost(
+            aggregateTotalCost=0.05,
+            aggregatePromptCost=0.03,
+            aggregateCompletionCost=0.02,
+        )
+        assert cost.aggregateTotalCost == 0.05
+
+    def test_optional_fields(self):
+        cost = TotalCost()
+        assert cost.aggregateTotalCost is None
+
+
+class TestSpanPropertyEntry:
+    def test_basic(self):
+        entry = SpanPropertyEntry(
+            dimension={
+                "name": "attributes.input.value",
+                "dataType": "STRING",
+                "category": "spanProperty",
+            }
+        )
+        assert entry.dimension.name == "attributes.input.value"
+        assert entry.dimension.dataType == "STRING"
+        assert entry.dimension.category == "spanProperty"
+
+    def test_dimension_without_category(self):
+        dim = SpanPropertyDimension(name="attributes.output.value", dataType="STRING")
+        assert dim.category is None
 
 
 class TestDimensionInput:

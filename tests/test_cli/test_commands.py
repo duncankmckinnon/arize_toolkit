@@ -410,9 +410,18 @@ class TestTraces:
         call_kwargs = mock_client.get_trace.call_args[1]
         assert call_kwargs["column_names"] == ["input.value", "output.value", "llm.token_count.total"]
 
-    def test_traces_get_no_columns_returns_all(self, runner, mock_client):
+    def test_traces_get_default_columns(self, runner, mock_client):
+        """Default (no --columns, no --all) uses input/output columns."""
         mock_client.get_trace.return_value = []
         result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-id", "m1"])
+        assert result.exit_code == 0
+        call_kwargs = mock_client.get_trace.call_args[1]
+        assert call_kwargs["column_names"] == ["attributes.input.value", "attributes.output.value"]
+
+    def test_traces_get_all_flag(self, runner, mock_client):
+        """--all flag triggers auto-discovery (column_names=None)."""
+        mock_client.get_trace.return_value = []
+        result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-id", "m1", "--all"])
         assert result.exit_code == 0
         call_kwargs = mock_client.get_trace.call_args[1]
         assert call_kwargs["column_names"] is None

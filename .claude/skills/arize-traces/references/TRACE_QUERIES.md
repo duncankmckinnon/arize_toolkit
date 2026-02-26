@@ -8,6 +8,7 @@ ______________________________________________________________________
 
 ## Table of Contents
 
+1. [Discover Available Columns](#discover-available-columns)
 1. [List Traces in a Time Window](#list-traces-in-a-time-window)
 1. [Get Spans with Input/Output for a Trace](#get-spans-with-inputoutput-for-a-trace)
 1. [Get Span Metadata Only (No Columns)](#get-span-metadata-only)
@@ -19,9 +20,35 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Discover Available Columns
+
+Query `tracingSchema.spanProperties` to discover all available column names for a model. Results are paginated (max 20 per page).
+
+```bash
+curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $ARIZE_API_KEY" \
+  -d @- <<'EOF' | jq '[.data.node.tracingSchema.spanProperties.edges[] | .node.dimension | {name, dataType, category}]'
+{
+  "query": "query GetSpanColumns($id: ID!, $startTime: DateTime!, $endTime: DateTime!, $count: Int!, $endCursor: String) { node(id: $id) { __typename ... on Model { tracingSchema(startTime: $startTime, endTime: $endTime) { spanProperties(first: $count, after: $endCursor) { pageInfo { hasNextPage endCursor } edges { node { dimension { name dataType category } } } } } } id } }",
+  "variables": {
+    "id": "MODEL_ID_HERE",
+    "startTime": "2025-01-01T00:00:00Z",
+    "endTime": "2026-12-31T23:59:59Z",
+    "count": 20,
+    "endCursor": null
+  }
+}
+EOF
+```
+
+Returns column names like `attributes.input.value`, `attributes.llm.model_name`, etc. Use these as `columnNames` in span queries.
+
+______________________________________________________________________
+
 ## List Traces in a Time Window
 
-Get root spans (one per trace) to discover trace IDs within a time range.
+Get root spans (one per trace) to discover trace IDs within a time range. Includes `traceTokenCounts` for aggregate token usage and structured `columns` for input/output values.
 
 ```bash
 curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
@@ -29,7 +56,7 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
   -H "x-api-key: $ARIZE_API_KEY" \
   -d @- <<'EOF' | jq '[.data.node.spans.edges[] | .span | select(.parentId == "" or .parentId == null) | {traceId, name, spanKind, statusCode, latencyMs: (.latencyMs | round), startTime}]'
 {
-  "query": "query ListTraces($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: true) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId } } } } id } }",
+  "query": "query ListTraces($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $truncateStringLength: Int) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: true, truncateStringLength: $truncateStringLength) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId attributes traceTokenCounts { aggregatePromptTokenCount aggregateCompletionTokenCount aggregateTotalTokenCount } columns { name value { __typename ... on CategoricalDimensionValue { stringValue: value } ... on NumericDimensionValue { numericValue: value } } } } } } } id } }",
   "variables": {
     "id": "MODEL_ID_HERE",
     "dataset": {
@@ -42,19 +69,20 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
     "sort": { "column": "start_time", "dir": "DESC" },
     "count": 20,
     "cursor": null,
-    "columnNames": []
+    "columnNames": ["attributes.input.value", "attributes.output.value"],
+    "truncateStringLength": 5000
   }
 }
 EOF
 ```
 
-Returns a list of traces with trace ID, root span name, status, latency, and start time.
+Returns a list of traces with trace ID, root span name, status, latency, start time, token counts, and column values.
 
 ______________________________________________________________________
 
 ## Get Spans with Input/Output for a Trace
 
-Retrieves all spans for a specific trace with their input and output values.
+Retrieves all spans for a specific trace with their input and output values via structured columns and `traceTokenCounts`.
 
 ```bash
 curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
@@ -62,7 +90,7 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
   -H "x-api-key: $ARIZE_API_KEY" \
   -d @- <<'EOF' | jq .
 {
-  "query": "query GetTrace($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $includeRootSpans: Boolean!) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: $includeRootSpans) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId columns { name value { __typename ... on CategoricalDimensionValue { stringValue: value } ... on NumericDimensionValue { numericValue: value } } } } } } } id } }",
+  "query": "query GetTrace($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $includeRootSpans: Boolean!, $truncateStringLength: Int) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: $includeRootSpans, truncateStringLength: $truncateStringLength) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId attributes traceTokenCounts { aggregatePromptTokenCount aggregateCompletionTokenCount aggregateTotalTokenCount } columns { name value { __typename ... on CategoricalDimensionValue { stringValue: value } ... on NumericDimensionValue { numericValue: value } } } } } } } id } }",
   "variables": {
     "id": "MODEL_ID_HERE",
     "dataset": {
@@ -100,7 +128,8 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
       "attributes.llm.output_messages",
       "attributes.llm.model_name"
     ],
-    "includeRootSpans": false
+    "includeRootSpans": false,
+    "truncateStringLength": 5000
   }
 }
 EOF
@@ -278,14 +307,34 @@ Available fields on each span node:
 | `latencyMs` | `Float` | Latency in milliseconds |
 | `sessionId` | `String` | Session ID |
 | `userId` | `String` | User ID |
-| `columns` | `[NameValuePairType!]!` | Requested column values |
+| `columns` | `[NameValuePairType!]!` | Requested column values (union of string/numeric) |
 | `attributes` | `String!` | All attributes as JSON string |
+| `traceTokenCounts` | `TraceTokenCounts` | Aggregate token counts (prompt, completion, total) |
+| `totalCost` | `TotalCost` | Aggregate costs (prompt, completion, total) |
 
-**Note**: `traceTokenCounts` and `totalCost` are available but add significant query complexity. Only include when needed and reduce `count` accordingly.
+### TraceTokenCounts Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `aggregatePromptTokenCount` | `Float` | Total prompt tokens across all spans |
+| `aggregateCompletionTokenCount` | `Float` | Total completion tokens across all spans |
+| `aggregateTotalTokenCount` | `Float` | Total tokens across all spans |
+
+### TotalCost Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `aggregateTotalCost` | `Float` | Total cost across all spans |
+| `aggregatePromptCost` | `Float` | Total prompt cost across all spans |
+| `aggregateCompletionCost` | `Float` | Total completion cost across all spans |
+
+**Note**: `traceTokenCounts` and `totalCost` add query complexity. Only include when needed and reduce `count` accordingly.
 
 ______________________________________________________________________
 
 ## Column Name Catalog
+
+Column names use the `attributes.*` prefix. Use `tracingSchema.spanProperties` to discover all available columns dynamically.
 
 ### Core Input/Output (most commonly needed)
 

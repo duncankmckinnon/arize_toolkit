@@ -9,6 +9,7 @@ from gql import Client as GraphQLClient
 from gql.transport.requests import RequestsHTTPTransport
 from pandas import DataFrame
 
+from arize_toolkit.constants import LIST_TRACES_COLUMN_NAMES
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
 from arize_toolkit.models import BaseModelSchema, Dashboard, DimensionFilterInput
@@ -94,7 +95,7 @@ from arize_toolkit.queries.space_queries import (
     OrgIDandSpaceIDQuery,
     RemoveSpaceMemberMutation,
 )
-from arize_toolkit.queries.trace_queries import GetTraceDetailQuery, ListTracesQuery
+from arize_toolkit.queries.trace_queries import GetSpanColumnsQuery, GetTraceDetailQuery, ListTracesQuery
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -4066,29 +4067,67 @@ class Client:
     # ── Trace Tools ──────────────────────────────────────────────────────
 
     @staticmethod
-    def _flatten_span_dicts(
-        span_dicts: List[dict],
-        column_names: Optional[List[str]] = None,
-    ) -> List[dict]:
-        """Flatten span dicts by merging parsed attributes into top-level keys.
+    def _flatten_span_dicts(span_dicts: List[dict]) -> List[dict]:
+        """Flatten span dicts by merging parsed attributes and columns into top-level keys.
 
         The ``attributes`` JSON string is parsed and each key is promoted to a
-        top-level column (prefixed with ``attributes.``).  When *column_names*
-        is given, only matching attribute keys are kept.  The raw
-        ``attributes`` and ``columns`` fields are removed from the output.
+        top-level column (prefixed with ``attributes.``).  Structured ``columns``
+        data takes precedence over parsed attributes.  The raw ``attributes``
+        and ``columns`` fields are removed from the output.
         """
         flat: List[dict] = []
         for span_dict in span_dicts:
             row = {k: v for k, v in span_dict.items() if k not in ("attributes", "columns")}
             attrs_str = span_dict.get("attributes")
             if attrs_str:
-                all_attrs = json.loads(attrs_str)
-                if column_names is not None:
-                    all_attrs = {k: v for k, v in all_attrs.items() if k in column_names}
-                for k, v in all_attrs.items():
+                for k, v in json.loads(attrs_str).items():
                     row[f"attributes.{k}"] = v
+            # Process structured columns data (takes precedence over attributes)
+            columns = span_dict.get("columns")
+            if columns:
+                for col in columns:
+                    val_obj = col.get("value")
+                    if val_obj is not None:
+                        val = val_obj.get("stringValue") if val_obj.get("stringValue") is not None else val_obj.get("numericValue")
+                        row[col["name"]] = val
             flat.append(row)
         return flat
+
+    def get_span_columns(
+        self,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+    ) -> List[str]:
+        """Get available span column names for a model.
+
+        Returns list of column name strings (e.g., ["attributes.input.value", ...])
+        ready to plug into list_traces() or get_trace() column_names parameter.
+        """
+        if not model_id and not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if not model_id:
+            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+            model_id = model.id
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        results = GetSpanColumnsQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            startTime=start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            endTime=end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            count=20,
+            sleep_time=self.sleep_time,
+        )
+        return [entry.dimension.name for entry in results]
 
     def list_traces(
         self,
@@ -4148,7 +4187,8 @@ class Client:
             dataset=dataset,
             sort=sort,
             count=count,
-            columnNames=[],
+            columnNames=LIST_TRACES_COLUMN_NAMES,
+            truncateStringLength=5000,
             sleep_time=self.sleep_time,
         )
         span_dicts = [result.to_dict() for result in results]
@@ -4226,24 +4266,21 @@ class Client:
         }
         sort = {"column": "start_time", "dir": "ASC"}
 
+        if column_names is None:
+            column_names = self.get_span_columns(model_id=model_id, start_time=start_time, end_time=end_time)
+
         results = GetTraceDetailQuery.iterate_over_pages(
             self._graphql_client,
             id=model_id,
             dataset=dataset,
             sort=sort,
             count=count,
+            columnNames=column_names,
             includeRootSpans=True,
+            truncateStringLength=5000,
             sleep_time=self.sleep_time,
         )
-        print(results)
         span_dicts = [result.to_dict() for result in results]
         if to_dataframe:
-            return DataFrame.from_records(self._flatten_span_dicts(span_dicts, column_names=column_names))
-        if column_names is not None:
-            for span_dict in span_dicts:
-                attrs_str = span_dict.get("attributes")
-                if attrs_str:
-                    all_attrs = json.loads(attrs_str)
-                    filtered = {k: v for k, v in all_attrs.items() if k in column_names}
-                    span_dict["attributes"] = json.dumps(filtered)
+            return DataFrame.from_records(self._flatten_span_dicts(span_dicts))
         return span_dicts
