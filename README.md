@@ -11,7 +11,7 @@
 [![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org)
 [![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![coverage](https://img.shields.io/badge/coverage-92%25-green)](https://coverage.readthedocs.io)
+[![coverage](https://img.shields.io/badge/coverage-90%25-green)](https://coverage.readthedocs.io)
 [![CLI](https://img.shields.io/badge/CLI-arize__toolkit-orange)](https://duncankmckinnon.github.io/arize_toolkit/cli/)
 
 </div>
