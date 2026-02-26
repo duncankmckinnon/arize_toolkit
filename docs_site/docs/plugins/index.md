@@ -6,11 +6,10 @@ Arize Toolkit includes a [Claude Code](https://code.claude.com) plugin marketpla
 
 ### arize-toolkit
 
-User-facing plugin with skills for querying and managing the Arize platform.
+User-facing plugin with skills for managing Arize resources and debugging traces.
 
 | Skill | Description |
 |-------|-------------|
-| `arize-graphql-analytics` | Query and explore the Arize GraphQL API, build and validate queries/mutations |
 | `arize-toolkit-cli` | Manage Arize resources (models, monitors, prompts, traces, etc.) via the CLI |
 | `arize-traces` | Retrieve and debug trace data — list traces, inspect spans, analyze performance |
 
@@ -20,24 +19,43 @@ Developer plugin with workflows for contributing to the Arize Toolkit codebase.
 
 | Skill | Description |
 |-------|-------------|
+| `arize-graphql-analytics` | Query and explore the Arize GraphQL API, build and validate queries/mutations |
 | `new-query-workflow` | Complete 7-phase workflow for adding new GraphQL queries/mutations with models, types, tests, CLI commands, and docs |
+
+### claude-code-tracing (external)
+
+Automatic tracing of Claude Code sessions to Arize AX or Phoenix. Available from the [Arize Claude Code Plugin](https://github.com/Arize-ai/arize-claude-code-plugin) marketplace.
+
+| Skill | Description |
+|-------|-------------|
+| `setup-claude-code-tracing` | Set up and configure Arize tracing for Claude Code sessions with OpenInference spans (9 lifecycle hooks) |
 
 ## Installation
 
 ### Add the marketplace
 
 ```shell
-/plugin marketplace add duncankmckinnon/arize_toolkit
+claude plugin marketplace add duncankmckinnon/arize_toolkit
 ```
 
 ### Install plugins
 
 ```shell
 # Install user-facing tools
-/plugin install arize-toolkit@arize-toolkit
+claude plugin install arize-toolkit@arize-toolkit
 
 # Install developer tools
-/plugin install arize-toolkit-dev@arize-toolkit
+claude plugin install arize-toolkit-dev@arize-toolkit
+```
+
+For Claude Code tracing, add the Arize plugin marketplace and install separately:
+
+```shell
+# Add the Arize plugin marketplace
+claude plugin marketplace add Arize-ai/arize-claude-code-plugin
+
+# Install the tracing plugin
+claude plugin install claude-code-tracing@arize-claude-plugin
 ```
 
 ### Use skills
@@ -45,14 +63,14 @@ Developer plugin with workflows for contributing to the Arize Toolkit codebase.
 Once installed, skills are available via namespaced slash commands:
 
 ```shell
-# Query Arize data via GraphQL
-/arize-toolkit:arize-graphql-analytics
-
 # Manage resources with the CLI
 /arize-toolkit:arize-toolkit-cli
 
 # Debug traces
 /arize-toolkit:arize-traces
+
+# Query Arize data via GraphQL (developer plugin)
+/arize-toolkit-dev:arize-graphql-analytics
 
 # Add a new query to the codebase (developers)
 /arize-toolkit-dev:new-query-workflow
@@ -61,18 +79,6 @@ Once installed, skills are available via namespaced slash commands:
 Skills are also triggered automatically when Claude detects a relevant task — for example, asking "list my models" will invoke the CLI skill.
 
 ## Plugin Details
-
-### arize-graphql-analytics
-
-Provides a complete workflow for querying the Arize GraphQL API:
-
-1. **Check API Key** — verifies `ARIZE_API_KEY` is set
-1. **Fetch Schema** — introspects the full GraphQL schema
-1. **Build Query** — constructs queries using Relay connection patterns
-1. **Execute** — runs queries via `curl`
-1. **Summarize** — presents results in a readable format
-
-Includes reference docs for common query patterns, Relay connections, mutations, filtering, and error handling.
 
 ### arize-toolkit-cli
 
@@ -97,6 +103,18 @@ Specialized trace debugging workflow:
 1. **Get Trace Detail** — retrieves full span trees with parent-child relationships
 1. **Export** — supports CSV and JSON output for analysis
 
+### arize-graphql-analytics
+
+Provides a complete workflow for querying the Arize GraphQL API:
+
+1. **Check API Key** — verifies `ARIZE_API_KEY` is set
+1. **Fetch Schema** — introspects the full GraphQL schema
+1. **Build Query** — constructs queries using Relay connection patterns
+1. **Execute** — runs queries via `curl`
+1. **Summarize** — presents results in a readable format
+
+Includes reference docs for common query patterns, Relay connections, mutations, filtering, and error handling.
+
 ### new-query-workflow
 
 Seven-phase development workflow with validation checkpoints:
@@ -109,13 +127,23 @@ Seven-phase development workflow with validation checkpoints:
 1. **CLI Integration** — add CLI commands with Click
 1. **Documentation** — update tool docs and index
 
+### claude-code-tracing
+
+Automatic tracing plugin from the [Arize Claude Code Plugin](https://github.com/Arize-ai/arize-claude-code-plugin) marketplace. Provides 9 lifecycle hooks for comprehensive session observability:
+
+- **SessionStart** / **SessionEnd** — session lifecycle
+- **UserPromptSubmit** — user input tracking
+- **PreToolUse** / **PostToolUse** — tool invocation tracing
+- **Stop** / **SubagentStop** — completion events
+- **Notification** / **PermissionRequest** — system events
+
 ## Local Development
 
 To test plugins locally without installing from the marketplace:
 
 ```bash
 # Load both plugins for development
-claude --plugin-dir ./plugins/arize-toolkit --plugin-dir ./plugins/arize-toolkit-dev
+claude --plugin-dir .claude plugins/arize-toolkit --plugin-dir .claude plugins/arize-toolkit-dev
 ```
 
 ## Plugin Structure
@@ -126,9 +154,6 @@ plugins/
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   └── skills/
-│       ├── arize-graphql-analytics/
-│       │   ├── SKILL.md
-│       │   └── references/
 │       ├── arize-toolkit-cli/
 │       │   ├── SKILL.md
 │       │   └── references/
@@ -139,6 +164,9 @@ plugins/
     ├── .claude-plugin/
     │   └── plugin.json
     └── skills/
+        ├── arize-graphql-analytics/
+        │   ├── SKILL.md
+        │   └── references/
         └── new-query-workflow/
             ├── SKILL.md
             └── references/
