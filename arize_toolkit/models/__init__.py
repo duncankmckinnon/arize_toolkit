@@ -99,3 +99,4 @@ from arize_toolkit.models.monitor_models import (
     TimeSeriesWithThresholdDataType,
 )
 from arize_toolkit.models.space_models import Space
+from arize_toolkit.models.trace_models import DimensionInput, DimensionValueInput, FilterItemInput, ModelDatasetInput, SpanColumn, SpanColumnValue, SpanRecord, SpanSortInput

@@ -1,6 +1,6 @@
 ______________________________________________________________________
 
-## name: arize-cli description: Manage Arize platform resources using the arize_toolkit CLI. Use when users want to list, create, update, or delete Arize resources (models, monitors, prompts, evaluators, custom metrics, dashboards, spaces, organizations, users, or data imports) via the command line, configure CLI profiles, or perform platform administration tasks. Triggers on "list models", "create monitor", "ax", "arize_toolkit", "CLI", "arize cli", or any request to manage Arize platform resources from the terminal. license: Apache-2.0 metadata: author: solutions-resources version: "1.0" compatibility: Requires arize_toolkit[cli] installed. User must have API key configured via config profile, environment variable, or --api-key flag.
+## name: arize-toolkit-cli description: Manage Arize platform resources using the arize_toolkit CLI. Use when users want to list, create, update, or delete Arize resources (models, monitors, prompts, evaluators, custom metrics, dashboards, spaces, organizations, users, or data imports) via the command line, configure CLI profiles, or perform platform administration tasks. Triggers on "list models", "create monitor", "ax", "arize_toolkit", "CLI", "arize cli", or any request to manage Arize platform resources from the terminal.
 
 # Arize Toolkit CLI
 
@@ -88,6 +88,7 @@ ______________________________________________________________________
 | `evaluators` | | Manage LLM and code evaluators |
 | `dashboards` | | Manage dashboards |
 | `imports` | | Manage data import jobs (files/tables) |
+| `traces` | | Query and inspect traces and spans |
 
 See [references/COMMANDS.md](references/COMMANDS.md) for full command reference.
 
@@ -146,6 +147,31 @@ arize_toolkit prompts create "my-prompt" \
 
 ```bash
 arize_toolkit prompts create "my-prompt" --messages @prompt_messages.json
+```
+
+### List recent traces for a model
+
+```bash
+arize_toolkit traces list --model-name "my-agent"
+```
+
+### Get all spans for a trace
+
+```bash
+arize_toolkit traces get TRACE_ID --model-name "my-agent"
+```
+
+### Export trace spans to CSV with all attributes
+
+```bash
+arize_toolkit traces get TRACE_ID --model-name "my-agent" --csv spans.csv
+```
+
+### Export traces to CSV with filtered attributes
+
+```bash
+arize_toolkit traces list --model-name "my-agent" --csv traces.csv
+arize_toolkit traces get TRACE_ID --model-id "ID" --columns "input.value,output.value" --csv spans.csv
 ```
 
 ### Export data as JSON for scripting

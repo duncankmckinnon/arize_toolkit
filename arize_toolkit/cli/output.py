@@ -1,6 +1,6 @@
 import json
 import sys
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
 import click
 from rich.console import Console
@@ -16,15 +16,13 @@ def print_json(data: Any) -> None:
 
 def print_table(
     data: List[Dict[str, Any]],
-    columns: Optional[Sequence[str]] = None,
     title: Optional[str] = None,
 ) -> None:
     if not data:
         console.print("[dim]No results found.[/dim]")
         return
 
-    if columns is None:
-        columns = list(data[0].keys())
+    columns = list(data[0].keys())
 
     table = Table(title=title, show_lines=False)
     for col in columns:
@@ -38,7 +36,6 @@ def print_table(
 
 def print_result(
     data: Any,
-    columns: Optional[Sequence[str]] = None,
     title: Optional[str] = None,
     json_mode: bool = False,
 ) -> None:
@@ -47,9 +44,9 @@ def print_result(
         return
 
     if isinstance(data, list):
-        print_table(data, columns=columns, title=title)
+        print_table(data, title=title)
     elif isinstance(data, dict):
-        print_table([data], columns=columns, title=title)
+        print_table([data], title=title)
     else:
         console.print(data)
 
