@@ -49,15 +49,27 @@ arize_toolkit config list
 
 ### If no profile, initialize one
 
-```bash
-arize_toolkit config init
-```
-
-This runs an interactive setup. For non-interactive setup, use flags:
+Ask the user for their API key, organization name, and space name, then create the profile:
 
 ```bash
-arize_toolkit --api-key "KEY" --org "ORG" --space "SPACE" models list
+arize_toolkit config init --api-key "API_KEY" --org "ORG_NAME" --space "SPACE_NAME"
 ```
+
+### First-time Arize setup
+
+If the user doesn't have an Arize account yet, walk them through these steps:
+
+1. **Create an account** — sign up at https://app.arize.com/auth/join
+2. **Get an API key** — after logging in, navigate to **Settings → API Keys** in the Arize UI (see [API key docs](https://arize.com/docs/ax/security-and-settings/api-keys))
+3. **Find organization and space names** — from the Arize landing page, use the upper-left dropdown to select an organization, then pick a space. These are the `--org` and `--space` values for the CLI.
+4. **Initialize the CLI profile** with the values from steps 2-3:
+   ```bash
+   arize_toolkit config init --api-key "API_KEY" --org "ORG_NAME" --space "SPACE_NAME"
+   ```
+5. **For on-prem deployments** — add `--app-url` pointing to the base URL of the Arize instance:
+   ```bash
+   arize_toolkit config init --api-key "API_KEY" --org "ORG_NAME" --space "SPACE_NAME" --app-url "https://arize.your-company.com"
+   ```
 
 ---
 

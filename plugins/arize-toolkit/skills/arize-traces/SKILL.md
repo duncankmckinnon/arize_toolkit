@@ -9,10 +9,23 @@ Retrieve trace and span data from Arize using the `arize_toolkit` CLI.
 
 ---
 
+## Important: Token Usage & Column Selection
+
+When first retrieving trace or span data, **ask the user** whether they want:
+
+1. **Recommended columns** (lower token usage) — a curated subset of the most useful attributes: `name`, `spanKind`, `statusCode`, `latencyMs`, `parentId`, `attributes.input.value`, `attributes.output.value`, `attributes.llm.model_name`, `attributes.llm.token_count.prompt`, `attributes.llm.token_count.completion`, `attributes.tool.name`
+2. **All columns** (higher token usage) — every available attribute via `--all`. Note: this pulls 30+ fields per span including many empty values, which significantly increases context window usage in longer sessions.
+
+Once the user chooses, **use that approach for the rest of the session** unless they request otherwise.
+
+Always use `--json` output (global flag before the subcommand) — Rich table output wraps poorly and uses more tokens. Truncate `input.value` and `output.value` with jq `[:120]` in list views; show full values only when inspecting individual spans.
+
+---
+
 ## Workflow
 
 ```
-1. Check Setup → 2. Discover Columns → 3. List Traces → 4. Get Trace Detail → 5. Summarize
+1. Check Setup → 2. List Traces → 3. Choose Column Detail → 4. Get Trace Detail → 5. Summarize
 ```
 
 ---
@@ -37,87 +50,80 @@ Verify configuration:
 arize_toolkit config list
 ```
 
-If no profile exists, initialize one:
+If no profile exists, ask the user for their API key, organization name, and space name, then create the profile:
 
 ```bash
-arize_toolkit config init
+arize_toolkit config init --api-key "API_KEY" --org "ORG_NAME" --space "SPACE_NAME"
 ```
 
 ---
 
-## Step 2: Discover Available Columns
+## Step 2: List Traces
 
-Before querying traces, discover what attribute columns are available for a model:
-
-```bash
-arize_toolkit traces columns --model-name my-agent
-```
-
-JSON output for scripting:
+List recent traces using `--json` and `--count 5` (start small, paginate if needed):
 
 ```bash
-arize_toolkit --json traces columns --model-name my-agent
-```
+# Compact summary (recommended default)
+arize_toolkit --json traces list --model-name my-agent --count 5 | jq '.[] | {name, traceId, statusCode, latencyMs, input: .["attributes.input.value"][:120]}'
 
-With a specific time window:
-
-```bash
-arize_toolkit traces columns --model-name my-agent \
-  --start-time 2025-01-01T00:00:00Z --end-time 2025-01-31T23:59:59Z
-```
-
-This returns column names like `attributes.input.value`, `attributes.llm.model_name`, etc. Use these with `traces get --columns`.
-
----
-
-## Step 3: List Traces
-
-List recent traces (root spans) for a model to discover trace IDs:
-
-```bash
-# Rich table output (default)
-arize_toolkit traces list --model-name my-agent
-
-# With time window and count
-arize_toolkit traces list --model-name my-agent --start-time 2025-01-01T00:00:00Z --count 50
+# With time window
+arize_toolkit --json traces list --model-name my-agent --count 5 --start-time 2025-01-01T00:00:00Z
 
 # Sort ascending (oldest first)
-arize_toolkit traces list --model-name my-agent --sort asc
+arize_toolkit --json traces list --model-name my-agent --count 5 --sort asc
 
-# JSON output for scripting
-arize_toolkit --json traces list --model-name my-agent | jq '.[].traceId'
+# More results when needed
+arize_toolkit --json traces list --model-name my-agent --count 20
 
 # Export to CSV
 arize_toolkit traces list --model-name my-agent --csv traces.csv
 
 # Use model ID instead of name
-arize_toolkit traces list --model-id "TW9kZWw6..."
+arize_toolkit --json traces list --model-id "TW9kZWw6..."
 ```
 
 Present results as a table of traces with: trace ID, root span name, status, latency, start time.
 
 ---
 
-## Step 4: Get Trace Detail
+## Step 3: Choose Column Detail
 
-Once the user picks a trace ID, get all spans with their attributes:
+Before fetching span data, **ask the user** using AskUserQuestion:
+
+- **Recommended columns** (lower token usage) — core span fields plus key LLM attributes. Suitable for most debugging and inspection tasks.
+- **All columns** (higher token usage) — every available attribute. Useful for deep debugging or discovering unexpected attributes. Note: pulls 30+ fields per span, many empty.
+
+Remember their choice and use it for subsequent trace queries in the session.
+
+To discover what columns exist for a model:
 
 ```bash
-# Default: shows input/output attributes
-arize_toolkit traces get TRACE_ID --model-name my-agent
+arize_toolkit --json traces columns --model-name my-agent
+```
 
-# Include all available columns (auto-discovered)
-arize_toolkit traces get TRACE_ID --model-name my-agent --all
+---
 
-# Specify exact columns
-arize_toolkit traces get TRACE_ID --model-name my-agent \
-  --columns "attributes.input.value,attributes.output.value,attributes.llm.model_name"
+## Step 4: Get Trace Detail
 
-# Export to CSV
+Once the user picks a trace ID, get all spans using their chosen column detail level.
+
+**Recommended columns** (lower token usage):
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name my-agent \
+  --columns "attributes.input.value,attributes.output.value,attributes.llm.model_name,attributes.llm.token_count.prompt,attributes.llm.token_count.completion,attributes.tool.name"
+```
+
+**All columns** (higher token usage):
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name my-agent --all
+```
+
+**Export to CSV** (does not consume context tokens):
+
+```bash
 arize_toolkit traces get TRACE_ID --model-name my-agent --all --csv trace.csv
-
-# JSON output
-arize_toolkit --json traces get TRACE_ID --model-name my-agent
 ```
 
 ---
@@ -156,8 +162,12 @@ Present trace detail as:
 ### Quick trace inspection
 
 ```bash
-arize_toolkit traces list --model-name my-agent --count 5
-arize_toolkit traces get TRACE_ID --model-name my-agent --all
+# List recent traces
+arize_toolkit --json traces list --model-name my-agent --count 5 | jq '.[] | {name, traceId, statusCode, latencyMs, input: .["attributes.input.value"][:120]}'
+
+# Get spans with recommended columns
+arize_toolkit --json traces get TRACE_ID --model-name my-agent \
+  --columns "attributes.input.value,attributes.output.value,attributes.llm.model_name,attributes.llm.token_count.prompt,attributes.llm.token_count.completion,attributes.tool.name"
 ```
 
 ### Parse spans with JSON output (recommended)
@@ -231,10 +241,18 @@ arize_toolkit --profile staging traces list --model-name my-agent
 
 ## Tips
 
-- Use `--json` flag for scripting and piping to `jq`
-- Use `traces columns` first to discover available attributes before querying
-- `--all` on `traces get` auto-discovers all columns but may be slower
-- `--columns` is faster when you know exactly which attributes you need
+- **Always use `--json`** — place it before the subcommand: `arize_toolkit --json traces ...`
+- **Start with `--count 5`** — paginate up if the user needs more
+- **Ask the user about column detail level** on first trace retrieval, then stick with their choice
+- **Truncate input/output in list views** — use jq `[:120]` on value fields to keep context small
+- **Use jq files for `!=` filters** — zsh escapes `!` in inline jq causing errors. Write filters to a temp file and use `jq -f`:
+  ```bash
+  cat > /tmp/filter.jq << 'JQEOF'
+  .[] | with_entries(select(.value != null and .value != ""))
+  JQEOF
+  arize_toolkit --json traces get TRACE_ID --model-name my-agent --all | jq -f /tmp/filter.jq
+  ```
+- **Export to CSV for large datasets** — CSV export does not consume context tokens
 - Default time window is 7 days; use `--start-time` / `--end-time` for custom ranges
 - Use `--help` on any command for full usage: `arize_toolkit traces list --help`
 
