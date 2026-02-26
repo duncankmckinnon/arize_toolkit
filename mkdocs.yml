@@ -22,8 +22,22 @@ theme:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
-  
-  - Tools:
+
+  - CLI:
+    - Overview: cli/index.md
+    - Configuration: cli/config.md
+    - Spaces: cli/spaces.md
+    - Organizations: cli/orgs.md
+    - Users: cli/users.md
+    - Models & Projects: cli/models.md
+    - Monitors: cli/monitors.md
+    - Prompts: cli/prompts.md
+    - Custom Metrics: cli/custom_metrics.md
+    - Evaluators: cli/evaluators.md
+    - Dashboards: cli/dashboards.md
+    - Data Imports: cli/imports.md
+
+  - Python SDK:
     - Model Tools: model_tools.md
     - Monitor Tools: monitor_tools.md
     - Custom Metrics Tools: custom_metrics_tools.md

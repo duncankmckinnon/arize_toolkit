@@ -8,10 +8,11 @@
 [![Documentation](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml)
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
 [![Lint and Format](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml)
-[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org)
 [![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![coverage](https://img.shields.io/badge/coverage-92%25-green)](https://coverage.readthedocs.io)
+[![coverage](https://img.shields.io/badge/coverage-90%25-green)](https://coverage.readthedocs.io)
+[![CLI](https://img.shields.io/badge/CLI-arize__toolkit-orange)](https://duncankmckinnon.github.io/arize_toolkit/cli/)
 
 </div>
 
@@ -21,6 +22,7 @@
 
 - [**Home**](https://duncankmckinnon.github.io/arize_toolkit) - Main documentation page
 - [**Quickstart Guide**](https://duncankmckinnon.github.io/arize_toolkit/quickstart) - Get started quickly with Arize Toolkit
+- [**CLI Reference**](https://duncankmckinnon.github.io/arize_toolkit/cli/) - Command-line interface documentation
 
 ### Tools Documentation
 
@@ -77,6 +79,7 @@ Here's a quick overview of the main features in the current release:
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
 - **Prompt Optimization Extension** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
+- **Command-Line Interface** (optional): Manage all Arize resources directly from the terminal with Rich table output and JSON mode
 
 ## Installation
 
@@ -86,6 +89,14 @@ pip install arize_toolkit
 
 ### Optional Dependencies
 
+#### Command-Line Interface
+
+To use the `arize_toolkit` CLI, install with the `cli` extras:
+
+```bash
+pip install arize_toolkit[cli]
+```
+
 #### Prompt Optimization Extension
 
 For automated prompt optimization using meta-prompt techniques, install with the `prompt_optimizer` extras:
@@ -93,6 +104,69 @@ For automated prompt optimization using meta-prompt techniques, install with the
 ```bash
 pip install arize_toolkit[prompt_optimizer]
 ```
+
+## Command-Line Interface
+
+The CLI wraps all `Client` functionality so you can manage models, monitors, prompts, and more directly from the terminal.
+
+### Quick Start
+
+```bash
+# One-time setup — saves credentials to ~/.arize_toolkit/config.toml
+arize_toolkit config init
+
+# List models (Rich table output by default)
+arize_toolkit models list
+
+# Same thing, using the "projects" alias
+arize_toolkit projects list
+
+# JSON output, pipe to jq
+arize_toolkit --json models list | jq '.[].name'
+
+# Get monitor details for a specific model
+arize_toolkit monitors get "accuracy-alert" --model "fraud-detection-v3"
+
+# Create a performance monitor
+arize_toolkit monitors create-performance "accuracy-alert" \
+    --model "fraud-detection-v3" \
+    --environment production \
+    --performance-metric accuracy \
+    --threshold 0.95
+
+# Use a named profile for a different environment
+arize_toolkit --profile staging spaces list
+```
+
+### Global Options
+
+| Flag | Description |
+|------|-------------|
+| `--version` | Show the installed version |
+| `--profile NAME` | Use a named configuration profile |
+| `--json` | Output raw JSON instead of Rich tables |
+| `--api-key KEY` | Override the API key |
+| `--org NAME` | Override the organization |
+| `--space NAME` | Override the space |
+| `--app-url URL` | Override the Arize app URL |
+
+### Command Groups
+
+| Group | Description |
+|-------|-------------|
+| `config` | Manage configuration profiles (`init`, `list`, `show`, `use`) |
+| `spaces` | List, create, and switch spaces |
+| `orgs` | List and create organizations |
+| `users` | Search users and manage space membership |
+| `models` / `projects` | List models, check volume, pull performance metrics |
+| `monitors` | Create, list, copy, and delete monitors |
+| `prompts` | Manage prompt templates and versions |
+| `custom-metrics` | Create and manage custom metrics |
+| `evaluators` | Manage LLM and code evaluators |
+| `dashboards` | Create and view dashboards |
+| `imports` | Manage file and table import jobs |
+
+See the full [CLI documentation](https://duncankmckinnon.github.io/arize_toolkit/cli/) for detailed usage and examples.
 
 ## Client Setup
 

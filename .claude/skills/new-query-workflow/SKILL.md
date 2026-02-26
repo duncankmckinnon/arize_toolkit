@@ -11,7 +11,7 @@ Complete workflow for adding GraphQL queries/mutations to the Arize Toolkit with
 ```
 Phase 1: GraphQL Development → Phase 2: Component Discovery → Phase 3: Gap Analysis
                                            ↓
-Phase 6: Documentation ← Phase 5: Testing ← Phase 4: Implementation
+Phase 7: Documentation ← Phase 6: CLI ← Phase 5: Testing ← Phase 4: Implementation
 ```
 
 Execute phases in order. Pause for user validation after Phases 1, 3, and 4.
@@ -192,21 +192,108 @@ Test query structure, success cases, error handling, and pagination.
 
 Test client methods with mocked GraphQL responses.
 
-## Phase 6: Documentation
+## Phase 6: CLI Integration
+
+**Goal**: Expose the new client methods as CLI commands so they are accessible via `arize_toolkit`.
+
+### 6.1 Determine CLI Command Group
+
+Match the domain to an existing command group file, or create a new one if needed:
+
+| Domain | CLI File | Command Group |
+|--------|----------|---------------|
+| Models/Datasets | `arize_toolkit/cli/models.py` | `models` / `projects` |
+| Monitors/Alerts | `arize_toolkit/cli/monitors.py` | `monitors` |
+| Dashboards | `arize_toolkit/cli/dashboards.py` | `dashboards` |
+| LLM/Prompts | `arize_toolkit/cli/prompts.py` | `prompts` |
+| Data Import | `arize_toolkit/cli/imports.py` | `imports` |
+| Spaces/Orgs | `arize_toolkit/cli/spaces.py` / `arize_toolkit/cli/orgs.py` | `spaces` / `orgs` |
+| Custom Metrics | `arize_toolkit/cli/custom_metrics.py` | `custom-metrics` |
+| Evaluators | `arize_toolkit/cli/evaluators.py` | `evaluators` |
+
+### 6.2 Add CLI Commands
+
+Follow the existing Click command pattern in the target file:
+
+```python
+@{group}.command("{verb}")
+@click.argument("name")  # positional args for required identifiers
+@click.option("--model", required=True, help="Model name.")  # named options
+@click.option("--optional-flag", default=None, help="Description.")
+@click.pass_context
+def {group}_{verb}(ctx, name, model, optional_flag):
+    """Help text shown in --help."""
+    client = get_client(ctx)
+    data = client.{client_method}(name=name, model_name=model, ...)
+    print_result(data, columns=[...], title="Title", json_mode=ctx.obj["json_mode"])
+```
+
+**Key patterns**:
+
+- Use `@click.argument` for required positional identifiers (resource name, ID)
+- Use `@click.option("--name", required=True)` for required named parameters
+- Use `@click.option` with `default=None` for optional parameters
+- Destructive commands (`delete`) should add `@click.option("--yes", is_flag=True)` and call `click.confirm()` unless `--yes` is set
+- Use `print_result()` for data output, `print_success()` for confirmations, `print_url()` for links
+- Import `get_client` from `arize_toolkit.cli.client_factory`
+- Import output helpers from `arize_toolkit.cli.output`
+
+### 6.3 Register New Command Group (if new file)
+
+If creating a new command group file, register it in `arize_toolkit/cli/main.py`:
+
+```python
+from arize_toolkit.cli.{new_module} import {new}_group
+
+cli.add_command({new}_group)
+```
+
+### 6.4 Add CLI Tests
+
+**File**: `tests/test_cli/test_commands.py`
+
+Add tests following the existing pattern with mocked client:
+
+```python
+class TestNewGroup:
+    def test_{group}_list(self, runner, mock_client):
+        mock_client.get_all_{resources}.return_value = [
+            {"id": "r1", "name": "resource1", "createdAt": "2025-01-01"},
+        ]
+        result = runner.invoke(cli, ["{group}", "list"])
+        assert result.exit_code == 0
+        mock_client.get_all_{resources}.assert_called_once()
+
+    def test_{group}_get(self, runner, mock_client):
+        mock_client.get_{resource}.return_value = {"id": "r1", "name": "myresource"}
+        result = runner.invoke(cli, ["{group}", "get", "myresource"])
+        assert result.exit_code == 0
+        mock_client.get_{resource}.assert_called_once_with(name="myresource")
+```
+
+Also update the `patch_get_client` fixture's module list if adding a new CLI file.
+
+### 6.5 Update CLI Skill Reference
+
+**File**: `.claude/skills/arize-cli/references/COMMANDS.md`
+
+Add the new commands to the appropriate section following the existing format.
+
+## Phase 7: Documentation
 
 See [references/doc-patterns.md](references/doc-patterns.md) for detailed patterns.
 
-### 6.1 Update Tool Documentation
+### 7.1 Update Tool Documentation
 
 **File**: `docs_site/docs/{domain}_tools.md`
 
 Add method documentation with signature, parameters, returns, and example.
 
-### 6.2 Update Overview Table
+### 7.2 Update Overview Table
 
 Add entry to the Overview table at top of documentation file.
 
-### 6.3 Update Index (if new page)
+### 7.3 Update Index (if new page)
 
 - Add link to `docs_site/docs/index.md`
 - Add entry to `mkdocs.yml` under 'Tools'
@@ -222,6 +309,8 @@ Before completing, verify:
 **Queries**: [ ] In correct queries/ file [ ] Variables class complete [ ] Exception defined [ ] Response uses model [ ] Parser handles all cases [ ] Tests added
 
 **Client**: [ ] CRUD naming convention [ ] Docstring complete [ ] Validation implemented [ ] Tests added
+
+**CLI**: [ ] Commands added to correct group [ ] Arguments/options match client method params [ ] Output uses print_result/print_success [ ] CLI tests added [ ] patch_get_client fixture updated (if new file) [ ] arize-cli skill COMMANDS.md updated
 
 **Docs**: [ ] Tool page updated [ ] Overview table updated [ ] Examples provided
 
