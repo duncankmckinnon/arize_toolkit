@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: new-query-workflow description: Complete workflow for adding new GraphQL queries or mutations to the Arize Toolkit, including models, types, tests, client methods, and documentation. Use when (1) adding a new GraphQL query or mutation to arize_toolkit, (2) implementing new API functionality that requires queries, (3) user requests to add Arize API capabilities, or (4) user invokes /new-query-workflow. Triggers on phrases like "add a query", "create a mutation", "implement API for", "add support for [feature]", or explicit workflow invocation.
+---
+name: new-query-workflow
+description: Complete workflow for adding new GraphQL queries or mutations to the Arize Toolkit, including models, types, tests, client methods, and documentation. Use when (1) adding a new GraphQL query or mutation to arize_toolkit, (2) implementing new API functionality that requires queries, (3) user requests to add Arize API capabilities, or (4) user invokes /new-query-workflow. Triggers on phrases like "add a query", "create a mutation", "implement API for", "add support for [feature]", or explicit workflow invocation.
+---
 
 # New Query Workflow
 
