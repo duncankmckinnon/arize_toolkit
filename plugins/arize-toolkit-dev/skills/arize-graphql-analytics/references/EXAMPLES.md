@@ -2,7 +2,7 @@
 
 Practical examples using the patterns from the schema.
 
-______________________________________________________________________
+---
 
 ## Setup
 
@@ -13,7 +13,7 @@ export ARIZE_API_KEY="your-api-key"
 export ARIZE_GRAPHQL_ENDPOINT="https://app.arize.com/graphql"
 ```
 
-______________________________________________________________________
+---
 
 ## Full Schema Introspection
 
@@ -30,7 +30,7 @@ curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
 EOF
 ```
 
-______________________________________________________________________
+---
 
 ## Exploring the Schema
 
@@ -82,7 +82,7 @@ curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
   -d "{\"query\": \"{ __type(name: \\\"$ENUM_NAME\\\") { enumValues { name description } } }\"}"
 ```
 
-______________________________________________________________________
+---
 
 ## Common Queries
 
@@ -131,7 +131,7 @@ curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
   -d "{\"query\": \"{ spaces(first: 10, after: \\\"$CURSOR\\\") { edges { node { id name } } pageInfo { hasNextPage endCursor } } }\"}"
 ```
 
-______________________________________________________________________
+---
 
 ## Common Mutations
 
@@ -191,7 +191,7 @@ curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
 EOF
 ```
 
-______________________________________________________________________
+---
 
 ## Discovery Workflow
 
@@ -232,7 +232,7 @@ curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
 
 Build the mutation using the discovered fields and execute.
 
-______________________________________________________________________
+---
 
 ## Error Handling
 
@@ -248,7 +248,7 @@ RESPONSE=$(curl -s -X POST "$ARIZE_GRAPHQL_ENDPOINT" \
 echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print('ERRORS:', d.get('errors')) if d.get('errors') else print('SUCCESS:', d.get('data'))"
 ```
 
-______________________________________________________________________
+---
 
 ## Tips
 

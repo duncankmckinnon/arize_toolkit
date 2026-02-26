@@ -19,6 +19,6 @@ repos:
     rev: 0.7.22
     hooks:
       - id: mdformat
-        exclude: '^\.claude/'
+        exclude: '^(\.claude/|plugins/)'
         additional_dependencies:
           - mdformat-black==0.1.1

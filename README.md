@@ -44,22 +44,31 @@
 |-----------|-------------|
 | [**Prompt Optimization**](https://duncankmckinnon.github.io/arize_toolkit/extensions/prompt_optimization) | Automated prompt improvement based on historical performance |
 
+### Claude Code Plugin Marketplace
+
+This repository is a [Claude Code plugin marketplace](https://duncankmckinnon.github.io/arize_toolkit/plugins/) with AI-assisted tools for the Arize platform.
+
+```shell
+# Add the marketplace
+claude plugin marketplace add duncankmckinnon/arize_toolkit
+
+# Install plugins
+claude plugin install arize-toolkit@arize-toolkit
+claude plugin install arize-toolkit-dev@arize-toolkit
+```
+
+| Plugin | Skills | Description |
+|--------|--------|-------------|
+| **arize-toolkit** | `arize-toolkit-cli`, `arize-traces` | Manage Arize resources via CLI, debug traces |
+| **arize-toolkit-dev** | `arize-graphql-analytics`, `new-query-workflow` | Developer workflows for adding new functionality |
+
+See the [Plugin Marketplace docs](https://duncankmckinnon.github.io/arize_toolkit/plugins/) for full details.
+
 ### For Developers
 
 - [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
 - [**Integration Tests**](https://duncankmckinnon.github.io/arize_toolkit/developers/integration_test) - Running integration tests
-- [**Claude Code Skills**](https://duncankmckinnon.github.io/arize_toolkit/developers/claude_code_skills) - AI-assisted development workflows
-
-#### Claude Code Skills
-
-This repository includes [Claude Code](https://claude.ai/claude-code) skills for AI-assisted development:
-
-| Skill | Description |
-|-------|-------------|
-| `arize-graphql-analytics` | Query and explore the Arize GraphQL API, build and validate queries |
-| `new-query-workflow` | Complete workflow for adding new queries/mutations with models, types, tests, and docs |
-
-Use `/arize-graphql-analytics` or `/new-query-workflow` in Claude Code to invoke these skills.
+- [**Claude Code Plugins**](https://duncankmckinnon.github.io/arize_toolkit/developers/claude_code_skills) - Plugin development and skill authoring
 
 ## Disclaimer
 
@@ -157,7 +166,7 @@ arize_toolkit --profile staging spaces list
 | Group | Description |
 |-------|-------------|
 | `config` | Manage configuration profiles (`init`, `list`, `show`, `use`) |
-| `spaces` | List, create, and switch spaces |
+| `spaces` | List, create, and switch spaces or orgs |
 | `orgs` | List and create organizations |
 | `users` | Search users and manage space membership |
 | `models` / `projects` | List models, check volume, pull performance metrics |

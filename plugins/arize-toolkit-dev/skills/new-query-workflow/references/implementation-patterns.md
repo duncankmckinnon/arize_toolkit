@@ -9,7 +9,7 @@ Detailed patterns for implementing types, models, queries, and client methods in
 1. [Query Creation Patterns](#query-creation-patterns)
 1. [Client Method Patterns](#client-method-patterns)
 
-______________________________________________________________________
+---
 
 ## Type Creation Patterns
 
@@ -82,7 +82,7 @@ class NewOperatorType(InputValidationEnum):
     less_than = "lessThan", "Less Than", "<", "lt"
 ```
 
-______________________________________________________________________
+---
 
 ## Model Creation Patterns
 
@@ -178,7 +178,7 @@ graphql_query = (
 )
 ```
 
-______________________________________________________________________
+---
 
 ## Query Creation Patterns
 
@@ -340,7 +340,7 @@ class GetAllItemsQuery(BaseQuery):
         )
 ```
 
-______________________________________________________________________
+---
 
 ## Client Method Patterns
 

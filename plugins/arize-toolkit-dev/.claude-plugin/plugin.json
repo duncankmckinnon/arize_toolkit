@@ -1,0 +1,17 @@
+{
+  "name": "arize-toolkit-dev",
+  "description": "Developer workflows for contributing to the Arize Toolkit codebase",
+  "version": "1.0.0",
+  "author": {
+    "name": "Duncan McKinnon",
+    "email": "dmckinnon@arize.com"
+  },
+  "repository": "https://github.com/duncankmckinnon/arize_toolkit",
+  "license": "MIT",
+  "keywords": [
+    "arize",
+    "development",
+    "graphql",
+    "workflow"
+  ]
+}

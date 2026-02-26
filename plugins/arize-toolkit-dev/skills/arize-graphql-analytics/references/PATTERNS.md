@@ -2,7 +2,7 @@
 
 Patterns derived from the Arize GraphQL schema and best practices from the text-to-graphql architecture.
 
-______________________________________________________________________
+---
 
 ## Schema Understanding
 
@@ -41,7 +41,7 @@ Example type chain:
 → [Space!]!
 ```
 
-______________________________________________________________________
+---
 
 ## Relay Connection Pattern
 
@@ -101,7 +101,7 @@ CURSOR="previous_end_cursor"
 QUERY="{ spaces(first: 100, after: \"$CURSOR\") { edges { node { id name } } pageInfo { hasNextPage endCursor } } }"
 ```
 
-______________________________________________________________________
+---
 
 ## Node Interface
 
@@ -136,7 +136,7 @@ echo "U3BhY2U6MTIzNDU=" | base64 -d
 # Output: Space:12345
 ```
 
-______________________________________________________________________
+---
 
 ## Building Context for Queries
 
@@ -156,7 +156,7 @@ When constructing queries, gather all relevant types:
 1. Gather all types referenced by input fields
 1. Gather all types referenced by payload fields
 
-______________________________________________________________________
+---
 
 ## Mutation Patterns
 
@@ -234,7 +234,7 @@ mutation AssignSpaceMembership($input: AssignSpaceMembershipInput!) {
 }
 ```
 
-______________________________________________________________________
+---
 
 ## Filtering
 
@@ -262,7 +262,7 @@ Usage:
 }
 ```
 
-______________________________________________________________________
+---
 
 ## Enum Values
 
@@ -290,7 +290,7 @@ Find enum values from introspection:
 }
 ```
 
-______________________________________________________________________
+---
 
 ## Inline Fragments
 
@@ -308,7 +308,7 @@ Use for interface or union types:
 
 Check `possibleTypes` in schema to see what types implement an interface.
 
-______________________________________________________________________
+---
 
 ## Error Handling
 
@@ -344,7 +344,7 @@ ______________________________________________________________________
 
 Always check both top-level `errors` and payload `errors`.
 
-______________________________________________________________________
+---
 
 ## Optimizing Token Usage
 
@@ -354,7 +354,7 @@ When providing schema context:
 1. **Only include relevant types** for the specific query/mutation
 1. **Stop recursion at Node types** to avoid circular dependencies
 
-______________________________________________________________________
+---
 
 ## curl Escaping Reference
 

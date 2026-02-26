@@ -7,7 +7,7 @@ description: Retrieve and debug trace data from the Arize ML observability platf
 
 Retrieve trace and span data from Arize using the `arize_toolkit` CLI.
 
-______________________________________________________________________
+---
 
 ## Workflow
 
@@ -15,7 +15,7 @@ ______________________________________________________________________
 1. Check Setup → 2. Discover Columns → 3. List Traces → 4. Get Trace Detail → 5. Summarize
 ```
 
-______________________________________________________________________
+---
 
 ## Step 1: Check Setup
 
@@ -43,7 +43,7 @@ If no profile exists, initialize one:
 arize_toolkit config init
 ```
 
-______________________________________________________________________
+---
 
 ## Step 2: Discover Available Columns
 
@@ -68,7 +68,7 @@ arize_toolkit traces columns --model-name my-agent \
 
 This returns column names like `attributes.input.value`, `attributes.llm.model_name`, etc. Use these with `traces get --columns`.
 
-______________________________________________________________________
+---
 
 ## Step 3: List Traces
 
@@ -96,7 +96,7 @@ arize_toolkit traces list --model-id "TW9kZWw6..."
 
 Present results as a table of traces with: trace ID, root span name, status, latency, start time.
 
-______________________________________________________________________
+---
 
 ## Step 4: Get Trace Detail
 
@@ -120,7 +120,7 @@ arize_toolkit traces get TRACE_ID --model-name my-agent --all --csv trace.csv
 arize_toolkit --json traces get TRACE_ID --model-name my-agent
 ```
 
-______________________________________________________________________
+---
 
 ## Step 5: Summarize Results
 
@@ -130,7 +130,7 @@ Present trace detail as:
 1. **Per-span row** — name, kind, latency, status, truncated input/output
 1. **Errors** — highlight spans with error status codes
 
-______________________________________________________________________
+---
 
 ## CLI Options Reference
 
@@ -149,7 +149,7 @@ ______________________________________________________________________
 | `get` | `--count` | Number of spans per page (default: 20) |
 | `get` | `--csv PATH` | Export to CSV file |
 
-______________________________________________________________________
+---
 
 ## Common Workflows
 
@@ -179,7 +179,7 @@ arize_toolkit --json traces list --model-name my-agent | jq '[.[] | select(.stat
 arize_toolkit --profile staging traces list --model-name my-agent
 ```
 
-______________________________________________________________________
+---
 
 ## Tips
 
@@ -190,7 +190,7 @@ ______________________________________________________________________
 - Default time window is 7 days; use `--start-time` / `--end-time` for custom ranges
 - Use `--help` on any command for full usage: `arize_toolkit traces list --help`
 
-______________________________________________________________________
+---
 
 ## Troubleshooting
 
@@ -202,14 +202,14 @@ ______________________________________________________________________
 | Missing columns | Run `traces columns` to discover available attributes |
 | Wrong space/org | Use `--space` / `--org` flags or switch profile |
 
-______________________________________________________________________
+---
 
 ## API Constraints
 
 - Query complexity limit is 1000 — keep `--count` at 10-20 and paginate
 - `environmentName` is always `"tracing"` for trace/span data (handled automatically by the CLI)
 
-______________________________________________________________________
+---
 
 ## References
 
