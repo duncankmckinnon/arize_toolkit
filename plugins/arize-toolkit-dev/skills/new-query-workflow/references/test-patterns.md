@@ -9,7 +9,7 @@ Comprehensive test patterns for all Arize Toolkit components.
 1. [Query Tests](#query-tests)
 1. [Client Tests](#client-tests)
 
-______________________________________________________________________
+---
 
 ## Type Tests
 
@@ -40,7 +40,7 @@ class TestNewEnumType:
             NewEnumType.from_input("invalid_value")
 ```
 
-______________________________________________________________________
+---
 
 ## Model Tests
 
@@ -139,7 +139,7 @@ def sample_nested_config():
     return NestedConfig(setting1="value1", setting2=42)
 ```
 
-______________________________________________________________________
+---
 
 ## Query Tests
 
@@ -263,7 +263,7 @@ def gql_client():
     return MagicMock()
 ```
 
-______________________________________________________________________
+---
 
 ## Client Tests
 

@@ -7,7 +7,7 @@ description: Query and analyze data from the Arize platform using GraphQL, or he
 
 Query and analyze data from the Arize ML observability platform using GraphQL via curl.
 
-______________________________________________________________________
+---
 
 ## Workflow
 
@@ -17,7 +17,7 @@ ______________________________________________________________________
 
 **CRITICAL**: Always fetch the full schema FIRST before building any queries. This ensures accuracy.
 
-______________________________________________________________________
+---
 
 ## Step 1: Check API Key
 
@@ -48,7 +48,7 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
 
 Expected: `{"data":{"__typename":"Query"}}`
 
-______________________________________________________________________
+---
 
 ## Step 2: Fetch Full Schema (REQUIRED FIRST STEP)
 
@@ -96,7 +96,7 @@ NON_NULL → LIST → NON_NULL → OBJECT(Model)
 means: [Model!]!
 ```
 
-______________________________________________________________________
+---
 
 ## Step 3: Build Query or Mutation
 
@@ -118,7 +118,7 @@ Using the schema, construct the appropriate operation.
 
 See [references/PATTERNS.md](references/PATTERNS.md) for detailed patterns.
 
-______________________________________________________________________
+---
 
 ## Step 4: Execute
 
@@ -150,13 +150,13 @@ curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
 EOF
 ```
 
-______________________________________________________________________
+---
 
 ## Step 5: Summarize Results
 
 Parse the JSON response and provide clear insights to the user.
 
-______________________________________________________________________
+---
 
 ## Quick Reference: Common Patterns
 
@@ -204,7 +204,7 @@ mutation Op($input: InputType!) {
 }
 ```
 
-______________________________________________________________________
+---
 
 ## Query Building Mode
 
@@ -218,7 +218,7 @@ When helping users write queries (without executing):
    - Compact (for curl)
    - Full curl command
 
-______________________________________________________________________
+---
 
 ## Troubleshooting
 
@@ -229,7 +229,7 @@ ______________________________________________________________________
 | `Cannot query field on type` | Use inline fragment for interfaces |
 | Parse errors | Check JSON escaping in curl |
 
-______________________________________________________________________
+---
 
 ## References
 

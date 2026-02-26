@@ -52,6 +52,9 @@ nav:
   - Extensions:
     - Prompt Optimization: extensions/prompt_optimization.md
 
+  - Claude Code Plugins:
+    - Plugin Marketplace: plugins/index.md
+
   - For Developers:
     - Development: developers/development.md
     - Integration Tests: developers/integration_test.md

@@ -31,6 +31,10 @@ To get started with the toolkit, check out the [Quickstart Guide 🚀 ](quicksta
 
 - [Prompt Optimization](extensions/prompt_optimization.md) - Automated prompt improvement based on historical performance
 
+## Claude Code Plugins
+
+- [Plugin Marketplace](plugins/index.md) - Install AI-assisted skills for querying, managing, and developing with the Arize platform
+
 ## Disclaimer
 
 Although this package is used for development work with and within the Arize platform, it is not an Arize product.

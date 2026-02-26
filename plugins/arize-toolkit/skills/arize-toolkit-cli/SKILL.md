@@ -7,7 +7,7 @@ description: Manage Arize platform resources using the arize_toolkit CLI. Use wh
 
 Manage Arize platform resources from the command line using `arize_toolkit`.
 
-______________________________________________________________________
+---
 
 ## Workflow
 
@@ -15,7 +15,7 @@ ______________________________________________________________________
 1. Check Setup → 2. Resolve Config → 3. Run Command → 4. Summarize Output
 ```
 
-______________________________________________________________________
+---
 
 ## Step 1: Check Setup
 
@@ -31,7 +31,7 @@ If not installed:
 pip install arize_toolkit[cli]
 ```
 
-______________________________________________________________________
+---
 
 ## Step 2: Resolve Configuration
 
@@ -59,7 +59,7 @@ This runs an interactive setup. For non-interactive setup, use flags:
 arize_toolkit --api-key "KEY" --org "ORG" --space "SPACE" models list
 ```
 
-______________________________________________________________________
+---
 
 ## Step 3: Run Commands
 
@@ -93,7 +93,7 @@ ______________________________________________________________________
 
 See [references/COMMANDS.md](references/COMMANDS.md) for full command reference.
 
-______________________________________________________________________
+---
 
 ## Step 4: Summarize Output
 
@@ -102,7 +102,7 @@ ______________________________________________________________________
 - For list commands, summarize count and key details
 - For create/update/delete, confirm the action completed
 
-______________________________________________________________________
+---
 
 ## Common Workflows
 
@@ -187,7 +187,7 @@ arize_toolkit --json models list | jq '.[].name'
 arize_toolkit --profile staging monitors list --model-name "my-model"
 ```
 
-______________________________________________________________________
+---
 
 ## Tips
 
@@ -198,7 +198,7 @@ ______________________________________________________________________
 - `spaces switch` and `spaces create` automatically persist the new space/org to your config profile, so subsequent commands use the new space
 - Use `--help` on any command for full usage details: `arize_toolkit monitors create-performance --help`
 
-______________________________________________________________________
+---
 
 ## Troubleshooting
 
@@ -209,7 +209,7 @@ ______________________________________________________________________
 | Wrong space/org | Use `--space` / `--org` flags or switch profile |
 | Complex JSON args | Use `@file.json` syntax instead of inline JSON |
 
-______________________________________________________________________
+---
 
 ## References
 

@@ -10,7 +10,7 @@ Formatting guidelines for documentation files in `docs_site/docs/`.
 1. [Code Examples](#code-examples)
 1. [Index Updates](#index-updates)
 
-______________________________________________________________________
+---
 
 ## Document Structure
 
@@ -41,7 +41,7 @@ Capabilities covered:
 - Use horizontal rules (`---`) before each function
 - Keep related functions together
 
-______________________________________________________________________
+---
 
 ## Function Documentation
 
@@ -181,7 +181,7 @@ url = client.create_resource(
 * `resource_id` – The ID of the resource. **Provide either** `resource_name` **or** `resource_id`.
 ```
 
-______________________________________________________________________
+---
 
 ## Overview Table
 
@@ -206,7 +206,7 @@ The anchor (e.g., `#get_resource`) must match the H3 heading exactly:
 - `### \`get_resource\``→`#get_resource\`
 - `### \`get_all_resources\``→`#get_all_resources\`
 
-______________________________________________________________________
+---
 
 ## Code Examples
 
@@ -254,7 +254,7 @@ except ArizeAPIException as e:
     print(f"Error: {e}")
 ```
 
-______________________________________________________________________
+---
 
 ## Index Updates
 
@@ -284,7 +284,7 @@ nav:
     - New Tool Tools: new_tool_tools.md  # Add here
 ```
 
-______________________________________________________________________
+---
 
 ## Style Conventions
 
@@ -317,7 +317,7 @@ See **[Arize Monitors](https://docs.arize.com/arize/monitors)** for more details
 See [Model Tools](model_tools.md) for model operations.
 ```
 
-______________________________________________________________________
+---
 
 ## Checklist
 

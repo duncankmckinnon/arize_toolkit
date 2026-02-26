@@ -2,7 +2,7 @@
 
 End-to-end CLI walkthrough for discovering projects, retrieving traces, and analyzing trace data.
 
-______________________________________________________________________
+---
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ ______________________________________________________________________
 1. [Analyze Traces](#step-6-analyze-traces)
 1. [Column Name Catalog](#column-name-catalog)
 
-______________________________________________________________________
+---
 
 ## Step 1: Find Available Spaces and Projects
 
@@ -40,7 +40,7 @@ If you need to work in a different organization or space, override with flags:
 arize_toolkit --org "Other Org" --space "Other Space" models list
 ```
 
-______________________________________________________________________
+---
 
 ## Step 2: Find the Target Project
 
@@ -56,7 +56,7 @@ arize_toolkit --json models get "business-intel-agent" | jq '{name, id, modelTyp
 
 The model name is what you pass to `--model-name` in all trace commands. Alternatively, use the base64-encoded model ID with `--model-id`.
 
-______________________________________________________________________
+---
 
 ## Step 3: Discover Available Columns
 
@@ -87,7 +87,7 @@ Common columns you'll see:
 
 See [Column Name Catalog](#column-name-catalog) for the full list.
 
-______________________________________________________________________
+---
 
 ## Step 4: List Traces
 
@@ -113,7 +113,7 @@ arize_toolkit traces list --model-name business-intel-agent --csv traces.csv
 
 The output includes: `traceId`, `name`, `spanKind`, `statusCode`, `startTime`, `latencyMs`, and default attribute columns (`attributes.input.value`, `attributes.output.value`).
 
-______________________________________________________________________
+---
 
 ## Step 5: Get Trace Detail
 
@@ -139,7 +139,7 @@ arize_toolkit traces get TRACE_ID --model-name business-intel-agent --all --csv 
 
 The output includes per-span: `spanId`, `traceId`, `name`, `spanKind`, `statusCode`, `parentId`, `startTime`, `latencyMs`, and requested attribute columns.
 
-______________________________________________________________________
+---
 
 ## Step 6: Analyze Traces
 
@@ -192,7 +192,7 @@ When presenting trace detail, structure as:
 1. **Errors** — highlight spans with `statusCode: ERROR`
 1. **Performance** — identify slowest spans and token-heavy operations
 
-______________________________________________________________________
+---
 
 ## Column Name Catalog
 
