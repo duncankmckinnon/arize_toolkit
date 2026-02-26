@@ -1,6 +1,6 @@
 ---
 name: arize-traces
-description: Retrieve and debug trace data from the Arize ML observability platform. Use when users want to list recent traces, look up a specific trace by trace ID, get all spans within a trace, analyze trace performance (latency, tokens, cost), or export trace data. Triggers on requests involving Arize traces, span lookup, trace debugging, trace ID queries, or trace performance analysis.
+description: Retrieve and debug trace data from the Arize ML observability platform. Use when users want to list recent traces, look up a specific trace by trace ID, get all spans within a trace, analyze trace performance (latency, tokens, cost), or export trace data. Triggers on "list traces", "show traces", "look at traces", "get traces", "trace ID", "show me the spans", "see the spans", "dig into a trace", "trace detail", "trace performance", "what traces", "debug trace", "span lookup", "trace latency", "trace tokens", "trace cost", "export traces". Prefer this skill over arize-toolkit-cli when the request is specifically about traces or spans.
 ---
 
 # Arize Traces
@@ -158,6 +158,54 @@ Present trace detail as:
 ```bash
 arize_toolkit traces list --model-name my-agent --count 5
 arize_toolkit traces get TRACE_ID --model-name my-agent --all
+```
+
+### Parse spans with JSON output (recommended)
+
+Always prefer `--json` over Rich table output for trace inspection — it avoids terminal wrapping issues and is easier to filter. Use `arize_toolkit --json` (global flag, before the subcommand).
+
+**Compact span summary** — name, kind, latency, truncated input/output:
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name my-agent | jq '.[] | {name, spanKind, statusCode, latencyMs, input: .["attributes.input.value"][:80], output: .["attributes.output.value"][:80]}'
+```
+
+**All attributes, formatted per-span** — uses `--json --all` and pipes through Python to produce clean readable output with empty fields filtered out:
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name my-agent --all 2>&1 | python3 -c "
+import sys, json
+
+data = json.load(sys.stdin)
+for idx, span in enumerate(data):
+    print(f'=== Span {idx+1}: {span.get(\"name\", \"unknown\")} ===')
+    for k, v in span.items():
+        if k == 'name':
+            continue
+        val = str(v).strip()
+        if not val or val == 'None':
+            continue
+        if len(val) > 300:
+            val = val[:300] + '...'
+        print(f'  {k}: {val}')
+    print()
+"
+```
+
+**Single span by name** — get all non-empty attributes for a specific span (uses a jq file to avoid zsh `!=` escaping issues):
+
+```bash
+cat > /tmp/span.jq << 'JQEOF'
+first(.[] | select(.name == "SPAN_NAME")) | with_entries(select(.value != null and .value != ""))
+JQEOF
+
+arize_toolkit --json traces get TRACE_ID --model-name my-agent --all | jq -f /tmp/span.jq
+```
+
+**List traces as compact summary**:
+
+```bash
+arize_toolkit --json traces list --model-name my-agent | jq '.[] | {name, traceId, statusCode, latencyMs, input: .["attributes.input.value"][:80]}'
 ```
 
 ### Export traces for analysis

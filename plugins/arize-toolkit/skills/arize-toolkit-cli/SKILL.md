@@ -1,6 +1,6 @@
 ---
 name: arize-toolkit-cli
-description: Manage Arize platform resources using the arize_toolkit CLI. Use when users want to list, create, update, or delete Arize resources (models, monitors, prompts, evaluators, custom metrics, dashboards, spaces, organizations, users, or data imports) via the command line, configure CLI profiles, or perform platform administration tasks. Triggers on "list models", "create monitor", "ax", "arize_toolkit", "CLI", "arize cli", or any request to manage Arize platform resources from the terminal.
+description: Manage Arize platform resources using the arize_toolkit CLI. Use when users want to list, create, update, or delete Arize resources (models, monitors, prompts, evaluators, custom metrics, dashboards, spaces, organizations, users, or data imports) via the command line, configure CLI profiles, or perform platform administration tasks. Triggers on "list models", "create monitor", "arize_toolkit", "CLI", "arize cli", or any request to manage Arize platform resources from the terminal. Always use the "arize_toolkit" command, never "ax".
 ---
 
 # Arize Toolkit CLI
