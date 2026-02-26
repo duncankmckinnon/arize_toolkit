@@ -34,6 +34,7 @@
 | [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, evaluations, and LLM features |
 | [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and projects |
 | [**Data Import Tools**](https://duncankmckinnon.github.io/arize_toolkit/data_import_tools) | Import data from cloud storage and databases |
+| [**Trace Tools**](https://duncankmckinnon.github.io/arize_toolkit/trace_tools) | Query traces and spans, discover columns, and export trace data |
 | [**Dashboard Tools**](https://duncankmckinnon.github.io/arize_toolkit/dashboard_tools) | Create and manage dashboards |
 | [**Utility Tools**](https://duncankmckinnon.github.io/arize_toolkit/utility_tools) | Client configuration and utility functions |
 
@@ -79,6 +80,7 @@ Here's a quick overview of the main features in the current release:
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
 - **Prompt Optimization Extension** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
+- **Trace Inspection**: List traces, retrieve spans with full attributes, discover available columns, and export to DataFrames or CSV
 - **Command-Line Interface** (optional): Manage all Arize resources directly from the terminal with Rich table output and JSON mode
 
 ## Installation
@@ -164,6 +166,7 @@ arize_toolkit --profile staging spaces list
 | `custom-metrics` | Create and manage custom metrics |
 | `evaluators` | Manage LLM and code evaluators |
 | `dashboards` | Create and view dashboards |
+| `traces` | List traces, get spans, and discover available columns |
 | `imports` | Manage file and table import jobs |
 
 See the full [CLI documentation](https://duncankmckinnon.github.io/arize_toolkit/cli/) for detailed usage and examples.
