@@ -1,340 +1,202 @@
 # Trace Query Reference
 
-Verified, working GraphQL queries for retrieving trace data from the Arize public API.
-
-**CRITICAL**: The public API uses `spanRecordsPublic` (not `spanRecords`). The `queryFilter` string causes internal errors — always use the `filters` array. The API has a query complexity limit of 1000; keep `first` at 10-20 and paginate.
+End-to-end CLI walkthrough for discovering projects, retrieving traces, and analyzing trace data.
 
 ______________________________________________________________________
 
 ## Table of Contents
 
-1. [Discover Available Columns](#discover-available-columns)
-1. [List Traces in a Time Window](#list-traces-in-a-time-window)
-1. [Get Spans with Input/Output for a Trace](#get-spans-with-inputoutput-for-a-trace)
-1. [Get Span Metadata Only (No Columns)](#get-span-metadata-only)
-1. [Resolve Space and Model IDs](#resolve-space-and-model-ids)
-1. [Filter Pattern](#filter-pattern)
-1. [Pagination](#pagination)
-1. [SpanRecord Fields](#spanrecord-fields)
+1. [Find Available Spaces and Projects](#step-1-find-available-spaces-and-projects)
+1. [Find the Target Project](#step-2-find-the-target-project)
+1. [Discover Available Columns](#step-3-discover-available-columns)
+1. [List Traces](#step-4-list-traces)
+1. [Get Trace Detail](#step-5-get-trace-detail)
+1. [Analyze Traces](#step-6-analyze-traces)
 1. [Column Name Catalog](#column-name-catalog)
 
 ______________________________________________________________________
 
-## Discover Available Columns
+## Step 1: Find Available Spaces and Projects
 
-Query `tracingSchema.spanProperties` to discover all available column names for a model. Results are paginated (max 20 per page).
+Start by listing available spaces to understand the organization structure:
 
 ```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d @- <<'EOF' | jq '[.data.node.tracingSchema.spanProperties.edges[] | .node.dimension | {name, dataType, category}]'
-{
-  "query": "query GetSpanColumns($id: ID!, $startTime: DateTime!, $endTime: DateTime!, $count: Int!, $endCursor: String) { node(id: $id) { __typename ... on Model { tracingSchema(startTime: $startTime, endTime: $endTime) { spanProperties(first: $count, after: $endCursor) { pageInfo { hasNextPage endCursor } edges { node { dimension { name dataType category } } } } } } id } }",
-  "variables": {
-    "id": "MODEL_ID_HERE",
-    "startTime": "2025-01-01T00:00:00Z",
-    "endTime": "2026-12-31T23:59:59Z",
-    "count": 20,
-    "endCursor": null
-  }
-}
-EOF
+# List all spaces in the organization
+arize_toolkit spaces list
+
+# Switch to a specific space
+arize_toolkit spaces switch "My Space"
+
+# List all models/projects in the current space
+arize_toolkit models list
+
+# JSON output for scripting
+arize_toolkit --json models list | jq '.[].name'
 ```
 
-Returns column names like `attributes.input.value`, `attributes.llm.model_name`, etc. Use these as `columnNames` in span queries.
-
-______________________________________________________________________
-
-## List Traces in a Time Window
-
-Get root spans (one per trace) to discover trace IDs within a time range. Includes `traceTokenCounts` for aggregate token usage and structured `columns` for input/output values.
+If you need to work in a different organization or space, override with flags:
 
 ```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d @- <<'EOF' | jq '[.data.node.spans.edges[] | .span | select(.parentId == "" or .parentId == null) | {traceId, name, spanKind, statusCode, latencyMs: (.latencyMs | round), startTime}]'
-{
-  "query": "query ListTraces($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $truncateStringLength: Int) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: true, truncateStringLength: $truncateStringLength) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId attributes traceTokenCounts { aggregatePromptTokenCount aggregateCompletionTokenCount aggregateTotalTokenCount } columns { name value { __typename ... on CategoricalDimensionValue { stringValue: value } ... on NumericDimensionValue { numericValue: value } } } } } } } id } }",
-  "variables": {
-    "id": "MODEL_ID_HERE",
-    "dataset": {
-      "startTime": "2025-01-01T00:00:00Z",
-      "endTime": "2026-12-31T23:59:59Z",
-      "externalModelVersionIds": [],
-      "externalBatchIds": [],
-      "environmentName": "tracing"
-    },
-    "sort": { "column": "start_time", "dir": "DESC" },
-    "count": 20,
-    "cursor": null,
-    "columnNames": ["attributes.input.value", "attributes.output.value"],
-    "truncateStringLength": 5000
-  }
-}
-EOF
-```
-
-Returns a list of traces with trace ID, root span name, status, latency, start time, token counts, and column values.
-
-______________________________________________________________________
-
-## Get Spans with Input/Output for a Trace
-
-Retrieves all spans for a specific trace with their input and output values via structured columns and `traceTokenCounts`.
-
-```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d @- <<'EOF' | jq .
-{
-  "query": "query GetTrace($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $includeRootSpans: Boolean!, $truncateStringLength: Int) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: $includeRootSpans, truncateStringLength: $truncateStringLength) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId attributes traceTokenCounts { aggregatePromptTokenCount aggregateCompletionTokenCount aggregateTotalTokenCount } columns { name value { __typename ... on CategoricalDimensionValue { stringValue: value } ... on NumericDimensionValue { numericValue: value } } } } } } } id } }",
-  "variables": {
-    "id": "MODEL_ID_HERE",
-    "dataset": {
-      "startTime": "2025-01-01T00:00:00Z",
-      "endTime": "2026-12-31T23:59:59Z",
-      "externalModelVersionIds": [],
-      "externalBatchIds": [],
-      "environmentName": "tracing",
-      "filters": [
-        {
-          "filterType": "spanProperty",
-          "operator": "equals",
-          "dimension": {
-            "id": "context.trace_id",
-            "name": "context.trace_id",
-            "dataType": "STRING",
-            "category": "spanProperty"
-          },
-          "dimensionValues": [
-            {
-              "id": "TRACE_ID_HERE",
-              "value": "TRACE_ID_HERE"
-            }
-          ]
-        }
-      ]
-    },
-    "sort": { "column": "start_time", "dir": "DESC" },
-    "count": 10,
-    "cursor": null,
-    "columnNames": [
-      "attributes.input.value",
-      "attributes.output.value",
-      "attributes.llm.input_messages",
-      "attributes.llm.output_messages",
-      "attributes.llm.model_name"
-    ],
-    "includeRootSpans": false,
-    "truncateStringLength": 5000
-  }
-}
-EOF
-```
-
-### Parsing Column Values
-
-Columns use a union type. Extract values with jq:
-
-```bash
-# Extract input/output from each span
-| jq '.data.node.spans.edges[] | .span | {
-  name,
-  spanKind,
-  input: (.columns[] | select(.name == "attributes.input.value") | .value.stringValue),
-  output: (.columns[] | select(.name == "attributes.output.value") | .value.stringValue)
-}'
+arize_toolkit --org "Other Org" --space "Other Space" models list
 ```
 
 ______________________________________________________________________
 
-## Get Span Metadata Only
+## Step 2: Find the Target Project
 
-Lighter query without columns — useful for building a span tree or checking trace structure.
+Identify the project (model) that has tracing enabled:
 
 ```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d @- <<'EOF' | jq .
-{
-  "query": "query GetTrace($id: ID!, $dataset: ModelDatasetInput!, $sort: SpanSort!, $count: Int!, $cursor: String, $columnNames: [String!]!, $includeRootSpans: Boolean!) { node(id: $id) { __typename ... on Model { spans: spanRecordsPublic(first: $count, after: $cursor, dataset: $dataset, sort: $sort, columnNames: $columnNames, includeRootSpans: $includeRootSpans) { pageInfo { hasNextPage endCursor } edges { span: node { name spanKind statusCode startTime parentId latencyMs traceId spanId } } } } id } }",
-  "variables": {
-    "id": "MODEL_ID_HERE",
-    "dataset": {
-      "startTime": "2025-01-01T00:00:00Z",
-      "endTime": "2026-12-31T23:59:59Z",
-      "externalModelVersionIds": [],
-      "externalBatchIds": [],
-      "environmentName": "tracing",
-      "filters": [
-        {
-          "filterType": "spanProperty",
-          "operator": "equals",
-          "dimension": {
-            "id": "context.trace_id",
-            "name": "context.trace_id",
-            "dataType": "STRING",
-            "category": "spanProperty"
-          },
-          "dimensionValues": [
-            {
-              "id": "TRACE_ID_HERE",
-              "value": "TRACE_ID_HERE"
-            }
-          ]
-        }
-      ]
-    },
-    "sort": { "column": "start_time", "dir": "DESC" },
-    "count": 10,
-    "cursor": null,
-    "columnNames": [],
-    "includeRootSpans": false
-  }
-}
-EOF
+# Get details for a specific project by name
+arize_toolkit models get "business-intel-agent"
+
+# JSON output to see the model ID
+arize_toolkit --json models get "business-intel-agent" | jq '{name, id, modelType}'
 ```
+
+The model name is what you pass to `--model-name` in all trace commands. Alternatively, use the base64-encoded model ID with `--model-id`.
 
 ______________________________________________________________________
 
-## Resolve Space and Model IDs
+## Step 3: Discover Available Columns
 
-### List Spaces
-
-```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d '{"query": "{ viewer { spaces(first: 50) { edges { node { id name } } } } }"}' | jq .
-```
-
-### List Models in a Space
+Before querying traces, discover what attribute columns exist for the project:
 
 ```bash
-curl -s -X POST "${ARIZE_GRAPHQL_ENDPOINT:-https://app.arize.com/graphql}" \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: $ARIZE_API_KEY" \
-  -d @- <<'EOF' | jq .
-{
-  "query": "query GetModels($spaceId: ID!) { node(id: $spaceId) { ... on Space { id name models(first: 50) { edges { node { id name modelType } } } } } }",
-  "variables": { "spaceId": "SPACE_ID_HERE" }
-}
-EOF
+# List all available span columns
+arize_toolkit traces columns --model-name business-intel-agent
+
+# JSON output for scripting
+arize_toolkit --json traces columns --model-name business-intel-agent
+
+# With a specific time window
+arize_toolkit traces columns --model-name business-intel-agent \
+  --start-time 2025-01-01T00:00:00Z --end-time 2025-01-31T23:59:59Z
 ```
 
-### Decode a Base64 ID
+Common columns you'll see:
 
-```bash
-echo "TW9kZWw6NjA1NTIzNDU0Mjp6azlI" | base64 -d
-# Output: Model:6055234542:zk9H
-```
+| Column | Description |
+|--------|-------------|
+| `attributes.input.value` | Span input text |
+| `attributes.output.value` | Span output text |
+| `attributes.llm.model_name` | LLM model used |
+| `attributes.llm.token_count.total` | Total tokens |
+| `attributes.llm.token_count.prompt` | Prompt tokens |
+| `attributes.llm.token_count.completion` | Completion tokens |
+
+See [Column Name Catalog](#column-name-catalog) for the full list.
 
 ______________________________________________________________________
 
-## Filter Pattern
+## Step 4: List Traces
 
-The `filters` array uses this structure to filter by trace ID:
-
-```json
-{
-  "filterType": "spanProperty",
-  "operator": "equals",
-  "dimension": {
-    "id": "context.trace_id",
-    "name": "context.trace_id",
-    "dataType": "STRING",
-    "category": "spanProperty"
-  },
-  "dimensionValues": [
-    {
-      "id": "your-trace-id",
-      "value": "your-trace-id"
-    }
-  ]
-}
-```
-
-### Available Filter Properties
-
-| filterType | category | Use for |
-|-----------|----------|---------|
-| `spanProperty` | `spanProperty` | Span fields like `context.trace_id`, `name`, `status_code` |
-| `llmEval` | `llmEval` | Evaluation labels, scores, explanations |
-| `annotation` | `annotation` | Annotation data |
-
-### Operators
-
-`equals`, `notEquals`, `contains`, `containsString`, `greaterThan`, `lessThan`, `greaterThanOrEqual`, `lessThanOrEqual`
-
-### Dimension Data Types
-
-`STRING`, `LONG`, `FLOAT`, `DOUBLE`, `EMBEDDING`, `STRING_LIST`, `DICTIONARY`
-
-______________________________________________________________________
-
-## Pagination
+List recent traces (root spans) to find trace IDs for inspection:
 
 ```bash
-# First page: cursor = null
-# Next pages: set cursor to endCursor from previous response
+# List recent traces (default: 20 most recent, Rich table)
+arize_toolkit traces list --model-name business-intel-agent
 
-"cursor": "YXJyYXljb25uZWN0aW9uOjk="
+# More traces, with time window
+arize_toolkit traces list --model-name business-intel-agent \
+  --count 50 --start-time 2025-01-01T00:00:00Z
+
+# Oldest first
+arize_toolkit traces list --model-name business-intel-agent --sort asc
+
+# JSON output — extract just trace IDs
+arize_toolkit --json traces list --model-name business-intel-agent | jq '.[].traceId'
+
+# Export to CSV for external analysis
+arize_toolkit traces list --model-name business-intel-agent --csv traces.csv
 ```
 
-Keep `count` at 10-20 to stay under the complexity limit. Paginate with `after` cursor.
+The output includes: `traceId`, `name`, `spanKind`, `statusCode`, `startTime`, `latencyMs`, and default attribute columns (`attributes.input.value`, `attributes.output.value`).
 
 ______________________________________________________________________
 
-## SpanRecord Fields
+## Step 5: Get Trace Detail
 
-Available fields on each span node:
+Once you have a trace ID, retrieve all spans with their attributes:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `traceId` | `String!` | Trace ID |
-| `spanId` | `String!` | Span ID |
-| `parentId` | `String` | Parent span ID (null = root span) |
-| `name` | `String!` | Span name |
-| `spanKind` | `String!` | Kind: LLM, CHAIN, AGENT, TOOL, RETRIEVER |
-| `statusCode` | `String!` | Status: OK, ERROR |
-| `startTime` | `DateTime!` | Start timestamp |
-| `endTime` | `DateTime` | End timestamp |
-| `recordTimestamp` | `DateTime!` | Record timestamp |
-| `latencyMs` | `Float` | Latency in milliseconds |
-| `sessionId` | `String` | Session ID |
-| `userId` | `String` | User ID |
-| `columns` | `[NameValuePairType!]!` | Requested column values (union of string/numeric) |
-| `attributes` | `String!` | All attributes as JSON string |
-| `traceTokenCounts` | `TraceTokenCounts` | Aggregate token counts (prompt, completion, total) |
-| `totalCost` | `TotalCost` | Aggregate costs (prompt, completion, total) |
+```bash
+# Default: shows input/output attributes
+arize_toolkit traces get TRACE_ID --model-name business-intel-agent
 
-### TraceTokenCounts Fields
+# Include ALL available columns (auto-discovered)
+arize_toolkit traces get TRACE_ID --model-name business-intel-agent --all
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `aggregatePromptTokenCount` | `Float` | Total prompt tokens across all spans |
-| `aggregateCompletionTokenCount` | `Float` | Total completion tokens across all spans |
-| `aggregateTotalTokenCount` | `Float` | Total tokens across all spans |
+# Specific columns only (faster than --all)
+arize_toolkit traces get TRACE_ID --model-name business-intel-agent \
+  --columns "attributes.input.value,attributes.output.value,attributes.llm.model_name"
 
-### TotalCost Fields
+# JSON output for programmatic analysis
+arize_toolkit --json traces get TRACE_ID --model-name business-intel-agent --all
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `aggregateTotalCost` | `Float` | Total cost across all spans |
-| `aggregatePromptCost` | `Float` | Total prompt cost across all spans |
-| `aggregateCompletionCost` | `Float` | Total completion cost across all spans |
+# Export to CSV
+arize_toolkit traces get TRACE_ID --model-name business-intel-agent --all --csv trace.csv
+```
 
-**Note**: `traceTokenCounts` and `totalCost` add query complexity. Only include when needed and reduce `count` accordingly.
+The output includes per-span: `spanId`, `traceId`, `name`, `spanKind`, `statusCode`, `parentId`, `startTime`, `latencyMs`, and requested attribute columns.
+
+______________________________________________________________________
+
+## Step 6: Analyze Traces
+
+### Find error traces
+
+```bash
+arize_toolkit --json traces list --model-name business-intel-agent \
+  | jq '[.[] | select(.statusCode == "ERROR")]'
+```
+
+### Find slow traces
+
+```bash
+arize_toolkit --json traces list --model-name business-intel-agent \
+  | jq '[.[] | select(.latencyMs > 5000)] | sort_by(-.latencyMs)'
+```
+
+### Build a span tree from a trace
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name business-intel-agent \
+  | jq '[.[] | {name, spanKind, latencyMs, parentId, spanId}]'
+```
+
+Root spans have `parentId: null`. Child spans reference their parent via `parentId`.
+
+### Compare token usage across traces
+
+```bash
+arize_toolkit --json traces list --model-name business-intel-agent --count 50 \
+  | jq '[.[] | {traceId, name, latencyMs, tokens: .traceTokenCounts.aggregateTotalTokenCount}] | sort_by(-.tokens)'
+```
+
+### Export for deeper analysis
+
+```bash
+# Export traces list
+arize_toolkit traces list --model-name business-intel-agent --count 100 --csv traces.csv
+
+# Export a single trace's spans with all attributes
+arize_toolkit traces get TRACE_ID --model-name business-intel-agent --all --csv spans.csv
+```
+
+### Summarizing trace results
+
+When presenting trace detail, structure as:
+
+1. **Span tree** — show parent-child relationships using `parentId` (root has `parentId: null`)
+1. **Per-span row** — name, kind, latency, status, truncated input/output
+1. **Errors** — highlight spans with `statusCode: ERROR`
+1. **Performance** — identify slowest spans and token-heavy operations
 
 ______________________________________________________________________
 
 ## Column Name Catalog
 
-Column names use the `attributes.*` prefix. Use `tracingSchema.spanProperties` to discover all available columns dynamically.
+Column names use the `attributes.*` prefix. Use `arize_toolkit traces columns` to discover all available columns dynamically.
 
 ### Core Input/Output (most commonly needed)
 
@@ -377,10 +239,3 @@ Column names use the `attributes.*` prefix. Use `tracingSchema.spanProperties` t
 Pattern: `eval.<eval_name>.<field>` where field is `label`, `score`, or `explanation`.
 
 Example: `eval.matches_regex.label`, `eval.matches_regex.score`
-
-### Environment Name Values
-
-- `tracing` - For trace/span data (most common)
-- `production` - Production environment
-- `training` - Training environment
-- `validation` - Validation environment

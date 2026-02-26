@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Arize Toolkit CLI lets you manage models, monitors, prompts, evaluators, dashboards, and more directly from your terminal — no Python scripting required.
+The Arize Toolkit CLI lets you manage models, monitors, prompts, evaluators, dashboards, traces, and more directly from your terminal — no Python scripting required.
 
 Every command maps 1-to-1 to a method on the Python `Client`, so anything you can do in code you can also do from the command line.
 
@@ -90,6 +90,7 @@ Every command accepts the following flags. They can appear **before** the subcom
 | `custom-metrics` | Create and manage custom metrics | [Custom Metrics](custom_metrics.md) |
 | `evaluators` | Manage LLM and code evaluators | [Evaluators](evaluators.md) |
 | `dashboards` | Create and view dashboards | [Dashboards](dashboards.md) |
+| `traces` | List traces, get spans, and discover available columns | [Traces](traces.md) |
 | `imports` | Manage file and table import jobs | [Data Imports](imports.md) |
 
 ## JSON Mode

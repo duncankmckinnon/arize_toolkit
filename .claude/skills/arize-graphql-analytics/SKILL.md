@@ -1,6 +1,7 @@
-______________________________________________________________________
-
-## name: arize-graphql-analytics description: Query and analyze data from the Arize platform using GraphQL, or help build/validate GraphQL queries and mutations. Use when users want to explore spaces, models, monitors, datasets, any Arize platform data, OR when they need help writing, formatting, or debugging GraphQL queries/mutations for the Arize API. license: Apache-2.0 metadata: author: solutions-resources version: "1.2" compatibility: Requires curl and jq. User must have ARIZE_API_KEY environment variable set.
+---
+name: arize-graphql-analytics
+description: Query and analyze data from the Arize platform using GraphQL, or help build/validate GraphQL queries and mutations. Use when users want to explore spaces, models, monitors, datasets, any Arize platform data, OR when they need help writing, formatting, or debugging GraphQL queries/mutations for the Arize API.
+---
 
 # Arize GraphQL Analytics
 
