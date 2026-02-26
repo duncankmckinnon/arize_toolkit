@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -8,6 +9,7 @@ from gql import Client as GraphQLClient
 from gql.transport.requests import RequestsHTTPTransport
 from pandas import DataFrame
 
+from arize_toolkit.constants import LIST_TRACES_COLUMN_NAMES
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
 from arize_toolkit.models import BaseModelSchema, Dashboard, DimensionFilterInput
@@ -93,6 +95,7 @@ from arize_toolkit.queries.space_queries import (
     OrgIDandSpaceIDQuery,
     RemoveSpaceMemberMutation,
 )
+from arize_toolkit.queries.trace_queries import GetSpanColumnsQuery, GetTraceDetailQuery, ListTracesQuery
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -4060,3 +4063,224 @@ class Client:
                 logger.warning(f"Failed to create widget for model '{model_name}': {e}")
 
         return self.dashboard_url(dashboard_id)
+
+    # ── Trace Tools ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _flatten_span_dicts(span_dicts: List[dict]) -> List[dict]:
+        """Flatten span dicts by merging parsed attributes and columns into top-level keys.
+
+        The ``attributes`` JSON string is parsed and each key is promoted to a
+        top-level column (prefixed with ``attributes.``).  Structured ``columns``
+        data takes precedence over parsed attributes.  The raw ``attributes``
+        and ``columns`` fields are removed from the output.
+        """
+        flat: List[dict] = []
+        for span_dict in span_dicts:
+            row = {k: v for k, v in span_dict.items() if k not in ("attributes", "columns")}
+            attrs_str = span_dict.get("attributes")
+            if attrs_str:
+                for k, v in json.loads(attrs_str).items():
+                    row[f"attributes.{k}"] = v
+            # Process structured columns data (takes precedence over attributes)
+            columns = span_dict.get("columns")
+            if columns:
+                for col in columns:
+                    val_obj = col.get("value")
+                    if val_obj is not None:
+                        val = val_obj.get("stringValue") if val_obj.get("stringValue") is not None else val_obj.get("numericValue")
+                        row[col["name"]] = val
+            flat.append(row)
+        return flat
+
+    def get_span_columns(
+        self,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+    ) -> List[str]:
+        """Get available span column names for a model.
+
+        Returns list of column name strings (e.g., ["attributes.input.value", ...])
+        ready to plug into list_traces() or get_trace() column_names parameter.
+        """
+        if not model_id and not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if not model_id:
+            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+            model_id = model.id
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        results = GetSpanColumnsQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            startTime=start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            endTime=end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            count=20,
+            sleep_time=self.sleep_time,
+        )
+        return [entry.dimension.name for entry in results]
+
+    def list_traces(
+        self,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+        count: int = 20,
+        sort_direction: str = "desc",
+        to_dataframe: bool = False,
+    ) -> Union[List[dict], DataFrame]:
+        """List root spans (traces) for a model in a time window.
+
+        Args:
+            model_name (Optional[str]): Name of the model (either model_name or model_id required)
+            model_id (Optional[str]): ID of the model (either model_name or model_id required)
+            start_time (Optional[datetime | str]): Start of time window (defaults to 7 days ago)
+            end_time (Optional[datetime | str]): End of time window (defaults to now)
+            count (int): Number of traces to return per page (default 20)
+            sort_direction (str): Sort direction, "desc" or "asc" (default "desc")
+            to_dataframe (bool): If True, return a DataFrame with span fields and flattened
+                attributes as columns (default False)
+
+        Returns:
+            Union[List[dict], DataFrame]: List of span record dicts (default), or a DataFrame
+                with span fields and flattened attributes prefixed with ``attributes.``
+
+        Raises:
+            ValueError: If neither model_name nor model_id is provided
+            ArizeAPIException: If the model or traces are not found
+
+        """
+        if not model_id and not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if not model_id:
+            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+            model_id = model.id
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        dataset = {
+            "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "endTime": end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "environmentName": "tracing",
+        }
+        sort = {"column": "start_time", "dir": sort_direction.upper()}
+
+        results = ListTracesQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            dataset=dataset,
+            sort=sort,
+            count=count,
+            columnNames=LIST_TRACES_COLUMN_NAMES,
+            truncateStringLength=5000,
+            sleep_time=self.sleep_time,
+        )
+        span_dicts = [result.to_dict() for result in results]
+        if to_dataframe:
+            return DataFrame.from_records(self._flatten_span_dicts(span_dicts))
+        return span_dicts
+
+    def get_trace(
+        self,
+        trace_id: str,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+        column_names: Optional[List[str]] = None,
+        count: int = 20,
+        to_dataframe: bool = False,
+    ) -> Union[List[dict], DataFrame]:
+        """Get all spans for a specific trace with full attributes.
+
+        Args:
+            trace_id (str): The trace ID to look up
+            model_name (Optional[str]): Name of the model (either model_name or model_id required)
+            model_id (Optional[str]): ID of the model (either model_name or model_id required)
+            start_time (Optional[datetime | str]): Start of time window (defaults to 7 days ago)
+            end_time (Optional[datetime | str]): End of time window (defaults to now)
+            column_names (Optional[List[str]]): If specified, only include these attribute keys.
+                If None, all attributes are returned.
+            count (int): Number of spans per page (default 20)
+            to_dataframe (bool): If True, return a DataFrame with span fields and flattened
+                attributes as columns (default False)
+
+        Returns:
+            Union[List[dict], DataFrame]: List of span record dicts (default), or a DataFrame
+                with span fields and flattened attributes prefixed with ``attributes.``
+
+        Raises:
+            ValueError: If neither model_name nor model_id is provided
+            ArizeAPIException: If the model or trace is not found
+
+        """
+        if not model_id and not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if not model_id:
+            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+            model_id = model.id
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        dataset = {
+            "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "endTime": end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "environmentName": "tracing",
+            "filters": [
+                {
+                    "filterType": "spanProperty",
+                    "operator": "equals",
+                    "dimension": {
+                        "id": "context.trace_id",
+                        "name": "context.trace_id",
+                        "dataType": "STRING",
+                        "category": "spanProperty",
+                    },
+                    "dimensionValues": [
+                        {"id": trace_id, "value": trace_id},
+                    ],
+                }
+            ],
+        }
+        sort = {"column": "start_time", "dir": "ASC"}
+
+        if column_names is None:
+            column_names = self.get_span_columns(model_id=model_id, start_time=start_time, end_time=end_time)
+
+        results = GetTraceDetailQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            dataset=dataset,
+            sort=sort,
+            count=count,
+            columnNames=column_names,
+            includeRootSpans=True,
+            truncateStringLength=5000,
+            sleep_time=self.sleep_time,
+        )
+        span_dicts = [result.to_dict() for result in results]
+        if to_dataframe:
+            return DataFrame.from_records(self._flatten_span_dicts(span_dicts))
+        return span_dicts

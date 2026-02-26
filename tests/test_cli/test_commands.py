@@ -42,6 +42,7 @@ def patch_get_client(mock_client):
             "arize_toolkit.cli.evaluators",
             "arize_toolkit.cli.dashboards",
             "arize_toolkit.cli.imports",
+            "arize_toolkit.cli.traces",
         ]
         patches = [patch(f"{m}.get_client", return_value=mock_client) for m in modules]
         for p in patches:
@@ -76,6 +77,7 @@ class TestHelpOutput:
             "evaluators",
             "dashboards",
             "imports",
+            "traces",
             "config",
         ],
     )
@@ -343,6 +345,109 @@ class TestImports:
         result = runner.invoke(cli, ["imports", "files", "delete", "job-123", "--yes"])
         assert result.exit_code == 0
         mock_client.delete_file_import_job.assert_called_once_with(job_id="job-123")
+
+
+# --- Traces ---
+
+
+class TestTraces:
+    def test_traces_list(self, runner, mock_client):
+        mock_client.list_traces.return_value = [
+            {
+                "traceId": "t1",
+                "name": "LLMChain",
+                "spanKind": "LLM",
+                "statusCode": "OK",
+                "startTime": "2025-01-01T00:00:00.000000Z",
+                "latencyMs": 100.0,
+            },
+        ]
+        result = runner.invoke(cli, ["traces", "list", "--model-name", "my-model"])
+        assert result.exit_code == 0
+        mock_client.list_traces.assert_called_once()
+
+    def test_traces_list_by_id(self, runner, mock_client):
+        mock_client.list_traces.return_value = []
+        result = runner.invoke(cli, ["traces", "list", "--model-id", "m1"])
+        assert result.exit_code == 0
+        mock_client.list_traces.assert_called_once()
+
+    def test_traces_list_json(self, runner, mock_client):
+        mock_client.list_traces.return_value = [{"traceId": "t1", "name": "test"}]
+        result = runner.invoke(cli, ["--json", "traces", "list", "--model-name", "m"])
+        assert result.exit_code == 0
+
+    def test_traces_get(self, runner, mock_client):
+        mock_client.get_trace.return_value = [
+            {
+                "spanId": "s1",
+                "name": "LLMChain",
+                "spanKind": "LLM",
+                "statusCode": "OK",
+                "parentId": None,
+                "latencyMs": 150.0,
+            },
+        ]
+        result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-name", "my-model"])
+        assert result.exit_code == 0
+        mock_client.get_trace.assert_called_once()
+
+    def test_traces_get_with_columns(self, runner, mock_client):
+        mock_client.get_trace.return_value = []
+        result = runner.invoke(
+            cli,
+            [
+                "traces",
+                "get",
+                "trace-123",
+                "--model-id",
+                "m1",
+                "--columns",
+                "input.value,output.value,llm.token_count.total",
+            ],
+        )
+        assert result.exit_code == 0
+        call_kwargs = mock_client.get_trace.call_args[1]
+        assert call_kwargs["column_names"] == ["input.value", "output.value", "llm.token_count.total"]
+
+    def test_traces_get_default_columns(self, runner, mock_client):
+        """Default (no --columns, no --all) uses input/output columns."""
+        mock_client.get_trace.return_value = []
+        result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-id", "m1"])
+        assert result.exit_code == 0
+        call_kwargs = mock_client.get_trace.call_args[1]
+        assert call_kwargs["column_names"] == ["attributes.input.value", "attributes.output.value"]
+
+    def test_traces_get_all_flag(self, runner, mock_client):
+        """--all flag triggers auto-discovery (column_names=None)."""
+        mock_client.get_trace.return_value = []
+        result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-id", "m1", "--all"])
+        assert result.exit_code == 0
+        call_kwargs = mock_client.get_trace.call_args[1]
+        assert call_kwargs["column_names"] is None
+
+    def test_traces_list_csv(self, runner, mock_client, tmp_path):
+        import pandas as pd
+
+        mock_client.list_traces.return_value = pd.DataFrame([{"traceId": "t1", "name": "LLMChain", "attributes.input.value": "hello"}])
+        csv_path = str(tmp_path / "traces.csv")
+        result = runner.invoke(cli, ["traces", "list", "--model-name", "my-model", "--csv", csv_path])
+        assert result.exit_code == 0
+        assert "Exported 1 traces" in result.output
+        df = pd.read_csv(csv_path)
+        assert "traceId" in df.columns
+        assert "attributes.input.value" in df.columns
+
+    def test_traces_get_csv(self, runner, mock_client, tmp_path):
+        import pandas as pd
+
+        mock_client.get_trace.return_value = pd.DataFrame([{"spanId": "s1", "name": "LLM", "attributes.input.value": "hello"}])
+        csv_path = str(tmp_path / "spans.csv")
+        result = runner.invoke(cli, ["traces", "get", "trace-123", "--model-id", "m1", "--csv", csv_path])
+        assert result.exit_code == 0
+        assert "Exported 1 spans" in result.output
+        df = pd.read_csv(csv_path)
+        assert "spanId" in df.columns
 
 
 # --- Config Persistence (result_callback) ---

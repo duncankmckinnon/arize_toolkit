@@ -667,3 +667,43 @@ class EvaluatorSortColumn(InputValidationEnum):
     name = "name", "Name"
     createdAt = "createdAt", "Created At"
     updatedAt = "updatedAt", "Updated At"
+
+
+class SpanKind(InputValidationEnum):
+    """The kind of span in a trace"""
+
+    CHAIN = "CHAIN", "chain", "Chain"
+    RETRIEVER = "RETRIEVER", "retriever", "Retriever"
+    RERANKER = "RERANKER", "reranker", "Reranker"
+    LLM = "LLM", "llm", "Llm"
+    TOOL = "TOOL", "tool", "Tool"
+    AGENT = "AGENT", "agent", "Agent"
+    EMBEDDING = "EMBEDDING", "embedding", "Embedding"
+    GUARDRAIL = "GUARDRAIL", "guardrail", "Guardrail"
+    EVALUATOR = "EVALUATOR", "evaluator", "Evaluator"
+    UNKNOWN = "UNKNOWN", "unknown", "Unknown"
+
+
+class SpanStatusCode(InputValidationEnum):
+    """The status code of a span"""
+
+    OK = "OK", "ok", "Ok"
+    ERROR = "ERROR", "error", "Error"
+    UNSET = "UNSET", "unset", "Unset"
+
+
+class SpanSortColumn(InputValidationEnum):
+    """Columns available for sorting spans. Values verified from GraphQL SpanColumn enum."""
+
+    start_time = "start_time", "startTime", "Start Time"
+    end_time = "end_time", "endTime", "End Time"
+    latency_ms = "latency_ms", "latencyMs", "Latency"
+    totalTokenCount = "totalTokenCount", "total_token_count", "Total Token Count"
+    metadata = "metadata", "Metadata"
+
+
+class SortDirection(InputValidationEnum):
+    """Sort direction for queries. Values verified from GraphQL SortDirection enum."""
+
+    ASC = "ASC", "asc", "ascending"
+    DESC = "DESC", "desc", "descending"

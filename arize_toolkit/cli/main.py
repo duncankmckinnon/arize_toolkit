@@ -11,6 +11,7 @@ from arize_toolkit.cli.monitors import monitors_group
 from arize_toolkit.cli.orgs import orgs_group
 from arize_toolkit.cli.prompts import prompts_group
 from arize_toolkit.cli.spaces import spaces_group
+from arize_toolkit.cli.traces import traces_group
 from arize_toolkit.cli.users import users_group
 
 
@@ -69,6 +70,7 @@ cli.add_command(custom_metrics_group)
 cli.add_command(evaluators_group)
 cli.add_command(dashboards_group)
 cli.add_command(imports_group)
+cli.add_command(traces_group)
 
 
 if __name__ == "__main__":
