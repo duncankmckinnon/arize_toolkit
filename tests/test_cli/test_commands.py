@@ -1,7 +1,11 @@
 """Tests for CLI command modules using Click's CliRunner with mocked Client."""
 
-import tomllib
 from unittest.mock import MagicMock, patch
+
+try:
+    import tomllib
+except ModuleNotFoundError:
+    import tomli as tomllib
 
 import pytest
 import tomli_w
