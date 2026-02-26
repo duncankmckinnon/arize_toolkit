@@ -1,8 +1,10 @@
 """Tests for CLI command modules using Click's CliRunner with mocked Client."""
 
+import tomllib
 from unittest.mock import MagicMock, patch
 
 import pytest
+import tomli_w
 from click.testing import CliRunner
 
 from arize_toolkit.cli.main import cli
@@ -337,3 +339,136 @@ class TestImports:
         result = runner.invoke(cli, ["imports", "files", "delete", "job-123", "--yes"])
         assert result.exit_code == 0
         mock_client.delete_file_import_job.assert_called_once_with(job_id="job-123")
+
+
+# --- Config Persistence (result_callback) ---
+
+
+def _write_config(path, config):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as f:
+        tomli_w.dump(config, f)
+
+
+def _read_config(path):
+    with open(path, "rb") as f:
+        return tomllib.load(f)
+
+
+class TestConfigPersistence:
+    """Verify that space/org changes are persisted to the config file via result_callback."""
+
+    def test_spaces_switch_updates_profile(self, tmp_path):
+        config_file = tmp_path / "config.toml"
+        _write_config(
+            config_file,
+            {"default": {"api_key": "key", "organization": "org1", "space": "old-space"}},
+        )
+
+        mock_client = MagicMock()
+        mock_client.switch_space.return_value = "https://app.arize.com/..."
+        # After switch_space, the client's attributes reflect the new space
+        mock_client.space = "new-space"
+        mock_client.organization = "org1"
+
+        def fake_get_client(ctx):
+            ctx.obj["client"] = mock_client
+            return mock_client
+
+        runner = CliRunner()
+        with (
+            patch("arize_toolkit.cli.config_cmd.CONFIG_FILE", config_file),
+            patch("arize_toolkit.cli.config_cmd.CONFIG_DIR", tmp_path),
+            patch("arize_toolkit.cli.spaces.get_client", side_effect=fake_get_client),
+        ):
+            result = runner.invoke(cli, ["spaces", "switch", "new-space"])
+
+        assert result.exit_code == 0
+        saved = _read_config(config_file)
+        assert saved["default"]["space"] == "new-space"
+
+    def test_spaces_switch_updates_org(self, tmp_path):
+        config_file = tmp_path / "config.toml"
+        _write_config(
+            config_file,
+            {"default": {"api_key": "key", "organization": "org1", "space": "space1"}},
+        )
+
+        mock_client = MagicMock()
+        mock_client.switch_space.return_value = "https://app.arize.com/..."
+        mock_client.space = "space2"
+        mock_client.organization = "org2"
+
+        def fake_get_client(ctx):
+            ctx.obj["client"] = mock_client
+            return mock_client
+
+        runner = CliRunner()
+        with (
+            patch("arize_toolkit.cli.config_cmd.CONFIG_FILE", config_file),
+            patch("arize_toolkit.cli.config_cmd.CONFIG_DIR", tmp_path),
+            patch("arize_toolkit.cli.spaces.get_client", side_effect=fake_get_client),
+        ):
+            result = runner.invoke(cli, ["spaces", "switch", "space2", "--org", "org2"])
+
+        assert result.exit_code == 0
+        saved = _read_config(config_file)
+        assert saved["default"]["space"] == "space2"
+        assert saved["default"]["organization"] == "org2"
+
+    def test_spaces_create_persists_new_space(self, tmp_path):
+        config_file = tmp_path / "config.toml"
+        _write_config(
+            config_file,
+            {"default": {"api_key": "key", "organization": "org1", "space": "old-space"}},
+        )
+
+        mock_client = MagicMock()
+        mock_client.create_new_space.return_value = "new-id"
+        # After create with set_as_active=True, client.space is updated
+        mock_client.space = "brand-new-space"
+        mock_client.organization = "org1"
+
+        def fake_get_client(ctx):
+            ctx.obj["client"] = mock_client
+            return mock_client
+
+        runner = CliRunner()
+        with (
+            patch("arize_toolkit.cli.config_cmd.CONFIG_FILE", config_file),
+            patch("arize_toolkit.cli.config_cmd.CONFIG_DIR", tmp_path),
+            patch("arize_toolkit.cli.spaces.get_client", side_effect=fake_get_client),
+        ):
+            result = runner.invoke(cli, ["spaces", "create", "brand-new-space"])
+
+        assert result.exit_code == 0
+        saved = _read_config(config_file)
+        assert saved["default"]["space"] == "brand-new-space"
+
+    def test_no_write_when_nothing_changed(self, tmp_path):
+        config_file = tmp_path / "config.toml"
+        _write_config(
+            config_file,
+            {"default": {"api_key": "key", "organization": "org1", "space": "same-space"}},
+        )
+
+        mock_client = MagicMock()
+        mock_client.get_all_spaces.return_value = [{"id": "s1", "name": "same-space", "createdAt": "2025-01-01"}]
+        mock_client.space = "same-space"
+        mock_client.organization = "org1"
+
+        def fake_get_client(ctx):
+            ctx.obj["client"] = mock_client
+            return mock_client
+
+        runner = CliRunner()
+        with (
+            patch("arize_toolkit.cli.config_cmd.CONFIG_FILE", config_file),
+            patch("arize_toolkit.cli.config_cmd.CONFIG_DIR", tmp_path),
+            patch("arize_toolkit.cli.spaces.get_client", side_effect=fake_get_client),
+            patch("arize_toolkit.cli.config_cmd.save_config") as mock_save,
+        ):
+            result = runner.invoke(cli, ["spaces", "list"])
+
+        assert result.exit_code == 0
+        mock_save.assert_not_called()

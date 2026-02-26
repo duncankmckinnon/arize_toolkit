@@ -29,6 +29,15 @@ def get_profile(profile_name: str = "default") -> Dict[str, Any]:
     return config.get(profile_name, {})
 
 
+def update_profile(profile_name: str = "default", **updates: str) -> None:
+    """Update specific fields in a config profile and save."""
+    config = load_config()
+    profile = config.get(profile_name, {})
+    profile.update(updates)
+    config[profile_name] = profile
+    save_config(config)
+
+
 def resolve_config(
     profile: Optional[str] = None,
     api_key: Optional[str] = None,

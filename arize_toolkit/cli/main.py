@@ -1,7 +1,7 @@
 import click
 
 from arize_toolkit import __version__
-from arize_toolkit.cli.config_cmd import config_group
+from arize_toolkit.cli.config_cmd import config_group, get_profile, update_profile
 from arize_toolkit.cli.custom_metrics import custom_metrics_group
 from arize_toolkit.cli.dashboards import dashboards_group
 from arize_toolkit.cli.evaluators import evaluators_group
@@ -32,6 +32,29 @@ def cli(ctx, profile, json_mode, api_key, org, space, app_url):
     ctx.obj["org"] = org
     ctx.obj["space"] = space
     ctx.obj["app_url"] = app_url
+
+
+@cli.result_callback()
+@click.pass_context
+def persist_client_state(ctx, *args, **kwargs):
+    """After each command, persist any client space/org changes to the config profile."""
+    client = ctx.obj.get("client")
+    if client is None:
+        return
+
+    profile_name = ctx.obj.get("profile") or "default"
+    profile = get_profile(profile_name)
+    if not profile:
+        return
+
+    updates = {}
+    if client.space and client.space != profile.get("space"):
+        updates["space"] = client.space
+    if client.organization and client.organization != profile.get("organization"):
+        updates["organization"] = client.organization
+
+    if updates:
+        update_profile(profile_name, **updates)
 
 
 cli.add_command(config_group)
