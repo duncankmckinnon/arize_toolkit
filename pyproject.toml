@@ -57,6 +57,15 @@ prompt_optimizer = [
     "arize-phoenix-evals>=0.22.0",
     "arize-phoenix-client>=1.0",
 ]
+cli = [
+    "click>=8.0",
+    "rich>=13.0",
+    "tomli>=1.0;python_version<'3.11'",
+    "tomli-w>=1.0",
+]
+
+[project.scripts]
+arize_toolkit = "arize_toolkit.cli.main:cli"
 
 [tool.hatch.version]
 source = "vcs"
