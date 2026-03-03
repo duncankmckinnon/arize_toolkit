@@ -5976,18 +5976,7 @@ class TestEvaluators:
     """Test evaluator functionality"""
 
     def test_create_template_evaluator(self, client, mock_graphql_client):
-        """Test creating a template (LLM-based) evaluator"""
-        mock_integrations_response = {
-            "node": {
-                "llmIntegrations": [
-                    {
-                        "id": "integration1",
-                        "name": "My OpenAI",
-                        "provider": "openAI",
-                    },
-                ]
-            }
-        }
+        """Test creating a template (LLM-based) evaluator without explicit LLM integration"""
         mock_create_response = {
             "createEvaluator": {
                 "evaluator": {
@@ -6004,10 +5993,7 @@ class TestEvaluators:
                 "errors": [],
             }
         }
-        mock_graphql_client.return_value.execute.side_effect = [
-            mock_integrations_response,
-            mock_create_response,
-        ]
+        mock_graphql_client.return_value.execute.return_value = mock_create_response
 
         result = client.create_template_evaluator(
             name="Hallucination Detector",
@@ -6015,7 +6001,7 @@ class TestEvaluators:
             metric_name="hallucination_score",
             description="Detects hallucinations in LLM responses",
             classification_choices={"Yes": 0, "No": 1},
-            direction="higher",
+            direction="maximize",
         )
 
         assert result["id"] == "eval123"

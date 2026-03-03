@@ -1760,7 +1760,7 @@ class Client:
             tags (Optional[List[str]]): Tags for the evaluator
             classification_choices (Optional[Dict[str, float]]): Maps labels to scores for categorical evaluations
                 Example: {"Yes": 0, "No": 1} or {"Poor": 0, "Good": 0.5, "Excellent": 1}
-            direction (Optional[str]): Whether higher or lower scores are better ("maximize" or "minimize")
+            direction (Optional[str]): Whether higher or lower scores are better ("maximize" or "minimize"). Only sent when explicitly provided.
             data_granularity_type (str): The granularity level ("span", "trace", or "session", default: "span")
             include_explanations (bool): Whether to include explanations in the evaluation (default: True)
             use_function_calling (bool): Whether to use function calling if available (default: False)
@@ -1768,7 +1768,7 @@ class Client:
             rails (Optional[List[str]]): Rails associated with the config
             query_filter (Optional[str]): Optional query filter over a given data granularity
             llm_integration_name (Optional[str]): The name of the LLM integration to use.
-                If not provided, defaults to the first available integration in the space.
+                Only resolved when explicitly provided (or when llm_model_name is set).
             llm_model_name (Optional[str]): The LLM model name (e.g. "gpt-4o")
             llm_invocation_parameters (Optional[dict]): Parameters used when running the LLM (e.g. {"temperature": 0.0})
             llm_provider_parameters (Optional[dict]): Parameters used to initialize the LLM provider
@@ -1964,7 +1964,7 @@ class Client:
             direction (Optional[str]): "maximize" or "minimize"
             data_granularity_type (Optional[str]): "span", "trace", or "session"
             llm_integration_name (Optional[str]): The name of the LLM integration to use.
-                If not provided, defaults to the first available integration in the space.
+                Only resolved when explicitly provided (or when llm_model_name is set).
             llm_model_name (Optional[str]): The LLM model name
             llm_invocation_parameters (Optional[dict]): Parameters for running the LLM
             llm_provider_parameters (Optional[dict]): Parameters for initializing the LLM provider
@@ -1987,29 +1987,29 @@ class Client:
             )
             ```
         """
-        llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
-        llm_config = None
-        if llm_integration_id is not None:
-            llm_config = {
-                "integrationId": llm_integration_id,
-                "modelName": llm_model_name or "",
-                "invocationParameters": llm_invocation_parameters or {},
-                "providerParameters": llm_provider_parameters or {},
-            }
-
         template_config = {
             "name": metric_name,
             "template": template,
             "position": position,
             "includeExplanations": include_explanations,
             "useFunctionCallingIfAvailable": use_function_calling,
-            "classificationChoices": classification_choices,
-            "direction": direction,
             "dataGranularityType": data_granularity_type,
             "rails": rails,
             "queryFilter": query_filter,
-            "llmConfig": llm_config,
         }
+        if llm_integration_name or llm_model_name:
+            llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
+            if llm_integration_id is not None:
+                template_config["llmConfig"] = {
+                    "integrationId": llm_integration_id,
+                    "modelName": llm_model_name or "",
+                    "invocationParameters": llm_invocation_parameters or {},
+                    "providerParameters": llm_provider_parameters or {},
+                }
+        if direction:
+            template_config["direction"] = direction
+        if classification_choices:
+            template_config["classificationChoices"] = classification_choices
 
         result = CreateEvaluatorVersionMutation.run_graphql_mutation(
             self._graphql_client,

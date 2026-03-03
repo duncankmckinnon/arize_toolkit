@@ -81,11 +81,11 @@ Creates an LLM-based template evaluator that uses a prompt to evaluate model out
 - `--description` — Evaluator description.
 - `--tag` — Tags (repeatable).
 - `--classification-choices` — JSON mapping labels to scores (e.g. `'{"Yes":0,"No":1}'`).
-- `--direction` — Score direction: `maximize` or `minimize`. Defaults to `maximize`.
+- `--direction` — Score direction: `maximize` or `minimize`. Only sent when explicitly provided.
 - `--data-granularity` — Granularity: `span`, `trace`, or `session`. Defaults to `span`.
 - `--include-explanations / --no-explanations` — Include LLM explanations. Defaults to enabled.
 - `--use-function-calling / --no-function-calling` — Use function calling. Defaults to disabled.
-- `--llm-integration-name` — LLM integration name.
+- `--llm-integration-name` — LLM integration name. Only resolved when explicitly provided.
 - `--llm-model-name` — LLM model name (e.g. `gpt-4o`).
 
 **Example**

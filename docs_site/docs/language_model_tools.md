@@ -569,7 +569,6 @@ evaluator: dict = client.create_template_evaluator(
     metric_name="hallucination_score",
     description="Detects hallucinations in LLM responses",
     classification_choices={"Yes": 0, "No": 1},
-    direction="maximize",
     commit_message="Initial version",
 )
 ```
@@ -588,14 +587,14 @@ Creates a template (LLM-based) evaluator that uses an LLM with a prompt template
 - `description` – Human-readable description of what this evaluator does.
 - `tags` – List of tags for the evaluator.
 - `classification_choices` – Dictionary mapping labels to scores for categorical evaluations (e.g., `{"Yes": 0, "No": 1}` or `{"Poor": 0, "Good": 0.5, "Excellent": 1}`).
-- `direction` – Whether higher or lower scores are better: `"maximize"` or `"minimize"` (default: `"maximize"`).
+- `direction` – Whether higher or lower scores are better: `"maximize"` or `"minimize"`. Only sent when explicitly provided.
 - `data_granularity_type` – Evaluation granularity: `"span"`, `"trace"`, or `"session"` (default: `"span"`).
 - `include_explanations` – Whether to include explanations in the evaluation (default: `True`).
 - `use_function_calling` – Whether to use function calling if available (default: `False`).
 - `position` – Display position/order of the evaluator (default: `0`).
 - `rails` – Rails associated with the config.
 - `query_filter` – Optional query filter over a given data granularity.
-- `llm_integration_name` – Name of the LLM integration to use. Defaults to the first available integration in the space.
+- `llm_integration_name` – Name of the LLM integration to use. Only resolved when explicitly provided (or when `llm_model_name` is set).
 - `llm_model_name` – The LLM model name (e.g., `"gpt-4o"`).
 - `llm_invocation_parameters` – Parameters used when running the LLM (e.g., `{"temperature": 0.0}`).
 - `llm_provider_parameters` – Parameters used to initialize the LLM provider.
@@ -625,7 +624,6 @@ hallucination_eval = client.create_template_evaluator(
     metric_name="hallucination_score",
     description="Detects hallucinations in LLM responses",
     classification_choices={"Yes": 0, "No": 1},
-    direction="maximize",
 )
 
 # Multi-level quality evaluator with custom LLM
@@ -634,7 +632,7 @@ quality_eval = client.create_template_evaluator(
     template="Rate the quality of this response:\n\nQuestion: {{input}}\nResponse: {{output}}\n\nRating: Poor, Fair, Good, or Excellent",
     metric_name="quality_score",
     classification_choices={"Poor": 0, "Fair": 0.33, "Good": 0.67, "Excellent": 1.0},
-    direction="maximize",
+    direction="maximize",  # optional: only sent when explicitly provided
     llm_integration_name="My OpenAI Integration",
     llm_model_name="gpt-4o",
 )
@@ -833,10 +831,10 @@ Creates a new version of an existing template evaluator with updated configurati
 - `use_function_calling` – Whether to use function calling if available (default: `False`).
 - `rails` – Rails associated with the config.
 - `query_filter` – Optional query filter over a given data granularity.
-- `classification_choices` – Dictionary mapping labels to scores.
-- `direction` – `"maximize"` or `"minimize"`.
+- `classification_choices` – Dictionary mapping labels to scores. Only sent when explicitly provided.
+- `direction` – `"maximize"` or `"minimize"`. Only sent when explicitly provided.
 - `data_granularity_type` – `"span"`, `"trace"`, or `"session"`.
-- `llm_integration_name` – Name of the LLM integration to use.
+- `llm_integration_name` – Name of the LLM integration to use. Only resolved when explicitly provided (or when `llm_model_name` is set).
 - `llm_model_name` – The LLM model name.
 - `llm_invocation_parameters` – Parameters used when running the LLM.
 - `llm_provider_parameters` – Parameters used to initialize the LLM provider.
@@ -1147,7 +1145,6 @@ client.create_template_evaluator(
     template="Was this response helpful?\n\nQuestion: {{input}}\nResponse: {{output}}\n\nAnswer: Yes or No",
     metric_name="helpfulness_score",
     classification_choices={"Yes": 1, "No": 0},
-    direction="maximize",
 )
 
 # Code evaluator (Python-based)
