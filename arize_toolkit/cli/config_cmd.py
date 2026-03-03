@@ -56,6 +56,10 @@ def resolve_config(
         "organization": (org or os.environ.get("ARIZE_ORGANIZATION") or profile_data.get("organization")),
         "space": (space or os.environ.get("ARIZE_SPACE") or profile_data.get("space")),
         "app_url": (app_url or os.environ.get("ARIZE_APP_URL") or profile_data.get("app_url", "https://app.arize.com")),
+        "org_id": profile_data.get("org_id"),
+        "space_id": profile_data.get("space_id"),
+        "model_id": profile_data.get("model_id"),
+        "model_name": profile_data.get("model_name"),
     }
     return {k: v for k, v in resolved.items() if v is not None}
 
