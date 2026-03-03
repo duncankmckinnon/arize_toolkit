@@ -52,7 +52,7 @@ def evaluators_get(ctx, name):
 @click.option("--description", default=None, help="Evaluator description.")
 @click.option("--tag", multiple=True, help="Tags.")
 @click.option("--classification-choices", default=None, help='JSON mapping labels to scores (e.g. \'{"Yes":0,"No":1}\').')
-@click.option("--direction", type=click.Choice(["maximize", "minimize"]), default="maximize", help="Score direction.")
+@click.option("--direction", type=click.Choice(["maximize", "minimize"]), default=None, help="Score direction. Only sent when explicitly provided.")
 @click.option("--data-granularity", type=click.Choice(["span", "trace", "session"]), default="span", help="Data granularity.")
 @click.option("--include-explanations/--no-explanations", default=True, help="Include explanations.")
 @click.option("--use-function-calling/--no-function-calling", default=False, help="Use function calling.")
