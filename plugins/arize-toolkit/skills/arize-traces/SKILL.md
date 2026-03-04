@@ -9,16 +9,17 @@ Retrieve trace and span data from Arize using the `arize_toolkit` CLI.
 
 ---
 
-## Important: Token Usage & Column Selection
+## Critical: Always Use `--json`
 
-When first retrieving trace or span data, **ask the user** whether they want:
+**Every `arize_toolkit` trace command MUST use `--json`.**
 
-1. **Recommended columns** (lower token usage) — a curated subset of the most useful attributes: `name`, `spanKind`, `statusCode`, `latencyMs`, `parentId`, `attributes.input.value`, `attributes.output.value`, `attributes.llm.model_name`, `attributes.llm.token_count.prompt`, `attributes.llm.token_count.completion`, `attributes.tool.name`
-2. **All columns** (higher token usage) — every available attribute via `--all`. Note: this pulls 30+ fields per span including many empty values, which significantly increases context window usage in longer sessions.
+`--json` is a **global flag** that goes BEFORE the subcommand: `arize_toolkit --json traces ...` (NOT `arize_toolkit traces --json ...`). Without it, output renders as Rich tables that wrap poorly, are hard to parse, and waste tokens.
 
-Once the user chooses, **use that approach for the rest of the session** unless they request otherwise.
+**Correct:** `arize_toolkit --json traces list --model-name my-agent`
+**Wrong:** `arize_toolkit traces list --json --model-name my-agent` (`--json` in wrong position)
+**Wrong:** `arize_toolkit traces --json list --model-name my-agent` (`--json` in wrong position)
 
-Always use `--json` output (global flag before the subcommand) — Rich table output wraps poorly and uses more tokens. Truncate `input.value` and `output.value` with jq `[:120]` in list views; show full values only when inspecting individual spans.
+When using `traces get`, use `--all` or `--columns` based on the user's column detail choice (see Step 3). Truncate `input.value` and `output.value` with jq `[:120]` in list views; show full values only when inspecting individual spans.
 
 ---
 
@@ -60,13 +61,19 @@ arize_toolkit config init --api-key "API_KEY" --org "ORG_NAME" --space "SPACE_NA
 
 ## Step 2: List Traces
 
-List recent traces using `--json` and `--count 5` (start small, paginate if needed):
+**Always specify `--start-time`** to narrow the query window. The default is 7 days, which can be slow and hit rate limits. Use a short window (e.g., 1 hour) unless the user needs a wider range. Generate the ISO timestamp dynamically:
 
 ```bash
-# Compact summary (recommended default)
-arize_toolkit --json traces list --model-name my-agent --count 5 | jq '.[] | {name, traceId, statusCode, latencyMs, input: .["attributes.input.value"][:120]}'
+# Last 1 hour (recommended default)
+arize_toolkit --json traces list --model-name my-agent --count 5 \
+  --start-time "$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)" \
+  | jq '.[] | {name, traceId, statusCode, latencyMs, input: .["attributes.input.value"][:120]}'
 
-# With time window
+# Last 24 hours
+arize_toolkit --json traces list --model-name my-agent --count 5 \
+  --start-time "$(date -u -v-24H +%Y-%m-%dT%H:%M:%SZ)"
+
+# Specific time window
 arize_toolkit --json traces list --model-name my-agent --count 5 --start-time 2025-01-01T00:00:00Z
 
 # Sort ascending (oldest first)
@@ -91,7 +98,8 @@ Present results as a table of traces with: trace ID, root span name, status, lat
 Before fetching span data, **ask the user** using AskUserQuestion:
 
 - **Recommended columns** (lower token usage) — core span fields plus key LLM attributes. Suitable for most debugging and inspection tasks.
-- **All columns** (higher token usage) — every available attribute. Useful for deep debugging or discovering unexpected attributes. Note: pulls 30+ fields per span, many empty.
+- **All columns** (higher token usage) — every available attribute via `--all`. Note: this pulls 30+ fields per span including many empty values, which significantly increases context window usage in longer sessions.
+- **Specific columns** — let the user specify exactly which attributes they want via `--columns`.
 
 Remember their choice and use it for subsequent trace queries in the session.
 
@@ -118,6 +126,13 @@ arize_toolkit --json traces get TRACE_ID --model-name my-agent \
 
 ```bash
 arize_toolkit --json traces get TRACE_ID --model-name my-agent --all
+```
+
+**Specific columns** (user-specified):
+
+```bash
+arize_toolkit --json traces get TRACE_ID --model-name my-agent \
+  --columns "attributes.input.value,attributes.output.value,attributes.tool.name"
 ```
 
 **Export to CSV** (does not consume context tokens):
@@ -241,7 +256,8 @@ arize_toolkit --profile staging traces list --model-name my-agent
 
 ## Tips
 
-- **Always use `--json`** — place it before the subcommand: `arize_toolkit --json traces ...`
+- **Always use `--json`** — it is a GLOBAL flag that MUST go before the subcommand: `arize_toolkit --json traces ...` (not `arize_toolkit traces --json`)
+- **Always specify `--start-time`** — default is 7 days which is slow and burns rate limits. Use `--start-time "$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)"` for last hour as a default, widen only if needed
 - **Start with `--count 5`** — paginate up if the user needs more
 - **Ask the user about column detail level** on first trace retrieval, then stick with their choice
 - **Truncate input/output in list views** — use jq `[:120]` on value fields to keep context small
@@ -253,7 +269,7 @@ arize_toolkit --profile staging traces list --model-name my-agent
   arize_toolkit --json traces get TRACE_ID --model-name my-agent --all | jq -f /tmp/filter.jq
   ```
 - **Export to CSV for large datasets** — CSV export does not consume context tokens
-- Default time window is 7 days; use `--start-time` / `--end-time` for custom ranges
+- Default time window is 7 days, but always narrow it with `--start-time` to avoid slow queries and rate limits
 - Use `--help` on any command for full usage: `arize_toolkit traces list --help`
 
 ---
@@ -264,7 +280,8 @@ arize_toolkit --profile staging traces list --model-name my-agent
 |-------|----------|
 | `command not found` | Install with `pip install arize_toolkit[cli]` |
 | Authentication error | Check API key: `arize_toolkit config show` |
-| No traces returned | Check model name and time window; traces default to last 7 days |
+| No traces returned | Check model name and time window; widen `--start-time` if needed |
+| Rate limit exceeded | Narrow the time window with `--start-time`; avoid default 7-day range |
 | Missing columns | Run `traces columns` to discover available attributes |
 | Wrong space/org | Use `--space` / `--org` flags or switch profile |
 
