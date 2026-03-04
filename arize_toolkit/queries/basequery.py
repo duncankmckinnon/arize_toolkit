@@ -1,3 +1,4 @@
+import logging
 from time import sleep
 from typing import List, Optional, Tuple
 
@@ -6,6 +7,8 @@ from gql import gql
 
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.utils import Dictable
+
+logger = logging.getLogger("arize_toolkit")
 
 
 class BaseVariables(Dictable):
@@ -44,12 +47,14 @@ class BaseQuery:
     @classmethod
     def _graphql_query(cls, client: GraphQLClient, **kwargs) -> Tuple[List[QueryResponse], bool, Optional[str]]:
         try:
+            logger.debug(f"GraphQL query: {cls.__name__}")
             query = gql(cls.graphql_query)
             variable_values = cls.Variables(**kwargs).to_dict(exclude_none=False)
             result = client.execute(
                 query,
                 variable_values=variable_values,
             )
+            logger.debug(f"GraphQL response: {cls.__name__} -> {result}")
             if "errors" in result:
                 cls.raise_exception(str(result["errors"]))
             return cls._parse_graphql_result(result)
@@ -61,12 +66,14 @@ class BaseQuery:
     @classmethod
     def _graphql_mutation(cls, client: GraphQLClient, **kwargs) -> Tuple[List[QueryResponse], bool, Optional[str]]:
         try:
+            logger.debug(f"GraphQL mutation: {cls.__name__}")
             query = gql(cls.graphql_query)
             variable_values = cls.Variables(**kwargs).to_dict(exclude_none=True)
             result = client.execute(
                 query,
                 variable_values={"input": variable_values},
             )
+            logger.debug(f"GraphQL response: {cls.__name__} -> {result}")
             if "errors" in result:
                 cls.raise_exception(str(result["errors"]))
             return cls._parse_graphql_result(result)

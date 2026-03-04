@@ -1,3 +1,5 @@
+import logging
+
 import click
 
 from arize_toolkit import __version__
@@ -23,9 +25,16 @@ from arize_toolkit.cli.users import users_group
 @click.option("--org", default=None, help="Arize organization name.")
 @click.option("--space", default=None, help="Arize space name.")
 @click.option("--app-url", default=None, help="Arize app URL.")
+@click.option("-v", "--verbose", is_flag=True, help="Enable debug logging.")
 @click.pass_context
-def cli(ctx, profile, json_mode, api_key, org, space, app_url):
+def cli(ctx, profile, json_mode, api_key, org, space, app_url, verbose):
     """Arize Toolkit CLI — manage models, monitors, prompts, and more."""
+    if verbose:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(name)s %(message)s"))
+        arize_logger = logging.getLogger("arize_toolkit")
+        arize_logger.setLevel(logging.DEBUG)
+        arize_logger.addHandler(handler)
     ctx.ensure_object(dict)
     ctx.obj["profile"] = profile
     ctx.obj["json_mode"] = json_mode

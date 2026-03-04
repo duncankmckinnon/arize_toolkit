@@ -196,13 +196,7 @@ class Client:
             raise ValueError("Either model_id or model_name must be provided")
         if model_name in self._model_cache:
             return self._model_cache[model_name]
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
-        self._model_cache[model_name] = model.id
-        return model.id
+        return self.get_model(model_name)["id"]
 
     @classmethod
     def create_with_new_organization(
@@ -832,7 +826,10 @@ class Client:
 
         """
         results = GetAllModelsQuery.iterate_over_pages(self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time)
-        return [result.to_dict() for result in results]
+        models = [result.to_dict() for result in results]
+        for model in models:
+            self._model_cache[model["name"]] = model["id"]
+        return models
 
     def get_model_by_id(self, model_id: str) -> dict:
         """Retrieves a specific model by ID.
@@ -874,6 +871,7 @@ class Client:
 
         """
         results = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+        self._model_cache[model_name] = results.id
         return results.to_dict()
 
     def get_model_url(self, model_name: str) -> str:
