@@ -94,6 +94,7 @@ from arize_toolkit.queries.space_queries import (
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
     RemoveSpaceMemberMutation,
+    UpdateSpaceMutation,
 )
 from arize_toolkit.queries.trace_queries import GetSpanColumnsQuery, GetTraceDetailQuery, ListTracesQuery
 from arize_toolkit.types import ModelType
@@ -520,6 +521,45 @@ class Client:
             self.space_id = result.id
             self._model_cache.clear()
         return result.id
+
+    def update_space(
+        self,
+        name: Optional[str] = None,
+        space_id: Optional[str] = None,
+        private: Optional[bool] = None,
+        description: Optional[str] = None,
+        gradient_start_color: Optional[str] = None,
+        gradient_end_color: Optional[str] = None,
+        ml_models_enabled: Optional[bool] = None,
+    ) -> dict:
+        """Updates a space's properties.
+
+        Args:
+            name (str, optional): New name for the space.
+            space_id (str, optional): ID of the space to update. Defaults to the active space.
+            private (bool, optional): Whether the space should be private.
+            description (str, optional): New description for the space.
+            gradient_start_color (str, optional): Hex color code for gradient start.
+            gradient_end_color (str, optional): Hex color code for gradient end.
+            ml_models_enabled (bool, optional): Whether ML models are enabled.
+
+        Returns:
+            dict: Updated space data containing id, name, description, private, createdAt.
+
+        Raises:
+            ArizeAPIException: If there is an error updating the space.
+        """
+        result = UpdateSpaceMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=space_id or self.space_id,
+            name=name,
+            private=private,
+            description=description,
+            gradientStartColor=gradient_start_color,
+            gradientEndColor=gradient_end_color,
+            mlModelsEnabled=ml_models_enabled,
+        )
+        return result.to_dict()
 
     def create_new_organization_and_space(
         self,

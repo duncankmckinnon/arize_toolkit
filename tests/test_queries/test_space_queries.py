@@ -12,6 +12,7 @@ from arize_toolkit.queries.space_queries import (
     GetSpaceByNameQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
+    UpdateSpaceMutation,
 )
 
 
@@ -927,3 +928,117 @@ class TestCreateSpaceAdminApiKeyMutation:
         variables = CreateSpaceAdminApiKeyMutation.Variables(name="Test Admin Key", spaceId="space_123")
         assert variables.name == "Test Admin Key"
         assert variables.spaceId == "space_123"
+
+
+class TestUpdateSpaceMutation:
+    """Test the UpdateSpaceMutation class."""
+
+    def test_mutation_structure(self):
+        """Test that the mutation structure is correct."""
+        mutation = UpdateSpaceMutation.graphql_query
+        assert "mutation updateSpace" in mutation
+        assert "$input: UpdateSpaceMutationInput!" in mutation
+        assert "updateSpace" in mutation
+        assert "input: $input" in mutation
+
+    def test_successful_mutation(self, gql_client):
+        """Test successful space update."""
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "space_123",
+                    "name": "Updated Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": "Updated description",
+                    "private": True,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateSpaceMutation.run_graphql_mutation(gql_client, spaceId="space_123", name="Updated Space", description="Updated description")
+
+        assert result.name == "Updated Space"
+        assert result.id == "space_123"
+        assert result.description == "Updated description"
+        assert result.private is True
+        gql_client.execute.assert_called_once()
+
+    def test_successful_mutation_partial_update(self, gql_client):
+        """Test successful partial space update with only some fields."""
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "space_123",
+                    "name": "My Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": "Original description",
+                    "private": False,
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = UpdateSpaceMutation.run_graphql_mutation(gql_client, spaceId="space_123", private=False)
+
+        assert result.id == "space_123"
+        assert result.private is False
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_no_update_space(self, gql_client):
+        """Test error when updateSpace is not in response."""
+        mock_response = {}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateSpaceMutation.QueryException,
+            match="Failed to update space",
+        ):
+            UpdateSpaceMutation.run_graphql_mutation(gql_client, spaceId="space_123", name="New Name")
+
+        gql_client.execute.assert_called_once()
+
+    def test_failed_mutation_no_space_in_response(self, gql_client):
+        """Test error when space is not in updateSpace response."""
+        mock_response = {"updateSpace": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            UpdateSpaceMutation.QueryException,
+            match="Failed to update space",
+        ):
+            UpdateSpaceMutation.run_graphql_mutation(gql_client, spaceId="space_123", name="New Name")
+
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for variables."""
+        # Test missing spaceId
+        with pytest.raises(Exception) as exc_info:
+            UpdateSpaceMutation.Variables()
+        assert "spaceId" in str(exc_info.value)
+
+        # Test valid variables with only required field
+        variables = UpdateSpaceMutation.Variables(spaceId="space_123")
+        assert variables.spaceId == "space_123"
+        assert variables.name is None
+        assert variables.private is None
+        assert variables.description is None
+
+        # Test valid variables with all optional fields
+        variables = UpdateSpaceMutation.Variables(
+            spaceId="space_123",
+            name="New Name",
+            private=True,
+            description="New description",
+            gradientStartColor="#FF0000",
+            gradientEndColor="#0000FF",
+            mlModelsEnabled=True,
+        )
+        assert variables.spaceId == "space_123"
+        assert variables.name == "New Name"
+        assert variables.private is True
+        assert variables.description == "New description"
+        assert variables.gradientStartColor == "#FF0000"
+        assert variables.gradientEndColor == "#0000FF"
+        assert variables.mlModelsEnabled is True
