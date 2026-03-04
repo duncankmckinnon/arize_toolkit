@@ -479,6 +479,7 @@ class TestConfigPersistence:
         # After switch_space, the client's attributes reflect the new space
         mock_client.space = "new-space"
         mock_client.organization = "org1"
+        mock_client._model_cache = {}
 
         def fake_get_client(ctx):
             ctx.obj["client"] = mock_client
@@ -507,6 +508,7 @@ class TestConfigPersistence:
         mock_client.switch_space.return_value = "https://app.arize.com/..."
         mock_client.space = "space2"
         mock_client.organization = "org2"
+        mock_client._model_cache = {}
 
         def fake_get_client(ctx):
             ctx.obj["client"] = mock_client
@@ -537,6 +539,7 @@ class TestConfigPersistence:
         # After create with set_as_active=True, client.space is updated
         mock_client.space = "brand-new-space"
         mock_client.organization = "org1"
+        mock_client._model_cache = {}
 
         def fake_get_client(ctx):
             ctx.obj["client"] = mock_client
@@ -565,6 +568,7 @@ class TestConfigPersistence:
         mock_client.get_all_spaces.return_value = [{"id": "s1", "name": "same-space", "createdAt": "2025-01-01"}]
         mock_client.space = "same-space"
         mock_client.organization = "org1"
+        mock_client._model_cache = {}
 
         def fake_get_client(ctx):
             ctx.obj["client"] = mock_client

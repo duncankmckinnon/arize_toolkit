@@ -135,11 +135,14 @@ class Client:
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
         _skip_org_space_lookup: bool = False,
+        org_id: Optional[str] = None,
+        space_id: Optional[str] = None,
     ):
         self.organization = organization
         self.space = space
         self.sleep_time = sleep_time
         self.arize_app_url = arize_app_url
+        self._model_cache: Dict[str, str] = {}
         arize_developer_key = arize_developer_key or os.getenv("ARIZE_DEVELOPER_KEY")
         self._graphql_client = GraphQLClient(
             transport=RequestsHTTPTransport(
@@ -147,7 +150,10 @@ class Client:
                 headers={"x-api-key": arize_developer_key},
             )
         )
-        if not _skip_org_space_lookup:
+        if org_id and space_id:
+            self.org_id = org_id
+            self.space_id = space_id
+        elif not _skip_org_space_lookup:
             self._set_org_and_space_id()
 
     def _set_org_and_space_id(self) -> None:
@@ -170,6 +176,33 @@ class Client:
             self.org_id = results.organization_id
             self.space_id = results.space_id
         logger.info(f"Using organization: {self.organization} and space: {self.space}")
+
+    def resolve_model_id(self, model_name: Optional[str] = None, model_id: Optional[str] = None) -> str:
+        """Resolve a model_id from model_name using cache, or return model_id if already provided.
+
+        Args:
+            model_name: The model name to resolve
+            model_id: The model ID (returned directly if provided)
+
+        Returns:
+            str: The resolved model ID
+
+        Raises:
+            ValueError: If neither model_id nor model_name is provided
+        """
+        if model_id:
+            return model_id
+        if not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if model_name in self._model_cache:
+            return self._model_cache[model_name]
+        model = GetModelQuery.run_graphql_query(
+            self._graphql_client,
+            model_name=model_name,
+            space_id=self.space_id,
+        )
+        self._model_cache[model_name] = model.id
+        return model.id
 
     @classmethod
     def create_with_new_organization(
@@ -342,6 +375,7 @@ class Client:
             self.space_id = result.space_id
             self.organization = organization
             self.space = space
+        self._model_cache.clear()
         return self.space_url
 
     def _org_url(self, org_id: str) -> str:
@@ -477,6 +511,7 @@ class Client:
             if set_as_active:
                 self.space = existing.name
                 self.space_id = existing.id
+                self._model_cache.clear()
             return existing.id
         except ArizeAPIException:
             pass
@@ -489,6 +524,7 @@ class Client:
         if set_as_active:
             self.space = name
             self.space_id = result.id
+            self._model_cache.clear()
         return result.id
 
     def create_new_organization_and_space(
@@ -532,6 +568,7 @@ class Client:
             self.organization = org_name
             self.space_id = space_result.id
             self.space = space_name
+            self._model_cache.clear()
 
         return self._space_url(org_result.id, space_result.id)
 
@@ -849,8 +886,8 @@ class Client:
             str: The path to the model
 
         """
-        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
-        return self.model_url(model.id)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.model_url(model_id)
 
     def get_model_volume_by_id(
         self,
@@ -909,12 +946,8 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
-        return self.get_model_volume_by_id(model_id=model.id, start_time=start_time, end_time=end_time)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.get_model_volume_by_id(model_id=model_id, start_time=start_time, end_time=end_time)
 
     def get_total_volume(
         self,
@@ -1021,12 +1054,8 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
-        return self.delete_data_by_id(model.id, start_time, end_time, environment)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.delete_data_by_id(model_id, start_time, end_time, environment)
 
     def get_performance_metric_over_time(
         self,
@@ -1056,15 +1085,7 @@ class Client:
             a pandas DataFrame with columns "metricDisplayDate" and "metricValue"
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         if start_time:
             start_time = parse_datetime(start_time)
         else:
@@ -1133,15 +1154,7 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         annotation_data = {
             "name": name,
             "updatedBy": updated_by,
@@ -2308,14 +2321,14 @@ class Client:
             ArizeAPIException: If the model or custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+        model_id = self.resolve_model_id(model_name=model_name)
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
             model_name=model_name,
             metric_name=metric_name,
         )
-        return self.custom_metric_url(model.id, custom_metric.id)
+        return self.custom_metric_url(model_id, custom_metric.id)
 
     def create_custom_metric(
         self,
@@ -2349,15 +2362,7 @@ class Client:
             ArizeAPIException: If metric creation fails or there is an API error
 
         """
-        if not model_id:
-            if not model_name:
-                raise ValueError("Either model_id or model_name must be provided")
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         inputs = {
             "metric": metric,
             "modelId": model_id,
@@ -2408,18 +2413,14 @@ class Client:
             ArizeAPIException: If the custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
+        model_id = self.resolve_model_id(model_name=model_name)
         metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
             model_name=model_name,
             metric_name=metric_name,
         )
-        return self.delete_custom_metric_by_id(metric.id, model.id)
+        return self.delete_custom_metric_by_id(metric.id, model_id)
 
     def update_custom_metric_by_id(
         self,
@@ -2502,11 +2503,7 @@ class Client:
             ArizeAPIException: If the custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
+        model_id = self.resolve_model_id(model_name=model_name)
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
@@ -2515,7 +2512,7 @@ class Client:
         )
         inputs = {
             "customMetricId": custom_metric.id,
-            "modelId": model.id,
+            "modelId": model_id,
             "name": name or custom_metric_name,
             "metric": metric or custom_metric.metric,
             "modelEnvironmentName": environment or "production",
@@ -4105,11 +4102,7 @@ class Client:
         Returns list of column name strings (e.g., ["attributes.input.value", ...])
         ready to plug into list_traces() or get_trace() column_names parameter.
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         if start_time:
             start_time = parse_datetime(start_time)
         else:
@@ -4160,11 +4153,7 @@ class Client:
             ArizeAPIException: If the model or traces are not found
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         if start_time:
             start_time = parse_datetime(start_time)
         else:
@@ -4230,11 +4219,7 @@ class Client:
             ArizeAPIException: If the model or trace is not found
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         if start_time:
             start_time = parse_datetime(start_time)
         else:

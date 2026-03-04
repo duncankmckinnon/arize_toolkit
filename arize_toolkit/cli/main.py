@@ -53,6 +53,18 @@ def persist_client_state(ctx, *args, **kwargs):
         updates["space"] = client.space
     if client.organization and client.organization != profile.get("organization"):
         updates["organization"] = client.organization
+    org_id = getattr(client, "org_id", None)
+    if isinstance(org_id, str) and org_id != profile.get("org_id"):
+        updates["org_id"] = org_id
+    space_id = getattr(client, "space_id", None)
+    if isinstance(space_id, str) and space_id != profile.get("space_id"):
+        updates["space_id"] = space_id
+    # Persist last-used model from cache
+    if client._model_cache:
+        last_name, last_id = next(reversed(client._model_cache.items()))
+        if last_name != profile.get("model_name") or last_id != profile.get("model_id"):
+            updates["model_name"] = last_name
+            updates["model_id"] = last_id
 
     if updates:
         update_profile(profile_name, **updates)

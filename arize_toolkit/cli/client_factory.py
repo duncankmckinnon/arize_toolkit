@@ -28,7 +28,14 @@ def get_client(ctx: click.Context):
             organization=config.get("organization"),
             space=config.get("space"),
             arize_app_url=config.get("app_url", "https://app.arize.com"),
+            org_id=config.get("org_id"),
+            space_id=config.get("space_id"),
         )
+        # Seed model cache from config
+        cached_model_name = config.get("model_name")
+        cached_model_id = config.get("model_id")
+        if cached_model_name and cached_model_id:
+            client._model_cache[cached_model_name] = cached_model_id
     except Exception as e:
         print_error(f"Failed to initialize client: {e}")
 
