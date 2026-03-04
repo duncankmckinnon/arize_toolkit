@@ -10,6 +10,7 @@ The `spaces` command group manages Arize spaces within your organization. Spaces
 | [`spaces get`](#spaces-get) | Get a space by name | `get_space` |
 | [`spaces create`](#spaces-create) | Create a new space | `create_new_space` |
 | [`spaces switch`](#spaces-switch) | Switch the active space | `switch_space` |
+| [`spaces update`](#spaces-update) | Update a space's properties | `update_space` |
 | [`spaces create-key`](#spaces-create-key) | Create a space admin API key | `create_space_admin_api_key` |
 
 ______________________________________________________________________
@@ -104,6 +105,39 @@ Switches the active space for subsequent client operations.
 
 ```bash
 arize_toolkit spaces switch staging
+```
+
+______________________________________________________________________
+
+### `spaces update`
+
+```bash
+arize_toolkit spaces update [OPTIONS]
+```
+
+Updates the properties of a space. By default updates the active space. Only the options you provide will be changed.
+
+**Options**
+
+- `--name` — New name for the space.
+- `--space-id` — ID of the space to update (defaults to active space).
+- `--private / --public` — Set visibility.
+- `--description` — New description.
+- `--gradient-start-color` — Hex color code for gradient start.
+- `--gradient-end-color` — Hex color code for gradient end.
+- `--ml-models-enabled / --ml-models-disabled` — Toggle ML models.
+
+**Example**
+
+```bash
+# Update the current space's description
+arize_toolkit spaces update --description "Production monitoring"
+
+# Rename and make private
+arize_toolkit spaces update --name "Production" --private
+
+# Update a specific space by ID
+arize_toolkit spaces update --space-id abc123 --public
 ```
 
 ______________________________________________________________________

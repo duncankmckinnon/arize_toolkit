@@ -116,6 +116,40 @@ class TestSpaces:
         assert result.exit_code == 0
         mock_client.create_new_space.assert_called_once_with(name="new-space", private=True, set_as_active=True)
 
+    def test_spaces_update(self, runner, mock_client):
+        mock_client.update_space.return_value = {"id": "s1", "name": "updated-space", "description": "new desc"}
+        result = runner.invoke(cli, ["spaces", "update", "--name", "updated-space", "--description", "new desc"])
+        assert result.exit_code == 0
+        mock_client.update_space.assert_called_once_with(
+            name="updated-space",
+            space_id=None,
+            private=None,
+            description="new desc",
+            gradient_start_color=None,
+            gradient_end_color=None,
+            ml_models_enabled=None,
+        )
+
+    def test_spaces_update_private(self, runner, mock_client):
+        mock_client.update_space.return_value = {"id": "s1", "name": "space1", "private": True}
+        result = runner.invoke(cli, ["spaces", "update", "--private"])
+        assert result.exit_code == 0
+        mock_client.update_space.assert_called_once_with(
+            name=None,
+            space_id=None,
+            private=True,
+            description=None,
+            gradient_start_color=None,
+            gradient_end_color=None,
+            ml_models_enabled=None,
+        )
+
+    def test_spaces_update_json(self, runner, mock_client):
+        mock_client.update_space.return_value = {"id": "s1", "name": "updated-space"}
+        result = runner.invoke(cli, ["--json", "spaces", "update", "--name", "updated-space"])
+        assert result.exit_code == 0
+        assert '"id"' in result.output
+
 
 # --- Orgs ---
 

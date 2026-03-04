@@ -2103,6 +2103,63 @@ class TestUtilityMethods:
         assert api_key_info["id"] == "key_permanent_456"
         mock_graphql_client.return_value.execute.assert_called_once()
 
+    def test_update_space(self, client, mock_graphql_client):
+        """Test updating a space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "test_space_id",
+                    "name": "Updated Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": "New description",
+                    "private": False,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.update_space(name="Updated Space", description="New description")
+
+        assert result["id"] == "test_space_id"
+        assert result["name"] == "Updated Space"
+        assert result["description"] == "New description"
+        assert result["private"] is False
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "test_space_id"
+        assert variables["name"] == "Updated Space"
+        assert variables["description"] == "New description"
+
+    def test_update_space_with_explicit_id(self, client, mock_graphql_client):
+        """Test updating a space with an explicit space ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "other_space_id",
+                    "name": "Other Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": None,
+                    "private": True,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.update_space(space_id="other_space_id", private=True)
+
+        assert result["id"] == "other_space_id"
+        assert result["private"] is True
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "other_space_id"
+
     def test_spaces_and_organizations_integration(self, client, mock_graphql_client):
         """Test integration between space and organization methods"""
         mock_graphql_client.return_value.execute.reset_mock()

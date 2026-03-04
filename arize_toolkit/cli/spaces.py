@@ -61,6 +61,30 @@ def spaces_switch(ctx, name, org):
     print_url(url, label="Switched to")
 
 
+@spaces_group.command("update")
+@click.option("--name", default=None, help="New name for the space.")
+@click.option("--space-id", default=None, help="ID of the space to update. Defaults to the active space.")
+@click.option("--private/--public", default=None, help="Whether the space is private.")
+@click.option("--description", default=None, help="Description for the space.")
+@click.option("--gradient-start-color", default=None, help="Hex color code for gradient start.")
+@click.option("--gradient-end-color", default=None, help="Hex color code for gradient end.")
+@click.option("--ml-models-enabled/--ml-models-disabled", default=None, help="Whether ML models are enabled.")
+@click.pass_context
+def spaces_update(ctx, name, space_id, private, description, gradient_start_color, gradient_end_color, ml_models_enabled):
+    """Update a space's properties."""
+    client = get_client(ctx)
+    data = client.update_space(
+        name=name,
+        space_id=space_id,
+        private=private,
+        description=description,
+        gradient_start_color=gradient_start_color,
+        gradient_end_color=gradient_end_color,
+        ml_models_enabled=ml_models_enabled,
+    )
+    print_result(data, json_mode=ctx.obj["json_mode"])
+
+
 @spaces_group.command("create-key")
 @click.argument("name")
 @click.pass_context

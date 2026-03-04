@@ -459,6 +459,44 @@ class RemoveSpaceMemberMutation(BaseQuery):
         )
 
 
+class UpdateSpaceMutation(BaseQuery):
+    graphql_query = (
+        """
+    mutation updateSpace($input: UpdateSpaceMutationInput!) {
+        updateSpace(input: $input) {
+            space { """
+        + Space.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Update a space within an organization"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        name: Optional[str] = None
+        private: Optional[bool] = None
+        description: Optional[str] = None
+        gradientStartColor: Optional[str] = None
+        gradientEndColor: Optional[str] = None
+        mlModelsEnabled: Optional[bool] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to update space"
+
+    class QueryResponse(Space):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "updateSpace" not in result or "space" not in result["updateSpace"]:
+            cls.raise_exception("Failed to update space")
+        space = result["updateSpace"]["space"]
+        return ([cls.QueryResponse(**space)], False, None)
+
+
 class GetUserQuery(BaseQuery):
     graphql_query = (
         """

@@ -20,6 +20,7 @@ These tools and properties on the `Client` object help you manage the client's a
 | Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
 | Create new Organization and Space | [`create_new_organization_and_space`](#create_new_organization_and_space) |
 | Create new Space | [`create_new_space`](#create_new_space) |
+| Update Space | [`update_space`](#update_space) |
 | Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
 | Get User by Name or Email | [`get_user`](#get_user) |
 | Assign Space Membership (by name) | [`assign_space_membership`](#assign_space_membership) |
@@ -485,6 +486,64 @@ print(f"Created public space with ID: {public_space_id}")
 # Safe to call again — returns the existing space instead of creating a duplicate
 same_space_id = client.create_new_space("My Production Space")
 assert same_space_id == new_space_id
+```
+
+______________________________________________________________________
+
+### `update_space`
+
+```python
+space: dict = client.update_space(
+    name: Optional[str] = None,
+    space_id: Optional[str] = None,
+    private: Optional[bool] = None,
+    description: Optional[str] = None,
+    gradient_start_color: Optional[str] = None,
+    gradient_end_color: Optional[str] = None,
+    ml_models_enabled: Optional[bool] = None,
+)
+```
+
+Updates a space's properties. Only the fields you provide will be updated; all others remain unchanged. By default, updates the currently active space.
+
+**Parameters**
+
+- `name` (Optional[str]) – New name for the space.
+- `space_id` (Optional[str]) – ID of the space to update. Defaults to the active space.
+- `private` (Optional[bool]) – Whether the space should be private.
+- `description` (Optional[str]) – New description for the space.
+- `gradient_start_color` (Optional[str]) – Hex color code for gradient start.
+- `gradient_end_color` (Optional[str]) – Hex color code for gradient end.
+- `ml_models_enabled` (Optional[bool]) – Whether ML models are enabled.
+
+**Returns**
+
+A space dictionary containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error updating the space
+
+**Example**
+
+```python
+# Update the current space's description
+space = client.update_space(description="Production ML monitoring space")
+print(f"Updated space: {space['name']}")
+
+# Rename a space and make it private
+space = client.update_space(name="Production", private=True)
+
+# Update a different space by ID
+space = client.update_space(
+    space_id="U3BhY2U6MTIzNDU2", description="Staging environment"
+)
 ```
 
 ______________________________________________________________________
