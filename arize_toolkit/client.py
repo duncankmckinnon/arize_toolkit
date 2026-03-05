@@ -49,6 +49,7 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
+from arize_toolkit.queries.dataset_queries import GetAllDatasetsQuery, GetDatasetByIdQuery, GetDatasetByNameQuery, GetDatasetExamplesQuery
 from arize_toolkit.queries.evaluator_queries import (
     CreateEvaluatorMutation,
     CreateEvaluatorVersionMutation,
@@ -849,6 +850,80 @@ class Client:
             search=search,
         )
         return result.to_dict()
+
+    def get_all_datasets(self) -> List[dict]:
+        """Retrieves all datasets in the current space.
+
+        Returns:
+            List[dict]: A list of dataset dictionaries, each containing id, name, createdAt, updatedAt,
+                datasetType, status, columns, experimentCount.
+        """
+        results = GetAllDatasetsQuery.iterate_over_pages(
+            self._graphql_client,
+            spaceId=self.space_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
+    def get_dataset(self, name: str) -> dict:
+        """Retrieves a dataset by name within the current space.
+
+        Args:
+            name (str): Name of the dataset to retrieve.
+
+        Returns:
+            dict: Dataset data containing id, name, createdAt, updatedAt, datasetType, status, columns, experimentCount.
+
+        Raises:
+            ArizeAPIException: If the dataset is not found.
+        """
+        result = GetDatasetByNameQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, datasetName=name)
+        return result.to_dict()
+
+    def get_dataset_by_id(self, dataset_id: str) -> dict:
+        """Retrieves a dataset by its ID.
+
+        Args:
+            dataset_id (str): ID of the dataset to retrieve.
+
+        Returns:
+            dict: Dataset data containing id, name, createdAt, updatedAt, datasetType, status, columns, experimentCount.
+
+        Raises:
+            ArizeAPIException: If the dataset is not found.
+        """
+        result = GetDatasetByIdQuery.run_graphql_query(self._graphql_client, datasetId=dataset_id)
+        return result.to_dict()
+
+    def get_dataset_examples(self, name: Optional[str] = None, dataset_id: Optional[str] = None) -> List[dict]:
+        """Retrieves all examples from the latest version of a dataset.
+
+        Args:
+            name (str, optional): Name of the dataset. Either name or dataset_id must be provided.
+            dataset_id (str, optional): ID of the dataset. Either name or dataset_id must be provided.
+
+        Returns:
+            List[dict]: A list of example dictionaries, each containing:
+            - id (str): Unique identifier for the example
+            - createdAt (datetime): When the example was created
+            - updatedAt (datetime): When the example was last updated
+            - data (dict): Column name to value mapping
+
+        Raises:
+            ValueError: If neither name nor dataset_id is provided.
+            ArizeAPIException: If the dataset or examples are not found.
+        """
+        if dataset_id is None:
+            if name is None:
+                raise ValueError("Either name or dataset_id must be provided")
+            dataset = GetDatasetByNameQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, datasetName=name)
+            dataset_id = dataset.id
+        results = GetDatasetExamplesQuery.iterate_over_pages(
+            self._graphql_client,
+            datasetId=dataset_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
 
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.

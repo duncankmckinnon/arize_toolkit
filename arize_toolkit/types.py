@@ -707,3 +707,18 @@ class SortDirection(InputValidationEnum):
 
     ASC = "ASC", "asc", "ascending"
     DESC = "DESC", "desc", "descending"
+
+
+class DatasetType(InputValidationEnum):
+    """Type of dataset. Values verified from GraphQL DatasetType enum."""
+
+    generative = "generative", "Generative"
+
+
+class DatasetStatus(InputValidationEnum):
+    """Status of a dataset. Values verified from GraphQL DatasetStatus enum."""
+
+    active = "active", "Active"
+    deleted = "deleted", "Deleted"
+    importing = "importing", "Importing"
+    failed = "failed", "Failed"

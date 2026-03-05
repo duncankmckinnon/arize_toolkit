@@ -6,6 +6,7 @@ from arize_toolkit import __version__
 from arize_toolkit.cli.config_cmd import config_group, get_profile, update_profile
 from arize_toolkit.cli.custom_metrics import custom_metrics_group
 from arize_toolkit.cli.dashboards import dashboards_group
+from arize_toolkit.cli.datasets import datasets_group
 from arize_toolkit.cli.evaluators import evaluators_group
 from arize_toolkit.cli.imports import imports_group
 from arize_toolkit.cli.models import models_group
@@ -92,6 +93,7 @@ cli.add_command(evaluators_group)
 cli.add_command(dashboards_group)
 cli.add_command(imports_group)
 cli.add_command(traces_group)
+cli.add_command(datasets_group)
 
 
 if __name__ == "__main__":

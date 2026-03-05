@@ -36,6 +36,7 @@ nav:
     - Evaluators: cli/evaluators.md
     - Dashboards: cli/dashboards.md
     - Data Imports: cli/imports.md
+    - Datasets: cli/datasets.md
     - Traces: cli/traces.md
 
   - Python SDK:
@@ -46,6 +47,7 @@ nav:
     - Space & Organization Tools: space_and_organization_tools.md
     - Data Import Tools: data_import_tools.md
     - Trace Tools: trace_tools.md
+    - Dataset Tools: dataset_tools.md
     - Dashboard Tools: dashboard_tools.md
     - Utility Tools: utility_tools.md
 

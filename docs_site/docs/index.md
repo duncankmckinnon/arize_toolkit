@@ -24,6 +24,7 @@ To get started with the toolkit, check out the [Quickstart Guide 🚀 ](quicksta
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
 - [Space & Organization Tools](space_and_organization_tools.md) - Documentation for space, organization, & navigation tools
 - [Data Import Tools](data_import_tools.md) - Documentation for importing data from files and databases
+- [Dataset Tools](dataset_tools.md) - Documentation for dataset tools
 - [Dashboard Tools](dashboard_tools.md) - Documentation for dashboard tools
 - [Utility Tools](utility_tools.md) - Documentation for client configuration and utility functions
 
@@ -56,6 +57,7 @@ arize_toolkit --json models list | jq '.[].name'
 | `custom-metrics` | Create and manage custom metrics | [Custom Metrics](cli/custom_metrics.md) |
 | `evaluators` | Manage LLM and code evaluators | [Evaluators](cli/evaluators.md) |
 | `dashboards` | Create and view dashboards | [Dashboards](cli/dashboards.md) |
+| `datasets` | Retrieve datasets and example data | [Datasets](cli/datasets.md) |
 | `imports` | Manage file and table import jobs | [Data Imports](cli/imports.md) |
 
 ## Extensions

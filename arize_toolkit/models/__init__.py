@@ -52,6 +52,7 @@ from arize_toolkit.models.data_import_models import (
     TableImportJobInput,
     TableIngestionParameters,
 )
+from arize_toolkit.models.dataset_models import Dataset, DatasetExample
 from arize_toolkit.models.evaluator_models import (
     CodeEvaluationConfig,
     CreateEvaluatorMutationInput,
