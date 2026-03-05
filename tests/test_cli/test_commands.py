@@ -43,6 +43,7 @@ def patch_get_client(mock_client):
             "arize_toolkit.cli.dashboards",
             "arize_toolkit.cli.imports",
             "arize_toolkit.cli.traces",
+            "arize_toolkit.cli.datasets",
         ]
         patches = [patch(f"{m}.get_client", return_value=mock_client) for m in modules]
         for p in patches:
@@ -78,6 +79,7 @@ class TestHelpOutput:
             "dashboards",
             "imports",
             "traces",
+            "datasets",
             "config",
         ],
     )
@@ -482,6 +484,65 @@ class TestTraces:
         assert "Exported 1 spans" in result.output
         df = pd.read_csv(csv_path)
         assert "spanId" in df.columns
+
+
+# --- Datasets ---
+
+
+class TestDatasets:
+    def test_datasets_list(self, runner, mock_client):
+        mock_client.get_all_datasets.return_value = [
+            {"id": "d1", "name": "dataset-one", "datasetType": "generative", "status": "active", "experimentCount": 3},
+            {"id": "d2", "name": "dataset-two", "datasetType": "generative", "status": "active", "experimentCount": 0},
+        ]
+        result = runner.invoke(cli, ["datasets", "list"])
+        assert result.exit_code == 0
+        mock_client.get_all_datasets.assert_called_once()
+
+    def test_datasets_list_json(self, runner, mock_client):
+        mock_client.get_all_datasets.return_value = [{"id": "d1", "name": "ds1"}]
+        result = runner.invoke(cli, ["--json", "datasets", "list"])
+        assert result.exit_code == 0
+
+    def test_datasets_get(self, runner, mock_client):
+        mock_client.get_dataset.return_value = {
+            "id": "d1",
+            "name": "my-dataset",
+            "createdAt": "2025-01-01T00:00:00Z",
+            "updatedAt": "2025-01-02T00:00:00Z",
+            "datasetType": "generative",
+            "status": "active",
+        }
+        result = runner.invoke(cli, ["datasets", "get", "my-dataset"])
+        assert result.exit_code == 0
+        mock_client.get_dataset.assert_called_once_with("my-dataset")
+
+    def test_datasets_get_json(self, runner, mock_client):
+        mock_client.get_dataset.return_value = {"id": "d1", "name": "my-dataset"}
+        result = runner.invoke(cli, ["--json", "datasets", "get", "my-dataset"])
+        assert result.exit_code == 0
+
+    def test_datasets_examples(self, runner, mock_client):
+        mock_client.get_dataset_examples.return_value = [
+            {"id": "ex1", "data": {"input": "hello", "output": "world"}},
+            {"id": "ex2", "data": {"input": "foo", "output": "bar"}},
+        ]
+        result = runner.invoke(cli, ["datasets", "examples", "my-dataset"])
+        assert result.exit_code == 0
+        mock_client.get_dataset_examples.assert_called_once_with(name="my-dataset", dataset_id=None)
+
+    def test_datasets_examples_by_id(self, runner, mock_client):
+        mock_client.get_dataset_examples.return_value = [
+            {"id": "ex1", "data": {"input": "hello"}},
+        ]
+        result = runner.invoke(cli, ["datasets", "examples", "ignored", "--dataset-id", "d123"])
+        assert result.exit_code == 0
+        mock_client.get_dataset_examples.assert_called_once_with(name=None, dataset_id="d123")
+
+    def test_datasets_examples_json(self, runner, mock_client):
+        mock_client.get_dataset_examples.return_value = [{"id": "ex1", "data": {"input": "hello"}}]
+        result = runner.invoke(cli, ["--json", "datasets", "examples", "my-dataset"])
+        assert result.exit_code == 0
 
 
 # --- Config Persistence (result_callback) ---

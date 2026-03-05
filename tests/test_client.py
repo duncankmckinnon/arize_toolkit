@@ -290,6 +290,195 @@ class TestModel:
             client.get_model("non_existent_model")
         assert "No model found" in str(exc_info.value)
 
+    def test_get_all_datasets(self, client, mock_graphql_client):
+        """Test listing all datasets in a space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "datasets": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "d1",
+                                "name": "Dataset One",
+                                "datasetType": "generative",
+                                "status": "active",
+                            }
+                        },
+                        {
+                            "node": {
+                                "id": "d2",
+                                "name": "Dataset Two",
+                                "datasetType": "generative",
+                                "status": "active",
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_all_datasets()
+
+        assert len(result) == 2
+        assert result[0]["name"] == "Dataset One"
+        assert result[1]["name"] == "Dataset Two"
+
+    def test_get_dataset(self, client, mock_graphql_client):
+        """Test getting a dataset by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "datasets": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "dataset_123",
+                                "name": "My Dataset",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "updatedAt": "2024-01-02T00:00:00Z",
+                                "datasetType": "generative",
+                                "status": "active",
+                                "columns": ["input", "output"],
+                                "experimentCount": 2,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        dataset = client.get_dataset("My Dataset")
+
+        assert dataset["id"] == "dataset_123"
+        assert dataset["name"] == "My Dataset"
+        assert dataset["columns"] == ["input", "output"]
+        assert dataset["experimentCount"] == 2
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_by_id(self, client, mock_graphql_client):
+        """Test getting a dataset by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "id": "dataset_456",
+                "name": "Another Dataset",
+                "createdAt": "2024-02-01T00:00:00Z",
+                "updatedAt": "2024-02-02T00:00:00Z",
+                "datasetType": "generative",
+                "status": "active",
+                "columns": ["question", "answer"],
+                "experimentCount": 0,
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        dataset = client.get_dataset_by_id("dataset_456")
+
+        assert dataset["id"] == "dataset_456"
+        assert dataset["name"] == "Another Dataset"
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_examples(self, client, mock_graphql_client):
+        """Test getting dataset examples by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # First call resolves name to ID, second gets examples
+        name_response = {
+            "node": {
+                "datasets": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "dataset_789",
+                                "name": "Test Dataset",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "updatedAt": "2024-01-01T00:00:00Z",
+                                "datasetType": "generative",
+                                "status": "active",
+                                "columns": ["input", "output"],
+                                "experimentCount": 0,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        examples_response = {
+            "node": {
+                "latestDatasetVersion": {
+                    "examples": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "ex_1",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "updatedAt": "2024-01-01T00:00:00Z",
+                                    "columns": [
+                                        {"dimension": {"name": "input"}, "dimensionValue": {"sv": "Hello"}},
+                                        {"dimension": {"name": "output"}, "dimensionValue": {"sv": "Hi there"}},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [name_response, examples_response]
+
+        examples = client.get_dataset_examples(name="Test Dataset")
+
+        assert len(examples) == 1
+        assert examples[0]["data"] == {"input": "Hello", "output": "Hi there"}
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_get_dataset_examples_by_id(self, client, mock_graphql_client):
+        """Test getting dataset examples by ID directly"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "latestDatasetVersion": {
+                    "examples": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "ex_1",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "updatedAt": "2024-01-01T00:00:00Z",
+                                    "columns": [
+                                        {"dimension": {"name": "question"}, "dimensionValue": {"sv": "Why?"}},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        examples = client.get_dataset_examples(dataset_id="dataset_direct")
+
+        assert len(examples) == 1
+        assert examples[0]["data"] == {"question": "Why?"}
+        # Only one call - no name resolution needed
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_examples_no_args(self, client, mock_graphql_client):
+        """Test that get_dataset_examples raises ValueError with no args"""
+        with pytest.raises(ValueError, match="Either name or dataset_id must be provided"):
+            client.get_dataset_examples()
+
     def test_get_all_models(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
 
