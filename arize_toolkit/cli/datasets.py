@@ -20,21 +20,21 @@ def datasets_list(ctx):
     print_result(data, columns=columns, title="Datasets", json_mode=ctx.obj["json_mode"])
 
 
-@datasets_group.command("get")
+@datasets_group.command("info")
 @click.argument("name")
 @click.pass_context
-def datasets_get(ctx, name):
-    """Get a dataset by name."""
+def datasets_info(ctx, name):
+    """Get dataset metadata by name."""
     client = get_client(ctx)
     data = client.get_dataset(name)
     print_result(data, json_mode=ctx.obj["json_mode"])
 
 
-@datasets_group.command("examples")
+@datasets_group.command("get")
 @click.argument("name")
 @click.option("--dataset-id", default=None, help="Use dataset ID instead of name.")
 @click.pass_context
-def datasets_examples(ctx, name, dataset_id):
+def datasets_get(ctx, name, dataset_id):
     """Get examples from the latest version of a dataset."""
     client = get_client(ctx)
     data = client.get_dataset_examples(name=name if not dataset_id else None, dataset_id=dataset_id)

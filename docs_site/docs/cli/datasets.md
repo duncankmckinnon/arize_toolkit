@@ -7,8 +7,8 @@ The `datasets` command group retrieves dataset metadata and example data from Ar
 | Command | Description | Client Method |
 |---------|-------------|---------------|
 | [`datasets list`](#datasets-list) | List all datasets in the current space | `get_all_datasets` |
-| [`datasets get`](#datasets-get) | Get a dataset by name | `get_dataset` |
-| [`datasets examples`](#datasets-examples) | Get examples from the latest dataset version | `get_dataset_examples` |
+| [`datasets info`](#datasets-info) | Get dataset metadata by name | `get_dataset` |
+| [`datasets get`](#datasets-get) | Get examples from the latest dataset version | `get_dataset_examples` |
 
 ______________________________________________________________________
 
@@ -37,10 +37,10 @@ $ arize_toolkit --json datasets list
 
 ______________________________________________________________________
 
-### `datasets get`
+### `datasets info`
 
 ```bash
-arize_toolkit datasets get NAME
+arize_toolkit datasets info NAME
 ```
 
 Retrieves dataset metadata by name within the current space.
@@ -52,22 +52,22 @@ Retrieves dataset metadata by name within the current space.
 **Example**
 
 ```bash
-$ arize_toolkit datasets get pharmacy-malicious-baseline
+$ arize_toolkit datasets info pharmacy-malicious-baseline
 ┌──────────────────┬──────────────────────────────┬─────────────┬────────┐
 │ id               │ name                         │ datasetType │ status │
 ├──────────────────┼──────────────────────────────┼─────────────┼────────┤
 │ RGF0YXNldDox...  │ pharmacy-malicious-baseline   │ generative  │ active │
 └──────────────────┴──────────────────────────────┴─────────────┴────────┘
 
-$ arize_toolkit --json datasets get pharmacy-malicious-baseline
+$ arize_toolkit --json datasets info pharmacy-malicious-baseline
 ```
 
 ______________________________________________________________________
 
-### `datasets examples`
+### `datasets get`
 
 ```bash
-arize_toolkit datasets examples NAME [OPTIONS]
+arize_toolkit datasets get NAME [OPTIONS]
 ```
 
 Retrieves all example rows from the latest version of a dataset. Each row includes an `id` and a `data` dictionary mapping column names to values.
@@ -83,7 +83,7 @@ Retrieves all example rows from the latest version of a dataset. Each row includ
 **Example**
 
 ```bash
-$ arize_toolkit datasets examples pharmacy-malicious-baseline
+$ arize_toolkit datasets get pharmacy-malicious-baseline
                         Dataset Examples
 ┌──────────────────────────┬──────────────────────────────────────────────┐
 │ id                       │ data                                         │
@@ -93,8 +93,8 @@ $ arize_toolkit datasets examples pharmacy-malicious-baseline
 └──────────────────────────┴──────────────────────────────────────────────┘
 
 # By dataset ID
-$ arize_toolkit datasets examples ignored --dataset-id "RGF0YXNldDox..."
+$ arize_toolkit datasets get ignored --dataset-id "RGF0YXNldDox..."
 
 # JSON output
-$ arize_toolkit --json datasets examples pharmacy-malicious-baseline
+$ arize_toolkit --json datasets get pharmacy-malicious-baseline
 ```

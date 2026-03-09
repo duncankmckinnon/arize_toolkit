@@ -504,7 +504,7 @@ class TestDatasets:
         result = runner.invoke(cli, ["--json", "datasets", "list"])
         assert result.exit_code == 0
 
-    def test_datasets_get(self, runner, mock_client):
+    def test_datasets_info(self, runner, mock_client):
         mock_client.get_dataset.return_value = {
             "id": "d1",
             "name": "my-dataset",
@@ -513,35 +513,35 @@ class TestDatasets:
             "datasetType": "generative",
             "status": "active",
         }
-        result = runner.invoke(cli, ["datasets", "get", "my-dataset"])
+        result = runner.invoke(cli, ["datasets", "info", "my-dataset"])
         assert result.exit_code == 0
         mock_client.get_dataset.assert_called_once_with("my-dataset")
 
-    def test_datasets_get_json(self, runner, mock_client):
+    def test_datasets_info_json(self, runner, mock_client):
         mock_client.get_dataset.return_value = {"id": "d1", "name": "my-dataset"}
-        result = runner.invoke(cli, ["--json", "datasets", "get", "my-dataset"])
+        result = runner.invoke(cli, ["--json", "datasets", "info", "my-dataset"])
         assert result.exit_code == 0
 
-    def test_datasets_examples(self, runner, mock_client):
+    def test_datasets_get(self, runner, mock_client):
         mock_client.get_dataset_examples.return_value = [
             {"id": "ex1", "data": {"input": "hello", "output": "world"}},
             {"id": "ex2", "data": {"input": "foo", "output": "bar"}},
         ]
-        result = runner.invoke(cli, ["datasets", "examples", "my-dataset"])
+        result = runner.invoke(cli, ["datasets", "get", "my-dataset"])
         assert result.exit_code == 0
         mock_client.get_dataset_examples.assert_called_once_with(name="my-dataset", dataset_id=None)
 
-    def test_datasets_examples_by_id(self, runner, mock_client):
+    def test_datasets_get_by_id(self, runner, mock_client):
         mock_client.get_dataset_examples.return_value = [
             {"id": "ex1", "data": {"input": "hello"}},
         ]
-        result = runner.invoke(cli, ["datasets", "examples", "ignored", "--dataset-id", "d123"])
+        result = runner.invoke(cli, ["datasets", "get", "ignored", "--dataset-id", "d123"])
         assert result.exit_code == 0
         mock_client.get_dataset_examples.assert_called_once_with(name=None, dataset_id="d123")
 
-    def test_datasets_examples_json(self, runner, mock_client):
+    def test_datasets_get_json(self, runner, mock_client):
         mock_client.get_dataset_examples.return_value = [{"id": "ex1", "data": {"input": "hello"}}]
-        result = runner.invoke(cli, ["--json", "datasets", "examples", "my-dataset"])
+        result = runner.invoke(cli, ["--json", "datasets", "get", "my-dataset"])
         assert result.exit_code == 0
 
 
