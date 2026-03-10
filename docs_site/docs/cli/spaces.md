@@ -11,6 +11,7 @@ The `spaces` command group manages Arize spaces within your organization. Spaces
 | [`spaces create`](#spaces-create) | Create a new space | `create_new_space` |
 | [`spaces switch`](#spaces-switch) | Switch the active space | `switch_space` |
 | [`spaces update`](#spaces-update) | Update a space's properties | `update_space` |
+| [`spaces users`](#spaces-users) | List users with access to the space | `get_space_users` |
 | [`spaces create-key`](#spaces-create-key) | Create a space admin API key | `create_space_admin_api_key` |
 
 ______________________________________________________________________
@@ -138,6 +139,45 @@ arize_toolkit spaces update --name "Production" --private
 
 # Update a specific space by ID
 arize_toolkit spaces update --space-id abc123 --public
+```
+
+______________________________________________________________________
+
+### `spaces users`
+
+```bash
+arize_toolkit spaces users [--search TEXT] [--user-type human|bot]
+```
+
+Lists all users with access to the current space, including explicit members, account admins, and organization admins.
+
+**Options**
+
+- `--search` — Filter users by name or email.
+- `--user-type` — Filter by user type: `human` or `bot`.
+
+**Example**
+
+```bash
+# List all space users
+$ arize_toolkit spaces users
+                     Space Users
+┌──────────┬──────────────┬─────────────────────┬────────┬──────────────────────┐
+│ id       │ name         │ email               │ role   │ membership           │
+├──────────┼──────────────┼─────────────────────┼────────┼──────────────────────┤
+│ user123  │ Jane Doe     │ jane@example.com    │ admin  │ EXPLICIT_MEMBERSHIP  │
+│ user456  │ John Smith   │ john@example.com    │ member │ EXPLICIT_MEMBERSHIP  │
+│ user789  │ Org Admin    │ orgadm@example.com  │        │ ORGANIZATION_ADMIN   │
+└──────────┴──────────────┴─────────────────────┴────────┴──────────────────────┘
+
+# Search for a specific user
+arize_toolkit spaces users --search "jane@example.com"
+
+# List only bot users
+arize_toolkit spaces users --user-type bot
+
+# JSON output
+arize_toolkit --json spaces users
 ```
 
 ______________________________________________________________________

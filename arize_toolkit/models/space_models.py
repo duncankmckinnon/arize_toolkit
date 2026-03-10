@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import Field
 
 from arize_toolkit.models.base_models import BaseNode, User
-from arize_toolkit.types import AccountRole, SpaceMemberRole, UserStatus, UserType
+from arize_toolkit.types import AccountRole, SpaceMemberRole, SpaceMembership, UserStatus, UserType
 from arize_toolkit.utils import GraphQLModel
 
 
@@ -40,6 +40,28 @@ class SpaceMemberInput(GraphQLModel):
         default=None,
         description="Custom role ID. Either role or customRoleId must be provided, but not both.",
     )
+
+
+class CustomRole(GraphQLModel):
+    """A custom role with permissions"""
+
+    id: str = Field(description="The unique ID of the custom role")
+    name: str = Field(description="The name of the custom role")
+
+
+class SpaceUser(GraphQLModel):
+    """A user that has access to the space through explicit or inherited membership"""
+
+    role: Optional[SpaceMemberRole] = Field(
+        default=None,
+        description="The legacy role for the space (admin, member, readOnly, annotator). Null for custom roles or inherited membership.",
+    )
+    membership: SpaceMembership = Field(description="The way in which the user has access to the space")
+    customRole: Optional[CustomRole] = Field(
+        default=None,
+        description="The custom role assigned to this space member. Null for legacy roles and inherited memberships.",
+    )
+    user: User = Field(description="The space member user information")
 
 
 class AccountUser(GraphQLModel):

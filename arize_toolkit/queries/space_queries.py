@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models.space_models import AccountUser, Organization, Space, SpaceMember, SpaceMemberInput
+from arize_toolkit.models.space_models import AccountUser, Organization, Space, SpaceMember, SpaceMemberInput, SpaceUser
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -495,6 +495,56 @@ class UpdateSpaceMutation(BaseQuery):
             cls.raise_exception("Failed to update space")
         space = result["updateSpace"]["space"]
         return ([cls.QueryResponse(**space)], False, None)
+
+
+class GetSpaceUsersQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceUsers($spaceId: ID!, $first: Int, $endCursor: String, $search: String, $userType: UserType) {
+        node(id: $spaceId) {
+            ... on Space {
+                spaceUsers(first: $first, after: $endCursor, search: $search, userType: $userType) {
+                    totalCount
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                    edges {
+                        node { """
+        + SpaceUser.to_graphql_fields()
+        + """
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get all users with access to a space"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        first: int = 50
+        search: Optional[str] = None
+        userType: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space users"
+
+    class QueryResponse(SpaceUser):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or "spaceUsers" not in result["node"] or "edges" not in result["node"]["spaceUsers"]:
+            cls.raise_exception("No space users found")
+        space_users = result["node"]["spaceUsers"]
+        page_info = space_users["pageInfo"]
+        user_nodes = [cls.QueryResponse(**edge["node"]) for edge in space_users["edges"]]
+        has_next_page = page_info["hasNextPage"]
+        end_cursor = page_info["endCursor"]
+        return (user_nodes, has_next_page, end_cursor)
 
 
 class GetUserQuery(BaseQuery):

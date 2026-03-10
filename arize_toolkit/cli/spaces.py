@@ -85,6 +85,35 @@ def spaces_update(ctx, name, space_id, private, description, gradient_start_colo
     print_result(data, json_mode=ctx.obj["json_mode"])
 
 
+@spaces_group.command("users")
+@click.option("--search", default=None, help="Filter users by name or email.")
+@click.option("--user-type", default=None, type=click.Choice(["human", "bot"]), help="Filter by user type.")
+@click.pass_context
+def spaces_users(ctx, search, user_type):
+    """List all users with access to the current space."""
+    client = get_client(ctx)
+    data = client.get_space_users(search=search, user_type=user_type)
+    # Flatten nested user info for table display
+    flat_data = []
+    for item in data:
+        user = item.get("user", {})
+        flat_data.append(
+            {
+                "id": user.get("id"),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": item.get("role"),
+                "membership": item.get("membership"),
+            }
+        )
+    print_result(
+        flat_data,
+        columns=["id", "name", "email", "role", "membership"],
+        title="Space Users",
+        json_mode=ctx.obj["json_mode"],
+    )
+
+
 @spaces_group.command("create-key")
 @click.argument("name")
 @click.pass_context

@@ -10,6 +10,7 @@ from arize_toolkit.queries.space_queries import (
     GetAllSpacesQuery,
     GetSpaceByIdQuery,
     GetSpaceByNameQuery,
+    GetSpaceUsersQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
     UpdateSpaceMutation,
@@ -1042,3 +1043,184 @@ class TestUpdateSpaceMutation:
         assert variables.gradientStartColor == "#FF0000"
         assert variables.gradientEndColor == "#0000FF"
         assert variables.mlModelsEnabled is True
+
+
+class TestGetSpaceUsersQuery:
+    """Test the GetSpaceUsersQuery class."""
+
+    def test_query_structure(self):
+        """Test that the query structure is correct."""
+        query = GetSpaceUsersQuery.graphql_query
+        assert "query getSpaceUsers" in query
+        assert "$spaceId: ID!" in query
+        assert "$search: String" in query
+        assert "$userType: UserType" in query
+        assert "node(id: $spaceId)" in query
+        assert "... on Space" in query
+        assert "spaceUsers" in query
+        assert "totalCount" in query
+        assert "pageInfo" in query
+
+    def test_successful_query_single_page(self, gql_client):
+        """Test successful space users retrieval with single page."""
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 2,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "admin",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+                            }
+                        },
+                        {
+                            "node": {
+                                "role": "member",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_2", "name": "Regular User", "email": "user@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        results = list(GetSpaceUsersQuery.iterate_over_pages(gql_client, spaceId="space_123"))
+
+        assert len(results) == 2
+        assert results[0].user.id == "user_1"
+        assert results[0].role.name == "admin"
+        assert results[0].membership.name == "EXPLICIT_MEMBERSHIP"
+        assert results[1].user.email == "user@example.com"
+        gql_client.execute.assert_called_once()
+
+    def test_successful_query_with_pagination(self, gql_client):
+        """Test successful space users retrieval with pagination."""
+        mock_responses = [
+            {
+                "node": {
+                    "spaceUsers": {
+                        "totalCount": 2,
+                        "pageInfo": {"hasNextPage": True, "endCursor": "cursor_1"},
+                        "edges": [
+                            {
+                                "node": {
+                                    "role": "admin",
+                                    "membership": "EXPLICIT_MEMBERSHIP",
+                                    "customRole": None,
+                                    "user": {"id": "user_1", "name": "User 1", "email": "user1@example.com"},
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "spaceUsers": {
+                        "totalCount": 2,
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "role": "member",
+                                    "membership": "ACCOUNT_ADMIN",
+                                    "customRole": None,
+                                    "user": {"id": "user_2", "name": "User 2", "email": "user2@example.com"},
+                                }
+                            }
+                        ],
+                    }
+                }
+            },
+        ]
+        gql_client.execute.side_effect = mock_responses
+
+        results = list(GetSpaceUsersQuery.iterate_over_pages(gql_client, spaceId="space_123"))
+
+        assert len(results) == 2
+        assert results[0].user.id == "user_1"
+        assert results[1].user.id == "user_2"
+        assert gql_client.execute.call_count == 2
+
+    def test_with_custom_role(self, gql_client):
+        """Test space user with a custom role."""
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 1,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": None,
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": {"id": "role_1", "name": "Data Scientist"},
+                                "user": {"id": "user_1", "name": "Custom Role User", "email": "custom@example.com"},
+                            }
+                        }
+                    ],
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        results = list(GetSpaceUsersQuery.iterate_over_pages(gql_client, spaceId="space_123"))
+
+        assert len(results) == 1
+        assert results[0].role is None
+        assert results[0].customRole.id == "role_1"
+        assert results[0].customRole.name == "Data Scientist"
+
+    def test_no_space_users_found(self, gql_client):
+        """Test error when space users structure is missing."""
+        mock_response = {"node": {}}
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(GetSpaceUsersQuery.QueryException, match="No space users found"):
+            list(GetSpaceUsersQuery.iterate_over_pages(gql_client, spaceId="space_123"))
+
+        gql_client.execute.assert_called_once()
+
+    def test_empty_users_list(self, gql_client):
+        """Test query returns empty list when no users in space."""
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 0,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [],
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        results = list(GetSpaceUsersQuery.iterate_over_pages(gql_client, spaceId="space_123"))
+
+        assert len(results) == 0
+        gql_client.execute.assert_called_once()
+
+    def test_variables_validation(self):
+        """Test input validation for required variables."""
+        # Test missing spaceId
+        with pytest.raises(Exception) as exc_info:
+            GetSpaceUsersQuery.Variables()
+        assert "spaceId" in str(exc_info.value)
+
+        # Test valid variables with defaults
+        variables = GetSpaceUsersQuery.Variables(spaceId="space_123")
+        assert variables.spaceId == "space_123"
+        assert variables.first == 50
+        assert variables.search is None
+        assert variables.userType is None
+
+        # Test valid variables with all options
+        variables = GetSpaceUsersQuery.Variables(spaceId="space_123", search="john", userType="human")
+        assert variables.search == "john"
+        assert variables.userType == "human"

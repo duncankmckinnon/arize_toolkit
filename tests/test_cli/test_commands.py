@@ -152,6 +152,44 @@ class TestSpaces:
         assert result.exit_code == 0
         assert '"id"' in result.output
 
+    def test_spaces_users(self, runner, mock_client):
+        mock_client.get_space_users.return_value = [
+            {
+                "role": "admin",
+                "membership": "EXPLICIT_MEMBERSHIP",
+                "customRole": None,
+                "user": {"id": "u1", "name": "Admin User", "email": "admin@example.com"},
+            },
+        ]
+        result = runner.invoke(cli, ["spaces", "users"])
+        assert result.exit_code == 0
+        mock_client.get_space_users.assert_called_once_with(search=None, user_type=None)
+
+    def test_spaces_users_with_search(self, runner, mock_client):
+        mock_client.get_space_users.return_value = []
+        result = runner.invoke(cli, ["spaces", "users", "--search", "admin"])
+        assert result.exit_code == 0
+        mock_client.get_space_users.assert_called_once_with(search="admin", user_type=None)
+
+    def test_spaces_users_with_user_type(self, runner, mock_client):
+        mock_client.get_space_users.return_value = []
+        result = runner.invoke(cli, ["spaces", "users", "--user-type", "bot"])
+        assert result.exit_code == 0
+        mock_client.get_space_users.assert_called_once_with(search=None, user_type="bot")
+
+    def test_spaces_users_json(self, runner, mock_client):
+        mock_client.get_space_users.return_value = [
+            {
+                "role": "member",
+                "membership": "ACCOUNT_ADMIN",
+                "customRole": None,
+                "user": {"id": "u2", "name": "User", "email": "user@example.com"},
+            },
+        ]
+        result = runner.invoke(cli, ["--json", "spaces", "users"])
+        assert result.exit_code == 0
+        assert '"id"' in result.output
+
 
 # --- Orgs ---
 

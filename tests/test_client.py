@@ -2882,6 +2882,132 @@ class TestUtilityMethods:
         with pytest.raises(ValueError, match="user_name must not be empty"):
             client.remove_space_member(user_name="")
 
+    def test_get_space_users(self, client, mock_graphql_client):
+        """Test getting space users for the current space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 2,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "admin",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+                            }
+                        },
+                        {
+                            "node": {
+                                "role": "member",
+                                "membership": "ACCOUNT_ADMIN",
+                                "customRole": None,
+                                "user": {"id": "user_2", "name": "Regular User", "email": "user@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users()
+
+        assert len(results) == 2
+        assert results[0]["user"]["id"] == "user_1"
+        assert results[0]["role"] == "admin"
+        assert results[0]["membership"] == "EXPLICIT_MEMBERSHIP"
+        assert results[1]["user"]["email"] == "user@example.com"
+
+    def test_get_space_users_with_search(self, client, mock_graphql_client):
+        """Test getting space users with search filter"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 1,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "admin",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users(search="admin")
+
+        assert len(results) == 1
+        assert results[0]["user"]["name"] == "Admin User"
+
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]
+        assert variables["search"] == "admin"
+
+    def test_get_space_users_with_user_type(self, client, mock_graphql_client):
+        """Test getting space users filtered by user type"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 1,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "member",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "bot_1", "name": "CI Bot", "email": "bot@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users(user_type="bot")
+
+        assert len(results) == 1
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]
+        assert variables["userType"] == "bot"
+
+    def test_get_space_users_empty(self, client, mock_graphql_client):
+        """Test getting space users when none exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 0,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users()
+        assert len(results) == 0
+
     def test_get_user_by_email(self, client, mock_graphql_client):
         """Test getting a user by email"""
         mock_graphql_client.return_value.execute.reset_mock()
