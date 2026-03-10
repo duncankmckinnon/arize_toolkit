@@ -22,6 +22,7 @@ These tools and properties on the `Client` object help you manage the client's a
 | Create new Space | [`create_new_space`](#create_new_space) |
 | Update Space | [`update_space`](#update_space) |
 | Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
+| Get Space Users | [`get_space_users`](#get_space_users) |
 | Get User by Name or Email | [`get_user`](#get_user) |
 | Assign Space Membership (by name) | [`assign_space_membership`](#assign_space_membership) |
 | Assign Space Membership (by ID) | [`assign_space_membership_by_id`](#assign_space_membership_by_id) |
@@ -587,6 +588,59 @@ if key_info["expiresAt"]:
     print(f"Expires: {key_info['expiresAt']}")
 else:
     print("Key does not expire")
+```
+
+______________________________________________________________________
+
+### `get_space_users`
+
+```python
+users: List[dict] = client.get_space_users(
+    space_id: Optional[str] = None,
+    search: Optional[str] = None,
+    user_type: Optional[str] = None
+)
+```
+
+Retrieves all users with access to a space, including explicit members, account admins, and organization admins. Supports filtering by search term and user type.
+
+**Parameters**
+
+- `space_id` (Optional[str]) – ID of the space. Defaults to the active space.
+- `search` (Optional[str]) – Search term to filter users by name or email.
+- `user_type` (Optional[str]) – Filter by user type: `'human'` or `'bot'`.
+
+**Returns**
+
+A list of space user dictionaries, each containing:
+
+- `role` (str): The user's legacy role (`admin`, `member`, `readOnly`, `annotator`), or None for custom roles/inherited membership
+- `membership` (str): How the user has access (`ACCOUNT_ADMIN`, `ORGANIZATION_ADMIN`, `EXPLICIT_MEMBERSHIP`, `PUBLIC_MEMBERSHIP`)
+- `customRole` (dict): Custom role info (`id`, `name`) if applicable, or None
+- `user` (dict): User information (`id`, `name`, `email`)
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error retrieving space users
+
+**Example**
+
+```python
+# Get all users in the current space
+users = client.get_space_users()
+for u in users:
+    print(
+        f"{u['user']['name']} ({u['user']['email']}) - role: {u['role']}, membership: {u['membership']}"
+    )
+
+# Search for a specific user by name or email
+results = client.get_space_users(search="john@example.com")
+
+# Filter by user type
+bots = client.get_space_users(user_type="bot")
+
+# Get users for a specific space
+users = client.get_space_users(space_id="U3BhY2U6MTIzNDU2")
 ```
 
 ______________________________________________________________________

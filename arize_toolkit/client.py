@@ -91,6 +91,7 @@ from arize_toolkit.queries.space_queries import (
     GetAllSpacesQuery,
     GetSpaceByIdQuery,
     GetSpaceByNameQuery,
+    GetSpaceUsersQuery,
     GetUserQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
@@ -821,6 +822,39 @@ class Client:
             userId=user_id,
         )
         return result.to_dict()
+
+    def get_space_users(
+        self,
+        space_id: Optional[str] = None,
+        search: Optional[str] = None,
+        user_type: Optional[str] = None,
+    ) -> List[dict]:
+        """Retrieves all users with access to a space.
+
+        Args:
+            space_id (Optional[str]): ID of the space. Defaults to the active space.
+            search (Optional[str]): Search term to filter users by name or email.
+            user_type (Optional[str]): Filter by user type ('human' or 'bot').
+
+        Returns:
+            List[dict]: A list of user dictionaries, each containing:
+                - role (str): The user's role in the space (admin, member, readOnly, annotator)
+                - membership (str): How the user has access (ACCOUNT_ADMIN, ORGANIZATION_ADMIN, EXPLICIT_MEMBERSHIP, PUBLIC_MEMBERSHIP)
+                - customRole (dict): Custom role info if applicable (id, name), or None
+                - user (dict): User information (id, name, email)
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving space users
+        """
+        sid = space_id or self.space_id
+        results = GetSpaceUsersQuery.iterate_over_pages(
+            self._graphql_client,
+            spaceId=sid,
+            search=search,
+            userType=user_type,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
 
     def get_user(self, search: str) -> dict:
         """Retrieves a user by searching for their name or email.
