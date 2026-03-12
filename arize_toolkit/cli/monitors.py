@@ -20,6 +20,7 @@ def _common_monitor_options(f):
     f = click.option("--operator2", type=click.Choice(OPERATOR_CHOICES), default=None, help="Second operator (double mode).")(f)
     f = click.option("--email", multiple=True, help="Email addresses for notifications.")(f)
     f = click.option("--integration-key-id", multiple=True, help="Integration key IDs for notifications.")(f)
+    f = click.option("--integration-name", multiple=True, help="Integration names for notifications (resolved to IDs).")(f)
     return f
 
 
@@ -88,6 +89,7 @@ def monitors_create_performance(
     operator2,
     email,
     integration_key_id,
+    integration_name,
 ):
     """Create a performance monitor."""
     client = get_client(ctx)
@@ -108,6 +110,7 @@ def monitors_create_performance(
         operator2=operator2,
         email_addresses=list(email) if email else None,
         integration_key_ids=list(integration_key_id) if integration_key_id else None,
+        integration_names=list(integration_name) if integration_name else None,
     )
     print_url(url, label="Created monitor")
 
@@ -138,6 +141,7 @@ def monitors_create_drift(
     operator2,
     email,
     integration_key_id,
+    integration_name,
 ):
     """Create a drift monitor."""
     client = get_client(ctx)
@@ -158,6 +162,7 @@ def monitors_create_drift(
         operator2=operator2,
         email_addresses=list(email) if email else None,
         integration_key_ids=list(integration_key_id) if integration_key_id else None,
+        integration_names=list(integration_name) if integration_name else None,
     )
     print_url(url, label="Created monitor")
 
@@ -190,6 +195,7 @@ def monitors_create_data_quality(
     operator2,
     email,
     integration_key_id,
+    integration_name,
 ):
     """Create a data quality monitor."""
     client = get_client(ctx)
@@ -211,6 +217,7 @@ def monitors_create_data_quality(
         operator2=operator2,
         email_addresses=list(email) if email else None,
         integration_key_ids=list(integration_key_id) if integration_key_id else None,
+        integration_names=list(integration_name) if integration_name else None,
     )
     print_url(url, label="Created monitor")
 

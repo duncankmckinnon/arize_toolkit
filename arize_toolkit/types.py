@@ -222,6 +222,28 @@ class PromptVersionInputVariableFormatEnum(InputValidationEnum):
     MUSTACHE = "MUSTACHE", "Mustache", "mustache", "{{}}"
 
 
+class IntegrationProvider(InputValidationEnum):
+    """Alert integration providers for monitor notifications (slack, pagerduty, opsgenie)"""
+
+    slack = "slack", "Slack", "SLACK"
+    pagerduty = "pagerduty", "PagerDuty", "Pagerduty", "PAGERDUTY"
+    opsgenie = "opsgenie", "OpsGenie", "Opsgenie", "OPSGENIE"
+
+
+class IntegrationAlertSeverity(InputValidationEnum):
+    """Alert severity levels for PagerDuty and OpsGenie integrations"""
+
+    opsgenieP1 = "opsgenieP1", "OpsGenie P1", "P1"
+    opsgenieP2 = "opsgenieP2", "OpsGenie P2", "P2"
+    opsgenieP3 = "opsgenieP3", "OpsGenie P3", "P3"
+    opsgenieP4 = "opsgenieP4", "OpsGenie P4", "P4"
+    opsgenieP5 = "opsgenieP5", "OpsGenie P5", "P5"
+    pagerdutycritical = "pagerdutycritical", "PagerDuty Critical", "critical"
+    pagerdutyerror = "pagerdutyerror", "PagerDuty Error", "error"
+    pagerdutywarning = "pagerdutywarning", "PagerDuty Warning", "warning"
+    pagerdutyinfo = "pagerdutyinfo", "PagerDuty Info", "info"
+
+
 class LLMIntegrationProvider(InputValidationEnum):
     """The LLM provider used for execution with the prompt"""
 
