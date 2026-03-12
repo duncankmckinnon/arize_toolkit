@@ -22,6 +22,7 @@ Click any function name to jump to the detailed section.
 | Quick-link to a monitor in the UI | [`get_monitor_url`](#get_monitor_url) |
 | Get monitor metric values over time | [`get_monitor_metric_values`](#get_monitor_metric_values) |
 | Get latest monitor metric value | [`get_latest_monitor_value`](#get_latest_monitor_value) |
+| List alert integrations | [`list_integrations`](#list_integrations) |
 | Create a **performance** monitor | [`create_performance_monitor`](#create_performance_monitor) |
 | Create a **drift** monitor | [`create_drift_monitor`](#create_drift_monitor) |
 | Create a **data-quality** monitor | [`create_data_quality_monitor`](#create_data_quality_monitor) |
@@ -340,6 +341,47 @@ if result["metric_value"] > result["threshold_value"]:
 
 ______________________________________________________________________
 
+### `list_integrations`
+
+```python
+integrations: list[dict] = client.list_integrations(
+    provider_name: str | None = None,  # "slack", "pagerduty", "opsgenie"
+    search: str | None = None,
+)
+```
+
+Lists alert integration keys (Slack, PagerDuty, OpsGenie) configured for your organization. Use this to discover available integrations and their IDs or names for use in monitor notifications.
+
+**Parameters**
+
+- `provider_name` (optional) – Filter by provider (`"slack"`, `"pagerduty"`, `"opsgenie"`).
+- `search` (optional) – Search by integration name.
+
+**Returns**
+
+A list of dictionaries, one per integration. Each contains:
+
+- `id` – The integration key ID (use with `integration_key_ids` in monitor creation)
+- `name` – The integration name (use with `integration_names` in monitor creation)
+- `providerName` – The provider (`"slack"`, `"pagerduty"`, `"opsgenie"`)
+- `channelName` – The channel name (Slack only)
+- `alertSeverity` – The alert severity level (PagerDuty/OpsGenie only)
+- `createdAt` – When the integration was created
+
+**Example**
+
+```python
+# List all integrations
+integrations = client.list_integrations()
+for i in integrations:
+    print(f"{i['name']} ({i['providerName']})")
+
+# List only Slack integrations
+slack = client.list_integrations(provider_name="slack")
+```
+
+______________________________________________________________________
+
 ## Creating Monitors
 
 The three helpers below share a very large surface-area of parameters – most of which are optional.\
@@ -376,6 +418,8 @@ monitor_url: str = client.create_performance_monitor(
   std_dev_multiplier2: float | None = None,
   # ––– Notifications –––
   email_addresses: list[str] | None = None,
+  integration_key_ids: list[str] | None = None,
+  integration_names: list[str] | None = None,
   filters: list[dict] | None = None,
 )
 ```
@@ -418,7 +462,9 @@ Creates a new performance monitor. Returns a URL path to the newly created monit
 - `threshold2` – Secondary threshold value used when `threshold_mode` is `"double"`.
 - `operator2` – Comparison operator for the secondary threshold.
 - `std_dev_multiplier2` – Standard-deviation multiplier for the secondary adaptive threshold.
-- `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `email_addresses` – List of email addresses that should receive alert notifications.
+- `integration_key_ids` – List of integration key IDs (from `list_integrations`) to notify when triggered.
+- `integration_names` – List of integration names to notify. These are resolved to IDs automatically using `list_integrations`. Use as a convenient alternative to `integration_key_ids`.
 - `filters` – List of filters to apply to the monitor.
 
 **Returns**
@@ -428,12 +474,24 @@ A URL path to the newly created monitor.
 **Example**
 
 ```python
+# With email notifications
 monitor_url = client.create_performance_monitor(
     name="Accuracy < 80%",
     model_name="fraud-detection-v3",
     model_environment_name="production",
     performance_metric="accuracy",
     threshold=0.8,
+    email_addresses=["alerts@my-org.com"],
+)
+
+# With integration notifications (by name)
+monitor_url = client.create_performance_monitor(
+    name="Accuracy < 80%",
+    model_name="fraud-detection-v3",
+    model_environment_name="production",
+    performance_metric="accuracy",
+    threshold=0.8,
+    integration_names=["#ml-alerts"],  # Slack channel name
 )
 print("Created:", monitor_url)
 ```
@@ -464,6 +522,8 @@ monitor_url: str = client.create_drift_monitor(
   evaluation_window_length_seconds: int = 259200,  # 3 days
   delay_seconds: int = 0,
   email_addresses: list[str] | None = None,
+  integration_key_ids: list[str] | None = None,
+  integration_names: list[str] | None = None,
   filters: list[dict] | None = None,
 )
 ```
@@ -501,7 +561,9 @@ Creates a new drift monitor. Returns a URL path to the newly created monitor.
   Default is `259 200` s (3 days).
 - `delay_seconds` – How long to wait before evaluating newly-arrived data (to accommodate ingestion lag).\
   Default is `0`.
-- `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `email_addresses` – List of email addresses that should receive alert notifications.
+- `integration_key_ids` – List of integration key IDs to notify when triggered.
+- `integration_names` – List of integration names to notify (resolved to IDs automatically).
 - `filters` – List of filters to apply to the monitor.
 
 **Returns**
@@ -517,6 +579,7 @@ monitor_url = client.create_drift_monitor(
     drift_metric="psi",
     dimension_category="prediction",
     operator="greaterThan",
+    integration_names=["PagerDuty Alerts"],
 )
 print("Created:", monitor_url)
 ```
@@ -547,6 +610,8 @@ monitor_url: str = client.create_data_quality_monitor(
   evaluation_window_length_seconds: int = 259200,  # 3 days
   delay_seconds: int = 0,
   email_addresses: list[str] | None = None,
+  integration_key_ids: list[str] | None = None,
+  integration_names: list[str] | None = None,
   filters: list[dict] | None = None,
 )
 ```
@@ -582,7 +647,9 @@ Creates a data-quality monitor. Returns a URL path to the newly created monitor.
 - `scheduled_runtime_days_of_week` – List of ISO weekday numbers (`1` = Mon … `7` = Sun) on which the monitor may run.
 - `evaluation_window_length_seconds` – Size of the rolling aggregation window.
 - `delay_seconds` – How long to wait before evaluating newly-arrived data (to accommodate ingestion lag).
-- `email_addresses` – List of email addresses that should receive alert notifications. Currently only supports direct email alerting, not other integrations.
+- `email_addresses` – List of email addresses that should receive alert notifications.
+- `integration_key_ids` – List of integration key IDs to notify when triggered.
+- `integration_names` – List of integration names to notify (resolved to IDs automatically).
 - `filters` – List of filters to apply to the monitor.
 
 **Returns**
@@ -599,6 +666,7 @@ monitor_url = client.create_data_quality_monitor(
     model_environment_name="production",
     operator="greaterThan",
     dimension_category="prediction",
+    integration_names=["#data-quality-alerts"],
 )
 print("Created:", monitor_url)
 ```

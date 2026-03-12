@@ -5,17 +5,28 @@ from pydantic import Field, model_validator
 
 from arize_toolkit.models.base_models import BaseNode, Dimension, DimensionFilterInput, DimensionValue, User
 from arize_toolkit.models.custom_metrics_models import CustomMetric
-from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DriftMetric, FilterRowType, ModelEnvironment, MonitorCategory, PerformanceMetric
+from arize_toolkit.types import (
+    ComparisonOperator,
+    DataQualityMetric,
+    DimensionCategory,
+    DriftMetric,
+    FilterRowType,
+    IntegrationAlertSeverity,
+    IntegrationProvider,
+    ModelEnvironment,
+    MonitorCategory,
+    PerformanceMetric,
+)
 from arize_toolkit.utils import GraphQLModel
 
 ## Monitor GraphQL Models ##
 
 
 class IntegrationKey(BaseNode):
-    providerName: Literal["slack", "pagerduty", "opsgenie"]
+    providerName: IntegrationProvider
     createdAt: Optional[datetime] = Field(default=None)
     channelName: Optional[str] = Field(default=None)
-    alertSeverity: Optional[str] = Field(default=None)
+    alertSeverity: Optional[IntegrationAlertSeverity] = Field(default=None)
 
 
 class MonitorContact(GraphQLModel):

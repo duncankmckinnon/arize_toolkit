@@ -3,6 +3,7 @@ import logging
 import click
 
 from arize_toolkit import __version__
+from arize_toolkit.cli.alert_integrations import alert_integrations_group
 from arize_toolkit.cli.config_cmd import config_group, get_profile, update_profile
 from arize_toolkit.cli.custom_metrics import custom_metrics_group
 from arize_toolkit.cli.dashboards import dashboards_group
@@ -80,6 +81,7 @@ def persist_client_state(ctx, *args, **kwargs):
         update_profile(profile_name, **updates)
 
 
+cli.add_command(alert_integrations_group)
 cli.add_command(config_group)
 cli.add_command(spaces_group)
 cli.add_command(orgs_group)

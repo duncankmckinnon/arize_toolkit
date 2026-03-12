@@ -81,14 +81,24 @@ class TestMonitorDetailedModels:
             providerName="slack",
             createdAt=created_time,
             channelName="#alerts",
-            alertSeverity="high",
         )
 
         assert key.id == "key123"
         assert key.name == "Slack Integration"
-        assert key.providerName == "slack"
+        assert key.providerName.name == "slack"
         assert key.channelName == "#alerts"
-        assert key.alertSeverity == "high"
+        assert key.alertSeverity is None
+
+        # Test with PagerDuty alert severity
+        pd_key = IntegrationKey(
+            id="key456",
+            name="PagerDuty Integration",
+            providerName="pagerduty",
+            createdAt=created_time,
+            alertSeverity="pagerdutycritical",
+        )
+        assert pd_key.providerName.name == "pagerduty"
+        assert pd_key.alertSeverity.name == "pagerdutycritical"
 
     def test_monitor_contact(self):
         """Test MonitorContact model."""
@@ -112,7 +122,7 @@ class TestMonitorDetailedModels:
         )
 
         assert integration_contact.notificationChannelType == "integration"
-        assert integration_contact.integration.providerName == "pagerduty"
+        assert integration_contact.integration.providerName.name == "pagerduty"
 
     def test_metric_window(self):
         """Test MetricWindow model."""

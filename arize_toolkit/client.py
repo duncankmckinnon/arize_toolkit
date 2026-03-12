@@ -59,6 +59,7 @@ from arize_toolkit.queries.evaluator_queries import (
     GetEvaluatorQuery,
     GetEvaluatorsQuery,
 )
+from arize_toolkit.queries.integration_queries import GetIntegrationKeysQuery
 from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
@@ -1810,6 +1811,66 @@ class Client:
         available = [r.name for r in results]
         raise ValueError(f"No LLM integration found with name '{llm_integration_name}'. " f"Available integrations: {available}")
 
+    def list_integrations(
+        self,
+        provider_name: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> List[dict]:
+        """List alert integration keys (slack, pagerduty, opsgenie) for the organization.
+
+        Args:
+            provider_name (Optional[str]): Filter by provider name (e.g. "slack", "pagerduty", "opsgenie")
+            search (Optional[str]): Search by integration name
+
+        Returns:
+            List[dict]: List of integration keys with id, name, providerName, channelName, alertSeverity, etc.
+
+        Example:
+            ```python
+            # List all integrations
+            integrations = client.list_integrations()
+
+            # List only slack integrations
+            slack_integrations = client.list_integrations(provider_name="slack")
+            ```
+        """
+        results = GetIntegrationKeysQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            organization_id=self.org_id,
+            providerName=provider_name,
+            search=search,
+        )
+        return [r.to_dict() for r in results]
+
+    def _resolve_integration_key_ids(
+        self,
+        integration_names: Union[str, List[str]],
+    ) -> List[str]:
+        """Resolve alert integration names to their IDs.
+
+        Args:
+            integration_names: Name(s) of alert integrations (slack, pagerduty, opsgenie) to look up.
+
+        Returns:
+            List[str]: The IDs of the matching integrations.
+
+        Raises:
+            ValueError: If any name does not match an existing integration.
+        """
+        if isinstance(integration_names, str):
+            integration_names = [integration_names]
+        results = GetIntegrationKeysQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            organization_id=self.org_id,
+        )
+        available = {r.name: r.id for r in results}
+        resolved_ids = []
+        for name in integration_names:
+            if name not in available:
+                raise ValueError(f"No alert integration found with name '{name}'. " f"Available integrations: {list(available.keys())}")
+            resolved_ids.append(available[name])
+        return resolved_ids
+
     def get_evaluators(
         self,
         search: Optional[str] = None,
@@ -2864,6 +2925,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = None,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new performance metric monitor for a model.
@@ -2894,6 +2956,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (only used if threshold_mode is "double")
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -2908,6 +2972,14 @@ class Client:
         """
         if performance_metric is None and custom_metric_id is None:
             raise ValueError("Either performance_metric or custom_metric_id must be provided")
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
@@ -2985,6 +3057,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new drift monitor for a model.
@@ -3013,6 +3086,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[List[str]]): Email addresses to notify when the monitor is triggered
             integration_key_ids (Optional[List[str]]): IDs of integration keys to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -3026,6 +3101,14 @@ class Client:
             ArizeAPIException: If monitor creation fails or there is an API error
 
         """
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
@@ -3102,6 +3185,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new data quality monitor for a model.
@@ -3131,6 +3215,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -3144,6 +3230,14 @@ class Client:
             ArizeAPIException: If monitor creation fails or there is an API error
 
         """
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
