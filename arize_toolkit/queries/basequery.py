@@ -44,6 +44,24 @@ class BaseQuery:
 
         pass
 
+    @staticmethod
+    def _find_exact_name_match(edges: list, search_name: str, name_field: str = "name") -> Optional[dict]:
+        """Find a node with an exact name match from a list of search result edges.
+
+        Args:
+            edges: List of GraphQL edge dicts, each containing a "node" dict.
+            search_name: The exact name to match against.
+            name_field: The field name in the node to compare (default: "name").
+
+        Returns:
+            The matching node dict, or None if no exact match is found.
+        """
+        for edge in edges:
+            node = edge.get("node", {})
+            if node and node.get(name_field) == search_name:
+                return node
+        return None
+
     @classmethod
     def _graphql_query(cls, client: GraphQLClient, **kwargs) -> Tuple[List[QueryResponse], bool, Optional[str]]:
         try:
@@ -57,6 +75,7 @@ class BaseQuery:
             logger.debug(f"GraphQL response: {cls.__name__} -> {result}")
             if "errors" in result:
                 cls.raise_exception(str(result["errors"]))
+            result["__query_variables__"] = kwargs
             return cls._parse_graphql_result(result)
         except ArizeAPIException as qe:
             raise qe
@@ -76,6 +95,7 @@ class BaseQuery:
             logger.debug(f"GraphQL response: {cls.__name__} -> {result}")
             if "errors" in result:
                 cls.raise_exception(str(result["errors"]))
+            result["__query_variables__"] = kwargs
             return cls._parse_graphql_result(result)
         except ArizeAPIException as qe:
             raise qe
