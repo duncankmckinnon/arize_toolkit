@@ -55,7 +55,7 @@ class GetMonitorQuery(BaseQuery):
         query getMonitorQuery($space_id: ID!, $model_name: String, $monitor_name: String){
             node(id:$space_id){
                 ...on Space{
-                    monitors(first: 1, search: $monitor_name, modelName: $model_name){
+                    monitors(first: 10, search: $monitor_name, modelName: $model_name){
                         edges{
                             node{ """
         + Monitor.to_graphql_fields()
@@ -82,12 +82,16 @@ class GetMonitorQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        monitor_name = variables.get("monitor_name", "")
         edges = result["node"]["monitors"]["edges"]
         if len(edges) == 0:
             cls.raise_exception("No monitor found with the given name")
-        node = edges[0]["node"]
+        monitor = cls._find_exact_name_match(edges, monitor_name)
+        if monitor is None:
+            cls.raise_exception(f"No monitor found with the exact name '{monitor_name}'")
         return (
-            [cls.QueryResponse(**node)],
+            [cls.QueryResponse(**monitor)],
             False,
             None,
         )
@@ -260,9 +264,10 @@ class GetModelMetricValueQuery(BaseQuery):
                 models(first: 1, search: $model_name, useExactSearchMatch: true){
                     edges{
                         node{
-                            monitors(first: 1, search: $monitor_name){
+                            monitors(first: 10, search: $monitor_name){
                                 edges{
                                     node{
+                                        name
                                         metricHistory(startTime: $start_date, endTime: $end_date, timeZone: "utc", timeSeriesDataGranularity: $time_series_data_granularity){
                                             ... on TimeSeriesWithThresholdDataType{"""
         + TimeSeriesWithThresholdDataType.to_graphql_fields()
@@ -298,6 +303,8 @@ class GetModelMetricValueQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        monitor_name = variables.get("monitor_name", "")
         # Navigate through the nested structure
         models_edges = result.get("node", {}).get("models", {}).get("edges", [])
         if not models_edges:
@@ -308,8 +315,13 @@ class GetModelMetricValueQuery(BaseQuery):
         if not monitors_edges:
             cls.raise_exception("No monitor found with the given name")
 
-        monitor_node = monitors_edges[0].get("node", {})
-        metric_history = monitor_node.get("metricHistory")
+        monitor = cls._find_exact_name_match(monitors_edges, monitor_name)
+        if monitor is None:
+            has_names = any(edge.get("node", {}).get("name") is not None for edge in monitors_edges)
+            if has_names:
+                cls.raise_exception(f"No monitor found with the exact name '{monitor_name}'")
+            monitor = monitors_edges[0].get("node", {})
+        metric_history = monitor.get("metricHistory")
         if not metric_history:
             cls.raise_exception("No metric history data available for the specified time range")
 
