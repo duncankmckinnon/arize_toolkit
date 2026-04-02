@@ -20,7 +20,7 @@ class TestGetMonitorQuery:
     def test_get_monitor_query_fetches_multiple_candidates(self):
         """Test that the GraphQL query requests multiple candidates (first: 10) for exact matching."""
         assert "first: 10" in GetMonitorQuery.graphql_query
-        assert "first: 1" not in GetMonitorQuery.graphql_query
+        assert "first: 1," not in GetMonitorQuery.graphql_query
 
     def test_get_monitor_query(self, gql_client):
         """Test getting a monitor"""
@@ -354,7 +354,7 @@ class TestGetModelMetricValueQuery:
         # Model search uses useExactSearchMatch: true, so first: 1 is OK there
         # But monitor search should use first: 10 for client-side exact matching
         assert "monitors(first: 10" in query
-        assert "monitors(first: 1" not in query
+        assert "monitors(first: 1," not in query
 
     def test_query_structure(self):
         """Test that the query structure is correct and includes all necessary fields."""
@@ -385,6 +385,7 @@ class TestGetModelMetricValueQuery:
                                     "edges": [
                                         {
                                             "node": {
+                                                "name": "test_monitor",
                                                 "metricHistory": {
                                                     "key": "accuracy_metric",
                                                     "dataPoints": [
@@ -415,7 +416,7 @@ class TestGetModelMetricValueQuery:
                                                             "y": 0.90,
                                                         },
                                                     ],
-                                                }
+                                                },
                                             }
                                         }
                                     ]
@@ -464,6 +465,7 @@ class TestGetModelMetricValueQuery:
                                     "edges": [
                                         {
                                             "node": {
+                                                "name": "volume_monitor",
                                                 "metricHistory": {
                                                     "key": "volume_metric",
                                                     "dataPoints": [
@@ -477,7 +479,7 @@ class TestGetModelMetricValueQuery:
                                                         },
                                                     ],
                                                     "thresholdDataPoints": None,
-                                                }
+                                                },
                                             }
                                         }
                                     ]

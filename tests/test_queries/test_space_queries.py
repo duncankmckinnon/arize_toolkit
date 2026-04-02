@@ -39,7 +39,8 @@ class TestOrgIDandSpaceIDQuery:
                         {
                             "node": {
                                 "id": "org_123",
-                                "spaces": {"edges": [{"node": {"id": "space_456"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "space_456", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -69,7 +70,7 @@ class TestOrgIDandSpaceIDQuery:
 
     def test_space_not_found(self, gql_client):
         """Test error when space is not found."""
-        mock_response = {"account": {"organizations": {"edges": [{"node": {"id": "org_123", "spaces": {"edges": []}}}]}}}
+        mock_response = {"account": {"organizations": {"edges": [{"node": {"id": "org_123", "name": "test_org", "spaces": {"edges": []}}}]}}}
         gql_client.execute.return_value = mock_response
 
         with pytest.raises(
@@ -119,6 +120,7 @@ class TestOrgAndFirstSpaceQuery:
                         {
                             "node": {
                                 "id": "org_789",
+                                "name": "test_org",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -146,7 +148,7 @@ class TestOrgAndFirstSpaceQuery:
 
     def test_no_spaces_in_organization(self, gql_client):
         """Test error when organization has no spaces."""
-        mock_response = {"account": {"organizations": {"edges": [{"node": {"id": "org_123", "spaces": {"edges": []}}}]}}}
+        mock_response = {"account": {"organizations": {"edges": [{"node": {"id": "org_123", "name": "empty_org", "spaces": {"edges": []}}}]}}}
         gql_client.execute.return_value = mock_response
 
         with pytest.raises(
@@ -179,7 +181,7 @@ class TestGetSpaceByNameQuery:
         assert "$organization_id: ID!" in query
         assert "$spaceName: String!" in query
         assert "node(id: $organization_id)" in query
-        assert "spaces(search: $spaceName, first: 1)" in query
+        assert "spaces(search: $spaceName, first: 10)" in query
 
     def test_successful_query(self, gql_client):
         """Test successful space retrieval by name."""
@@ -591,6 +593,7 @@ class TestQueryIntegration:
                             {
                                 "node": {
                                     "id": "org_workflow_123",
+                                    "name": "workflow_org",
                                     "spaces": {
                                         "edges": [
                                             {
