@@ -90,7 +90,7 @@ class GetEvaluatorByNameQuery(BaseQuery):
     query getEvaluatorByName($space_id: ID!, $name: String!) {
         node(id: $space_id) {
             ... on Space {
-                evaluators(first: 1, name: $name) {
+                evaluators(first: 10, name: $name) {
                     edges {
                         node {"""
         + Evaluator.to_graphql_fields()
@@ -117,12 +117,17 @@ class GetEvaluatorByNameQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        name = variables.get("name", "")
         if "node" not in result or result["node"] is None:
             cls.raise_exception("Space not found")
         edges = result["node"].get("evaluators", {}).get("edges", [])
         if len(edges) == 0:
             cls.raise_exception("No evaluator found with the given name")
-        return [cls.QueryResponse(**edges[0]["node"])], False, None
+        evaluator = cls._find_exact_name_match(edges, name)
+        if evaluator is None:
+            cls.raise_exception(f"No evaluator found with the exact name '{name}'")
+        return [cls.QueryResponse(**evaluator)], False, None
 
 
 class CreateEvaluatorMutation(BaseQuery):
