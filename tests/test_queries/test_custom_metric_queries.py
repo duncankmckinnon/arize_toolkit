@@ -250,6 +250,110 @@ class TestGetCustomMetricQuery:
                 metric_name="CustomMetric1",
             )
 
+    def test_get_custom_metric_no_exact_match(self, gql_client):
+        """When the server returns a partial match but no exact match, raise an error."""
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "customMetrics": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "id": "cm1",
+                                                "name": "My Metric v10",
+                                                "createdAt": "2021-01-01T00:00:00Z",
+                                                "description": "Similar name",
+                                                "metric": "sum(x)",
+                                                "requiresPositiveClass": False,
+                                            }
+                                        },
+                                    ],
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetCustomMetricQuery.QueryException,
+            match="No custom metric found with the exact name 'My Metric'",
+        ):
+            GetCustomMetricQuery.run_graphql_query(
+                gql_client,
+                space_id="123",
+                model_name="test_model",
+                metric_name="My Metric",
+            )
+
+    def test_get_custom_metric_multiple_results(self, gql_client):
+        """When multiple results are returned, the exact name match is selected."""
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "customMetrics": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "id": "cm1",
+                                                "name": "My Metric v2",
+                                                "createdAt": "2021-01-01T00:00:00Z",
+                                                "description": "Wrong metric",
+                                                "metric": "sum(x)",
+                                                "requiresPositiveClass": False,
+                                            }
+                                        },
+                                        {
+                                            "node": {
+                                                "id": "cm2",
+                                                "name": "My Metric",
+                                                "createdAt": "2021-06-01T00:00:00Z",
+                                                "description": "Correct metric",
+                                                "metric": "avg(x)",
+                                                "requiresPositiveClass": True,
+                                            }
+                                        },
+                                        {
+                                            "node": {
+                                                "id": "cm3",
+                                                "name": "My Metric v10",
+                                                "createdAt": "2021-03-01T00:00:00Z",
+                                                "description": "Another wrong metric",
+                                                "metric": "count(x)",
+                                                "requiresPositiveClass": False,
+                                            }
+                                        },
+                                    ],
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetCustomMetricQuery.run_graphql_query(
+            gql_client,
+            space_id="123",
+            model_name="test_model",
+            metric_name="My Metric",
+        )
+
+        assert result.id == "cm2"
+        assert result.name == "My Metric"
+        assert result.description == "Correct metric"
+        assert result.metric == "avg(x)"
+        assert result.requiresPositiveClass
+
 
 class TestCreateCustomMetricMutation:
     def test_create_custom_metric_mutation_success(self, gql_client):

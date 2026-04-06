@@ -253,6 +253,37 @@ class TestGetEvaluatorByNameQuery:
                 name="Nonexistent",
             )
 
+    def test_get_evaluator_by_name_no_exact_match(self, gql_client, mock_evaluator):
+        """Test that partial name matches are rejected."""
+        mock_response = {
+            "node": {
+                "evaluators": {
+                    "edges": [{"node": mock_evaluator}],  # name is "Hallucination Detector"
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        with pytest.raises(GetEvaluatorByNameQuery.QueryException, match="No evaluator found with the exact name"):
+            GetEvaluatorByNameQuery.run_graphql_query(gql_client, space_id="space123", name="Hallucination")
+
+    def test_get_evaluator_by_name_multiple_results(self, gql_client, mock_evaluator):
+        """Test exact match is found among multiple search results."""
+        other_evaluator = {**mock_evaluator, "id": "eval456", "name": "Hallucination Detector v2"}
+        mock_response = {
+            "node": {
+                "evaluators": {
+                    "edges": [
+                        {"node": other_evaluator},
+                        {"node": mock_evaluator},  # "Hallucination Detector" - the exact match
+                    ],
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        result = GetEvaluatorByNameQuery.run_graphql_query(gql_client, space_id="space123", name="Hallucination Detector")
+        assert result.id == "eval123"
+        assert result.name == "Hallucination Detector"
+
 
 class TestCreateEvaluatorMutation:
     def test_create_template_evaluator_success(self, gql_client, mock_evaluator):

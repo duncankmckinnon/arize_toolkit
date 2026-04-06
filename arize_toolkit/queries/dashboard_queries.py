@@ -91,7 +91,7 @@ class GetDashboardQuery(BaseQuery):
     query getDashboardByName($spaceId: ID!, $dashboardName: String!) {
         node(id: $spaceId) {
             ... on Space {
-                dashboards(search: $dashboardName, first: 1) {
+                dashboards(search: $dashboardName, first: 10) {
                     edges {
                         node {"""
         + DashboardBasis.to_graphql_fields()
@@ -117,11 +117,15 @@ class GetDashboardQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        dashboard_name = variables.get("dashboardName", "")
         if not result["node"]["dashboards"]["edges"]:
             cls.raise_exception("No dashboard found with the given name")
-
-        dashboard_node = result["node"]["dashboards"]["edges"][0]["node"]
-        return [cls.QueryResponse(**dashboard_node)], False, None
+        edges = result["node"]["dashboards"]["edges"]
+        dashboard = cls._find_exact_name_match(edges, dashboard_name)
+        if dashboard is None:
+            cls.raise_exception(f"No dashboard found with the exact name '{dashboard_name}'")
+        return [cls.QueryResponse(**dashboard)], False, None
 
 
 # Get Models used in a dashboard

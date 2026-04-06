@@ -38,7 +38,7 @@ class GetModelQuery(BaseQuery):
     query getModel($space_id: ID!, $model_name: String) {
         node(id: $space_id) {
             ... on Space {
-                models(search: $model_name, first: 1) {
+                models(search: $model_name, first: 10) {
                     edges {
                         node {"""
         + Model.to_graphql_fields()
@@ -64,12 +64,16 @@ class GetModelQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        model_name = variables.get("model_name", "")
         if "node" not in result or "models" not in result["node"] or "edges" not in result["node"]["models"]:
             cls.raise_exception("No model found with the given name")
-        result = result["node"]["models"]["edges"]
-        if len(result) == 0:
+        edges = result["node"]["models"]["edges"]
+        if len(edges) == 0:
             cls.raise_exception("No model found with the given name")
-        model_result = result[0]["node"]
+        model_result = cls._find_exact_name_match(edges, model_name)
+        if model_result is None:
+            cls.raise_exception(f"No model found with the exact name '{model_name}'")
         return (
             [cls.QueryResponse(**model_result)],
             False,
