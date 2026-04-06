@@ -18,7 +18,8 @@ def mock_graphql_client():
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -140,6 +141,7 @@ class TestClientInitialization:
                         {
                             "node": {
                                 "id": "existing_org_123",
+                                "name": "Existing Organization",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -197,6 +199,7 @@ class TestClientInitialization:
                         {
                             "node": {
                                 "id": "org_456",
+                                "name": "My Organization",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -545,7 +548,7 @@ class TestModel:
                         "edges": [
                             {
                                 "node": {
-                                    "name": "model1",
+                                    "name": "test_model",
                                     "id": "id1",
                                     "modelType": "numeric",
                                     "createdAt": "2021-01-01T00:00:00Z",
@@ -746,7 +749,7 @@ class TestCustomMetrics:
                             {
                                 "node": {
                                     "id": "test_model_id",
-                                    "name": "test_model",
+                                    "name": "new_model",
                                     "modelType": "score_categorical",
                                     "createdAt": "2021-01-01T00:00:00Z",
                                     "isDemoModel": False,
@@ -1400,7 +1403,7 @@ class TestLanguageModel:
                         {
                             "node": {
                                 "id": "prompt_id",
-                                "name": "test_prompt",
+                                "name": "prompt_id",
                                 "description": "test_description",
                                 "tags": ["test_tag"],
                                 "commitMessage": "test_commit_message",
@@ -1465,7 +1468,7 @@ class TestLanguageModel:
                                 {
                                     "node": {
                                         "id": "prompt_id",
-                                        "name": "test_prompt",
+                                        "name": "test_prompt_1",
                                         "description": "test_description",
                                         "tags": ["test_tag"],
                                         "commitMessage": "test_commit_message",
@@ -1822,21 +1825,39 @@ class TestUtilityMethods:
         """Test switching spaces"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock response for new space lookup
-        mock_graphql_client.return_value.execute.return_value = {
-            "account": {
-                "organizations": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "new_org_id",
-                                "spaces": {"edges": [{"node": {"id": "new_space_id"}}]},
+        # Mock responses for two space lookups
+        mock_graphql_client.return_value.execute.side_effect = [
+            {
+                "account": {
+                    "organizations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "new_org_id",
+                                    "name": "new_org",
+                                    "spaces": {"edges": [{"node": {"id": "new_space_id", "name": "new_space"}}]},
+                                }
                             }
-                        }
-                    ]
+                        ]
+                    }
                 }
-            }
-        }
+            },
+            {
+                "account": {
+                    "organizations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "new_org_id",
+                                    "name": "new_org",
+                                    "spaces": {"edges": [{"node": {"id": "another_space_id", "name": "another_space"}}]},
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
 
         # Test switching to a new space
         new_url = client.switch_space("new_space", "new_org")
@@ -1862,6 +1883,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "org_only_id",
+                                "name": "test_org_only",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -2408,6 +2430,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "org2",
+                                "name": "Development Org",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -2729,7 +2752,8 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "target_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "target_space_id", "name": "Target Space"}}]},
                             }
                         }
                     ]
@@ -2849,7 +2873,8 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "other_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "other_space_id", "name": "Other Space"}}]},
                             }
                         }
                     ]
@@ -3059,7 +3084,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "user_456",
-                                "name": "John Doe",
+                                "name": "John",
                                 "email": "john.doe@example.com",
                                 "status": "active",
                                 "accountRole": "admin",
@@ -3077,7 +3102,7 @@ class TestUtilityMethods:
         result = client.get_user(search="John")
 
         assert result["id"] == "user_456"
-        assert result["name"] == "John Doe"
+        assert result["name"] == "John"
         assert result["accountRole"] == "admin"
 
     def test_get_user_empty_search_raises(self, client, mock_graphql_client):
@@ -3346,6 +3371,7 @@ class TestPromptsExtended:
                         "edges": [
                             {
                                 "node": {
+                                    "name": "test_prompt",
                                     "versionHistory": {
                                         "pageInfo": {
                                             "hasNextPage": True,
@@ -3370,7 +3396,7 @@ class TestPromptsExtended:
                                                 }
                                             }
                                         ],
-                                    }
+                                    },
                                 }
                             }
                         ]
@@ -3383,6 +3409,7 @@ class TestPromptsExtended:
                         "edges": [
                             {
                                 "node": {
+                                    "name": "test_prompt",
                                     "versionHistory": {
                                         "pageInfo": {
                                             "hasNextPage": False,
@@ -3407,7 +3434,7 @@ class TestPromptsExtended:
                                                 }
                                             }
                                         ],
-                                    }
+                                    },
                                 }
                             }
                         ]
@@ -6079,7 +6106,8 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -6181,7 +6209,8 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]

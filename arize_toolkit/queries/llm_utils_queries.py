@@ -75,7 +75,7 @@ class GetPromptQuery(BaseQuery):
     query getPrompt($space_id: ID!, $prompt_name: String!) {
         node(id: $space_id) {
             ... on Space {
-                prompts(search: $prompt_name, first: 1) {
+                prompts(search: $prompt_name, first: 10) {
                     edges {
                         node {"""
         + Prompt.to_graphql_fields()
@@ -101,9 +101,14 @@ class GetPromptQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        prompt_name = variables.get("prompt_name", "")
         if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
             cls.raise_exception("No prompts found")
-        prompt = result["node"]["prompts"]["edges"][0]["node"]
+        edges = result["node"]["prompts"]["edges"]
+        prompt = cls._find_exact_name_match(edges, prompt_name)
+        if prompt is None:
+            cls.raise_exception(f"No prompt found with the exact name '{prompt_name}'")
         return [cls.QueryResponse(**prompt)], False, None
 
 
@@ -137,9 +142,10 @@ class GetAllPromptVersionsQuery(BaseQuery):
     query getAllPromptVersions($space_id: ID!, $prompt_name: String!, $endCursor: String) {
         node(id: $space_id) {
             ... on Space {
-                prompts(search: $prompt_name, first: 1) {
+                prompts(search: $prompt_name, first: 10) {
                     edges {
                         node {
+                            name
                             versionHistory(first: 10, after: $endCursor) {
                                 pageInfo {
                                     hasNextPage
@@ -173,9 +179,14 @@ class GetAllPromptVersionsQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        prompt_name = variables.get("prompt_name", "")
         if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
             cls.raise_exception("No prompts found")
-        prompt = result["node"]["prompts"]["edges"][0]["node"]
+        edges = result["node"]["prompts"]["edges"]
+        prompt = cls._find_exact_name_match(edges, prompt_name)
+        if prompt is None:
+            cls.raise_exception(f"No prompt found with the exact name '{prompt_name}'")
         version_edges = prompt["versionHistory"]["edges"]
         if len(version_edges) == 0:
             cls.raise_exception("No versions found")
