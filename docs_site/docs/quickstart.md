@@ -92,6 +92,7 @@ client = Client(
     space="your-space-name",
     arize_developer_key="your-api-key-here",
     arize_app_url="https://your-arize-instance.com",
+    verify="/path/to/internal-ca-bundle.pem",  # optional; defaults to True
 )
 ```
 

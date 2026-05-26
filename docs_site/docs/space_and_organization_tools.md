@@ -40,7 +40,10 @@ The `Client` constructor accepts optional `organization` and `space` parameters,
 ```python
 # Explicit organization and space
 client = Client(
-    organization="my_organization", space="my_space", arize_developer_key="your_api_key"
+    organization="my_organization",
+    space="my_space",
+    arize_developer_key="your_api_key",
+    verify=True,
 )
 
 # Auto-select first organization and space
@@ -76,7 +79,8 @@ client: Client = Client.create_with_new_organization(
     space_private: bool = False,
     arize_developer_key: Optional[str] = None,
     arize_app_url: str = "https://app.arize.com",
-    sleep_time: int = 0
+    sleep_time: int = 0,
+    verify: Union[bool, str] = True
 )
 ```
 
@@ -91,6 +95,7 @@ Creates a new organization and space, returning a `Client` instance already conf
 - `arize_developer_key` (Optional[str], optional) – The API key. Falls back to ARIZE_DEVELOPER_KEY environment variable if not provided.
 - `arize_app_url` (str, optional) – The URL of the Arize API. Defaults to "https://app.arize.com".
 - `sleep_time` (int, optional) – Seconds to sleep between API requests. Defaults to 0.
+- `verify` (Union[bool, str], optional) – TLS certificate verification for API requests. Set to a CA bundle path for self-hosted deployments with private certificates. Defaults to True.
 
 **Returns**
 
@@ -131,7 +136,8 @@ client: Client = Client.create_with_new_space(
     space_private: bool = True,
     arize_developer_key: Optional[str] = None,
     arize_app_url: str = "https://app.arize.com",
-    sleep_time: int = 0
+    sleep_time: int = 0,
+    verify: Union[bool, str] = True
 )
 ```
 
@@ -145,6 +151,7 @@ Creates a new space in an existing organization, returning a `Client` instance a
 - `arize_developer_key` (Optional[str], optional) – The API key. Falls back to ARIZE_DEVELOPER_KEY environment variable if not provided.
 - `arize_app_url` (str, optional) – The URL of the Arize API. Defaults to "https://app.arize.com".
 - `sleep_time` (int, optional) – Seconds to sleep between API requests. Defaults to 0.
+- `verify` (Union[bool, str], optional) – TLS certificate verification for API requests. Set to a CA bundle path for self-hosted deployments with private certificates. Defaults to True.
 
 **Returns**
 

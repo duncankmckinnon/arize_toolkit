@@ -96,6 +96,7 @@ class Client:
         - `arize_developer_key` (Optional[str]): The API key. This can be copied from the space settings page in Arize.
         - `arize_app_url` (Optional[str]): The URL of the Arize API (default for SaaS is https://app.arize.com). For on-prem deployments, this will need to be set to the URL of Arize app.
         - `sleep_time` (Optional[int]): The number of seconds to sleep between API requests (may be needed if rate limiting is an issue)
+        - `verify` (Union[bool, str]): TLS certificate verification. Set to a CA bundle path for self-hosted deployments with private certificates. Defaults to True.
     (Note: ARIZE_DEVELOPER_KEY environment variable can be set instead of passing in `arize_developer_key`)
 
     Properties:
@@ -119,17 +120,20 @@ class Client:
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
+        verify: Union[bool, str] = True,
         _skip_org_space_lookup: bool = False,
     ):
         self.organization = organization
         self.space = space
         self.sleep_time = sleep_time
         self.arize_app_url = arize_app_url
+        self.verify = verify
         arize_developer_key = arize_developer_key or os.getenv("ARIZE_DEVELOPER_KEY")
         self._graphql_client = GraphQLClient(
             transport=RequestsHTTPTransport(
                 url=f"{self.arize_app_url}/graphql",
                 headers={"x-api-key": arize_developer_key},
+                verify=verify,
             )
         )
         if not _skip_org_space_lookup:
@@ -166,6 +170,7 @@ class Client:
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
+        verify: Union[bool, str] = True,
     ) -> "Client":
         """Creates a new organization and space, returning a Client initialized to use them.
 
@@ -180,6 +185,7 @@ class Client:
             arize_developer_key (Optional[str]): The API key. Falls back to ARIZE_DEVELOPER_KEY env var.
             arize_app_url (str): The URL of the Arize API. Defaults to "https://app.arize.com".
             sleep_time (int): Seconds to sleep between API requests. Defaults to 0.
+            verify (Union[bool, str]): TLS certificate verification. Set to a CA bundle path for self-hosted deployments with private certificates. Defaults to True.
 
         Returns:
             Client: A new Client instance configured to use the created organization and space
@@ -202,6 +208,7 @@ class Client:
             arize_developer_key=arize_developer_key,
             arize_app_url=arize_app_url,
             sleep_time=sleep_time,
+            verify=verify,
             _skip_org_space_lookup=True,
         )
 
@@ -232,6 +239,7 @@ class Client:
         arize_developer_key: Optional[str] = None,
         arize_app_url: str = "https://app.arize.com",
         sleep_time: int = 0,
+        verify: Union[bool, str] = True,
     ) -> "Client":
         """Creates a new space in an existing organization, returning a Client initialized to use it.
 
@@ -245,6 +253,7 @@ class Client:
             arize_developer_key (Optional[str]): The API key. Falls back to ARIZE_DEVELOPER_KEY env var.
             arize_app_url (str): The URL of the Arize API. Defaults to "https://app.arize.com".
             sleep_time (int): Seconds to sleep between API requests. Defaults to 0.
+            verify (Union[bool, str]): TLS certificate verification. Set to a CA bundle path for self-hosted deployments with private certificates. Defaults to True.
 
         Returns:
             Client: A new Client instance configured to use the existing organization and new space
@@ -266,6 +275,7 @@ class Client:
             arize_developer_key=arize_developer_key,
             arize_app_url=arize_app_url,
             sleep_time=sleep_time,
+            verify=verify,
             _skip_org_space_lookup=True,
         )
 
