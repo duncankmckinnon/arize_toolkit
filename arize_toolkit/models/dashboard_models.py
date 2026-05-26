@@ -45,7 +45,6 @@ class WidgetModel(GraphQLModel):
     """A model on a dashboard widget"""
 
     id: Optional[str] = Field(default=None, description="The ID of the widget model")
-    externalModelId: Optional[str] = Field(default=None, description="The external model ID")
     createdAt: Optional[datetime] = Field(default=None, description="When the model was created")
     modelType: Optional[ModelType] = Field(default=None, description="The type of the model")
 

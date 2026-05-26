@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
       fail-fast: false  # Continue running other matrix jobs even if one fails
 
     steps:
@@ -30,16 +30,16 @@ jobs:
     - name: Create virtual environment and install dependencies
       run: |
         uv venv
-        uv pip install -e ".[dev,prompt_optimizer]"
+        uv pip install -e ".[dev,cli,prompt_optimizer]"
     
     - name: Run tests (Python < 3.12)
-      if: ${{ !contains(fromJSON('["3.12", "3.13"]'), matrix.python-version) }}
+      if: ${{ !contains(fromJSON('["3.12", "3.13", "3.14"]'), matrix.python-version) }}
       run: |
         uv run pytest -v --continue-on-collection-errors
-        
+
     - name: Run tests (Python >= 3.12)
-      if: ${{ contains(fromJSON('["3.12", "3.13"]'), matrix.python-version) }}
+      if: ${{ contains(fromJSON('["3.12", "3.13", "3.14"]'), matrix.python-version) }}
       run: |
         # snapshottest is automatically excluded for Python 3.12+ via pyproject.toml
-        # Run tests with plugin loading disabled for problematic plugins  
+        # Run tests with plugin loading disabled for problematic plugins
         uv run pytest -v --continue-on-collection-errors -p no:snapshottest

@@ -22,19 +22,40 @@ theme:
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
-  
-  - Tools:
+
+  - CLI:
+    - Overview: cli/index.md
+    - Configuration: cli/config.md
+    - Spaces: cli/spaces.md
+    - Organizations: cli/orgs.md
+    - Users: cli/users.md
+    - Models & Projects: cli/models.md
+    - Monitors: cli/monitors.md
+    - Prompts: cli/prompts.md
+    - Custom Metrics: cli/custom_metrics.md
+    - Evaluators: cli/evaluators.md
+    - Dashboards: cli/dashboards.md
+    - Data Imports: cli/imports.md
+    - Datasets: cli/datasets.md
+    - Traces: cli/traces.md
+
+  - Python SDK:
     - Model Tools: model_tools.md
     - Monitor Tools: monitor_tools.md
     - Custom Metrics Tools: custom_metrics_tools.md
     - Language Model Tools: language_model_tools.md
     - Space & Organization Tools: space_and_organization_tools.md
     - Data Import Tools: data_import_tools.md
+    - Trace Tools: trace_tools.md
+    - Dataset Tools: dataset_tools.md
     - Dashboard Tools: dashboard_tools.md
     - Utility Tools: utility_tools.md
 
   - Extensions:
     - Prompt Optimization: extensions/prompt_optimization.md
+
+  - Claude Code Plugins:
+    - Plugin Marketplace: plugins/index.md
 
   - For Developers:
     - Development: developers/development.md

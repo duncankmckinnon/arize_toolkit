@@ -113,7 +113,7 @@ class GetCustomMetricQuery(BaseQuery):
                 models(search:$model_name, useExactSearchMatch:true, first: 1){
                     edges{
                         node{
-                            customMetrics(searchTerm:$metric_name, first: 1){
+                            customMetrics(searchTerm:$metric_name, first: 10){
                                 edges{
                                     node{"""
         + CustomMetric.to_graphql_fields()
@@ -143,13 +143,18 @@ class GetCustomMetricQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        metric_name = variables.get("metric_name", "")
         if not result["node"]["models"]["edges"]:
             cls.raise_exception("No model found with the given name")
         model_result = result["node"]["models"]["edges"][0]["node"]
         if not model_result["customMetrics"]["edges"]:
             cls.raise_exception("No custom metric found with the given name")
-        custom_metric_result = model_result["customMetrics"]["edges"][0]["node"]
-        return [cls.QueryResponse(**custom_metric_result)], False, None
+        edges = model_result["customMetrics"]["edges"]
+        custom_metric = cls._find_exact_name_match(edges, metric_name)
+        if custom_metric is None:
+            cls.raise_exception(f"No custom metric found with the exact name '{metric_name}'")
+        return [cls.QueryResponse(**custom_metric)], False, None
 
 
 class GetCustomMetricByIDQuery(BaseQuery):

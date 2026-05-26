@@ -1,0 +1,18 @@
+{
+  "name": "arize-toolkit",
+  "description": "Manage resources with the CLI, and debug traces",
+  "version": "1.0.0",
+  "author": {
+    "name": "Duncan McKinnon",
+    "email": "dmckinnon@arize.com"
+  },
+  "repository": "https://github.com/duncankmckinnon/arize_toolkit",
+  "license": "MIT",
+  "keywords": [
+    "arize",
+    "observability",
+    "graphql",
+    "traces",
+    "cli"
+  ]
+}

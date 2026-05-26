@@ -1,0 +1,37 @@
+{
+  "name": "arize-toolkit",
+  "owner": {
+    "name": "Duncan McKinnon",
+    "email": "dmckinnon@arize.com"
+  },
+  "metadata": {
+    "description": "Arize AI observability toolkit plugins for Claude Code",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "arize-toolkit",
+      "source": "./plugins/arize-toolkit",
+      "description": "Manage Arize resources with claude from the CLI",
+      "version": "1.0.0",
+      "keywords": [
+        "arize",
+        "observability",
+        "traces",
+        "cli"
+      ]
+    },
+    {
+      "name": "arize-toolkit-dev",
+      "source": "./plugins/arize-toolkit-dev",
+      "description": "Developer workflows for contributing to the Arize Toolkit codebase",
+      "version": "1.0.0",
+      "keywords": [
+        "arize",
+        "development",
+        "graphql",
+        "workflow"
+      ]
+    }
+  ]
+}

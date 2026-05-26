@@ -10,6 +10,14 @@ Install the Arize Toolkit using pip:
 pip install arize_toolkit
 ```
 
+To also install the **command-line interface**:
+
+```bash
+pip install arize_toolkit[cli]
+```
+
+For CLI-specific documentation, see the [CLI Overview](cli/index.md).
+
 ## 🔐 Authentication & Setup
 
 ### Step 1: Get Your API Key

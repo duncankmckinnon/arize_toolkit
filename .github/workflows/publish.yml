@@ -30,7 +30,7 @@ jobs:
       run: |
         echo "🧪 Installing dependencies and running tests..."
         uv venv
-        uv pip install -e ".[dev,prompt_optimizer]"
+        uv pip install -e ".[dev,cli,prompt_optimizer]"
         # Use the same test command as our test workflow to avoid plugin issues
         uv run pytest -v --continue-on-collection-errors -p no:snapshottest
         echo "✅ All tests passed!"

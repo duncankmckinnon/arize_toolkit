@@ -1,8 +1,9 @@
 from datetime import datetime, timezone
 
 from arize_toolkit.models import Model
-from arize_toolkit.models.space_models import Organization, Space
-from arize_toolkit.types import ModelType
+from arize_toolkit.models.base_models import User
+from arize_toolkit.models.space_models import CustomRole, Organization, Space, SpaceUser
+from arize_toolkit.types import ModelType, SpaceMemberRole, SpaceMembership
 
 
 class TestSpaceModels:
@@ -113,6 +114,77 @@ class TestOrganizationModels:
         assert "name" in fields
         assert "createdAt" in fields
         assert "description" in fields
+
+
+class TestSpaceUserModels:
+    def test_space_user_init_with_legacy_role(self):
+        """Test SpaceUser model initialization with a legacy role."""
+        user = User(id="user123", name="John Doe", email="john@example.com")
+        space_user = SpaceUser(
+            role=SpaceMemberRole.admin,
+            membership=SpaceMembership.EXPLICIT_MEMBERSHIP,
+            user=user,
+        )
+
+        assert space_user.role == SpaceMemberRole.admin
+        assert space_user.membership == SpaceMembership.EXPLICIT_MEMBERSHIP
+        assert space_user.customRole is None
+        assert space_user.user.id == "user123"
+        assert space_user.user.email == "john@example.com"
+
+    def test_space_user_init_with_custom_role(self):
+        """Test SpaceUser model initialization with a custom role."""
+        user = User(id="user456", name="Jane Doe", email="jane@example.com")
+        custom_role = CustomRole(id="role123", name="Data Scientist")
+        space_user = SpaceUser(
+            membership=SpaceMembership.EXPLICIT_MEMBERSHIP,
+            customRole=custom_role,
+            user=user,
+        )
+
+        assert space_user.role is None
+        assert space_user.customRole.id == "role123"
+        assert space_user.customRole.name == "Data Scientist"
+
+    def test_space_user_init_inherited_membership(self):
+        """Test SpaceUser model initialization with inherited membership."""
+        user = User(id="user789", name="Admin User", email="admin@example.com")
+        space_user = SpaceUser(
+            membership=SpaceMembership.ACCOUNT_ADMIN,
+            user=user,
+        )
+
+        assert space_user.role is None
+        assert space_user.membership == SpaceMembership.ACCOUNT_ADMIN
+        assert space_user.customRole is None
+
+    def test_space_user_to_dict(self):
+        """Test SpaceUser model serialization to dictionary."""
+        user = User(id="user123", name="John Doe", email="john@example.com")
+        space_user = SpaceUser(
+            role=SpaceMemberRole.member,
+            membership=SpaceMembership.EXPLICIT_MEMBERSHIP,
+            user=user,
+        )
+
+        d = space_user.to_dict()
+        assert d["role"] == "member"
+        assert d["membership"] == "EXPLICIT_MEMBERSHIP"
+        assert d["user"]["id"] == "user123"
+        assert d["user"]["email"] == "john@example.com"
+
+    def test_space_user_graphql_fields(self):
+        """Test SpaceUser model GraphQL fields generation."""
+        fields = SpaceUser.to_graphql_fields()
+
+        assert "role" in fields
+        assert "membership" in fields
+        assert "customRole" in fields
+        assert "user" in fields
+        # Nested fields should be included
+        assert "id" in fields
+        assert "name" in fields
+        assert "email" in fields
 
 
 class TestSpaceAndModel:

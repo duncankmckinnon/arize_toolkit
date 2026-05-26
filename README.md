@@ -8,10 +8,11 @@
 [![Documentation](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/docs.yml)
 [![PyPI Package](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/publish.yml)
 [![Lint and Format](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml/badge.svg)](https://github.com/duncankmckinnon/arize_toolkit/actions/workflows/lint.yml)
-[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org)
+[![Python Version](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue)](https://www.python.org)
 [![uv](https://img.shields.io/badge/uv-latest-blueviolet)](https://github.com/astral-sh/uv)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![coverage](https://img.shields.io/badge/coverage-92%25-green)](https://coverage.readthedocs.io)
+[![coverage](https://img.shields.io/badge/coverage-90%25-green)](https://coverage.readthedocs.io)
+[![CLI](https://img.shields.io/badge/CLI-arize__toolkit-orange)](https://duncankmckinnon.github.io/arize_toolkit/cli/)
 
 </div>
 
@@ -21,17 +22,19 @@
 
 - [**Home**](https://duncankmckinnon.github.io/arize_toolkit) - Main documentation page
 - [**Quickstart Guide**](https://duncankmckinnon.github.io/arize_toolkit/quickstart) - Get started quickly with Arize Toolkit
+- [**CLI Reference**](https://duncankmckinnon.github.io/arize_toolkit/cli/) - Command-line interface documentation
 
 ### Tools Documentation
 
 | Tool Category | Description |
 |--------------|-------------|
-| [**Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage models, retrieve performance metrics and inference volumes |
+| [**Project/Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/model_tools) | Access and manage projects/models, retrieve performance metrics and traces/inference volumes |
 | [**Monitor Tools**](https://duncankmckinnon.github.io/arize_toolkit/monitor_tools) | Create, copy, and manage monitors and alerting |
 | [**Custom Metrics Tools**](https://duncankmckinnon.github.io/arize_toolkit/custom_metrics_tools) | Create and manage custom metrics |
-| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, and LLM features |
-| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and models |
+| [**Language Model Tools**](https://duncankmckinnon.github.io/arize_toolkit/language_model_tools) | Work with prompts, annotations, evaluations, and LLM features |
+| [**Space & Organization Tools**](https://duncankmckinnon.github.io/arize_toolkit/space_and_organization_tools) | Navigate and manage spaces, organizations, and projects |
 | [**Data Import Tools**](https://duncankmckinnon.github.io/arize_toolkit/data_import_tools) | Import data from cloud storage and databases |
+| [**Trace Tools**](https://duncankmckinnon.github.io/arize_toolkit/trace_tools) | Query traces and spans, discover columns, and export trace data |
 | [**Dashboard Tools**](https://duncankmckinnon.github.io/arize_toolkit/dashboard_tools) | Create and manage dashboards |
 | [**Utility Tools**](https://duncankmckinnon.github.io/arize_toolkit/utility_tools) | Client configuration and utility functions |
 
@@ -41,22 +44,47 @@
 |-----------|-------------|
 | [**Prompt Optimization**](https://duncankmckinnon.github.io/arize_toolkit/extensions/prompt_optimization) | Automated prompt improvement based on historical performance |
 
+### Claude Code Plugin Marketplace
+
+This repository is a [Claude Code plugin marketplace](https://duncankmckinnon.github.io/arize_toolkit/plugins/) with AI-assisted tools for the Arize platform.
+
+```shell
+# Add the marketplace
+claude plugin marketplace add duncankmckinnon/arize_toolkit
+
+# Install plugins
+claude plugin install arize-toolkit@arize-toolkit
+claude plugin install arize-toolkit-dev@arize-toolkit
+```
+
+| Plugin | Skills | Description |
+|--------|--------|-------------|
+| **arize-toolkit** | `arize-toolkit-cli`, `arize-traces` | Manage Arize resources via CLI, debug traces |
+| **arize-toolkit-dev** | `arize-graphql-analytics`, `new-query-workflow` | Developer workflows for adding new functionality |
+
+See the [Plugin Marketplace docs](https://duncankmckinnon.github.io/arize_toolkit/plugins/) for full details.
+
+#### Arize Claude Code Tracing
+
+For automatic tracing of Claude Code sessions to Arize AX or Phoenix, install the tracing plugin from the [Arize Claude Code Plugin](https://github.com/Arize-ai/arize-claude-code-plugin) marketplace:
+
+```shell
+# Add the Arize plugin marketplace
+claude plugin marketplace add Arize-ai/arize-claude-code-plugin
+
+# Install the tracing plugin
+claude plugin install claude-code-tracing@arize-claude-plugin
+```
+
+| Plugin | Skills | Description |
+|--------|--------|-------------|
+| **claude-code-tracing** | `setup-claude-code-tracing` | Automatic tracing of Claude Code sessions with OpenInference spans (9 lifecycle hooks) |
+
 ### For Developers
 
 - [**Development Guide**](https://duncankmckinnon.github.io/arize_toolkit/developers/development) - Information about extending the toolkit
 - [**Integration Tests**](https://duncankmckinnon.github.io/arize_toolkit/developers/integration_test) - Running integration tests
-- [**Claude Code Skills**](https://duncankmckinnon.github.io/arize_toolkit/developers/claude_code_skills) - AI-assisted development workflows
-
-#### Claude Code Skills
-
-This repository includes [Claude Code](https://claude.ai/claude-code) skills for AI-assisted development:
-
-| Skill | Description |
-|-------|-------------|
-| `arize-graphql-analytics` | Query and explore the Arize GraphQL API, build and validate queries |
-| `new-query-workflow` | Complete workflow for adding new queries/mutations with models, types, tests, and docs |
-
-Use `/arize-graphql-analytics` or `/new-query-workflow` in Claude Code to invoke these skills.
+- [**Claude Code Plugins**](https://duncankmckinnon.github.io/arize_toolkit/developers/claude_code_skills) - Plugin development and skill authoring
 
 ## Disclaimer
 
@@ -77,6 +105,8 @@ Here's a quick overview of the main features in the current release:
 - Import data from cloud storage (S3, GCS, Azure) and databases (BigQuery, Snowflake, Databricks)
 - Create, update, and delete data import jobs with full lifecycle management
 - **Prompt Optimization Extension** (optional): Automatically optimize prompts using meta-prompt techniques with feedback from evaluators
+- **Trace Inspection**: List traces, retrieve spans with full attributes, discover available columns, and export to DataFrames or CSV
+- **Command-Line Interface** (optional): Manage all Arize resources directly from the terminal with Rich table output and JSON mode
 
 ## Installation
 
@@ -86,6 +116,14 @@ pip install arize_toolkit
 
 ### Optional Dependencies
 
+#### Command-Line Interface
+
+To use the `arize_toolkit` CLI, install with the `cli` extras:
+
+```bash
+pip install arize_toolkit[cli]
+```
+
 #### Prompt Optimization Extension
 
 For automated prompt optimization using meta-prompt techniques, install with the `prompt_optimizer` extras:
@@ -93,6 +131,70 @@ For automated prompt optimization using meta-prompt techniques, install with the
 ```bash
 pip install arize_toolkit[prompt_optimizer]
 ```
+
+## Command-Line Interface
+
+The CLI wraps all `Client` functionality so you can manage models, monitors, prompts, and more directly from the terminal.
+
+### Quick Start
+
+```bash
+# One-time setup — saves credentials to ~/.arize_toolkit/config.toml
+arize_toolkit config init
+
+# List models (Rich table output by default)
+arize_toolkit models list
+
+# Same thing, using the "projects" alias
+arize_toolkit projects list
+
+# JSON output, pipe to jq
+arize_toolkit --json models list | jq '.[].name'
+
+# Get monitor details for a specific model
+arize_toolkit monitors get "accuracy-alert" --model "fraud-detection-v3"
+
+# Create a performance monitor
+arize_toolkit monitors create-performance "accuracy-alert" \
+    --model "fraud-detection-v3" \
+    --environment production \
+    --performance-metric accuracy \
+    --threshold 0.95
+
+# Use a named profile for a different environment
+arize_toolkit --profile staging spaces list
+```
+
+### Global Options
+
+| Flag | Description |
+|------|-------------|
+| `--version` | Show the installed version |
+| `--profile NAME` | Use a named configuration profile |
+| `--json` | Output raw JSON instead of Rich tables |
+| `--api-key KEY` | Override the API key |
+| `--org NAME` | Override the organization |
+| `--space NAME` | Override the space |
+| `--app-url URL` | Override the Arize app URL |
+
+### Command Groups
+
+| Group | Description |
+|-------|-------------|
+| `config` | Manage configuration profiles (`init`, `list`, `show`, `use`) |
+| `spaces` | List, create, and switch spaces or orgs |
+| `orgs` | List and create organizations |
+| `users` | Search users and manage space membership |
+| `models` / `projects` | List models, check volume, pull performance metrics |
+| `monitors` | Create, list, copy, and delete monitors |
+| `prompts` | Manage prompt templates and versions |
+| `custom-metrics` | Create and manage custom metrics |
+| `evaluators` | Manage LLM and code evaluators |
+| `dashboards` | Create and view dashboards |
+| `traces` | List traces, get spans, and discover available columns |
+| `imports` | Manage file and table import jobs |
+
+See the full [CLI documentation](https://duncankmckinnon.github.io/arize_toolkit/cli/) for detailed usage and examples.
 
 ## Client Setup
 

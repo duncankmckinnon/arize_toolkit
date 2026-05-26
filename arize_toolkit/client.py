@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -8,6 +9,7 @@ from gql import Client as GraphQLClient
 from gql.transport.requests import RequestsHTTPTransport
 from pandas import DataFrame
 
+from arize_toolkit.constants import LIST_TRACES_COLUMN_NAMES
 from arize_toolkit.exceptions import ArizeAPIException
 from arize_toolkit.model_managers import MonitorManager
 from arize_toolkit.models import BaseModelSchema, Dashboard, DimensionFilterInput
@@ -47,6 +49,17 @@ from arize_toolkit.queries.data_import_queries import (
     UpdateFileImportJobMutation,
     UpdateTableImportJobMutation,
 )
+from arize_toolkit.queries.dataset_queries import GetAllDatasetsQuery, GetDatasetByIdQuery, GetDatasetByNameQuery, GetDatasetExamplesQuery
+from arize_toolkit.queries.evaluator_queries import (
+    CreateEvaluatorMutation,
+    CreateEvaluatorVersionMutation,
+    DeleteEvaluatorMutation,
+    EditEvaluatorMutation,
+    GetEvaluatorByNameQuery,
+    GetEvaluatorQuery,
+    GetEvaluatorsQuery,
+)
+from arize_toolkit.queries.integration_queries import GetIntegrationKeysQuery
 from arize_toolkit.queries.llm_utils_queries import (
     CreateAnnotationMutation,
     CreatePromptMutation,
@@ -54,6 +67,7 @@ from arize_toolkit.queries.llm_utils_queries import (
     DeletePromptMutation,
     GetAllPromptsQuery,
     GetAllPromptVersionsQuery,
+    GetLlmIntegrationsQuery,
     GetPromptByIDQuery,
     GetPromptQuery,
     UpdatePromptMutation,
@@ -76,11 +90,16 @@ from arize_toolkit.queries.space_queries import (
     CreateSpaceAdminApiKeyMutation,
     GetAllOrganizationsQuery,
     GetAllSpacesQuery,
+    GetSpaceByIdQuery,
+    GetSpaceByNameQuery,
+    GetSpaceUsersQuery,
     GetUserQuery,
     OrgAndFirstSpaceQuery,
     OrgIDandSpaceIDQuery,
     RemoveSpaceMemberMutation,
+    UpdateSpaceMutation,
 )
+from arize_toolkit.queries.trace_queries import GetSpanColumnsQuery, GetTraceDetailQuery, ListTracesQuery
 from arize_toolkit.types import ModelType
 from arize_toolkit.utils import FormattedPrompt, parse_datetime
 
@@ -122,12 +141,15 @@ class Client:
         sleep_time: int = 0,
         verify: Union[bool, str] = True,
         _skip_org_space_lookup: bool = False,
+        org_id: Optional[str] = None,
+        space_id: Optional[str] = None,
     ):
         self.organization = organization
         self.space = space
         self.sleep_time = sleep_time
         self.arize_app_url = arize_app_url
         self.verify = verify
+        self._model_cache: Dict[str, str] = {}
         arize_developer_key = arize_developer_key or os.getenv("ARIZE_DEVELOPER_KEY")
         self._graphql_client = GraphQLClient(
             transport=RequestsHTTPTransport(
@@ -136,7 +158,10 @@ class Client:
                 verify=verify,
             )
         )
-        if not _skip_org_space_lookup:
+        if org_id and space_id:
+            self.org_id = org_id
+            self.space_id = space_id
+        elif not _skip_org_space_lookup:
             self._set_org_and_space_id()
 
     def _set_org_and_space_id(self) -> None:
@@ -159,6 +184,27 @@ class Client:
             self.org_id = results.organization_id
             self.space_id = results.space_id
         logger.info(f"Using organization: {self.organization} and space: {self.space}")
+
+    def resolve_model_id(self, model_name: Optional[str] = None, model_id: Optional[str] = None) -> str:
+        """Resolve a model_id from model_name using cache, or return model_id if already provided.
+
+        Args:
+            model_name: The model name to resolve
+            model_id: The model ID (returned directly if provided)
+
+        Returns:
+            str: The resolved model ID
+
+        Raises:
+            ValueError: If neither model_id nor model_name is provided
+        """
+        if model_id:
+            return model_id
+        if not model_name:
+            raise ValueError("Either model_id or model_name must be provided")
+        if model_name in self._model_cache:
+            return self._model_cache[model_name]
+        return self.get_model(model_name)["id"]
 
     @classmethod
     def create_with_new_organization(
@@ -337,6 +383,7 @@ class Client:
             self.space_id = result.space_id
             self.organization = organization
             self.space = space
+        self._model_cache.clear()
         return self.space_url
 
     def _org_url(self, org_id: str) -> str:
@@ -413,8 +460,48 @@ class Client:
         )
         return [result.to_dict() for result in results]
 
+    def get_space(self, name: str) -> dict:
+        """Retrieves a space by name within the current organization.
+
+        Args:
+            name (str): Name of the space to retrieve.
+
+        Returns:
+            dict: Space data containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If the space is not found
+        """
+        result = GetSpaceByNameQuery.run_graphql_query(self._graphql_client, organization_id=self.org_id, spaceName=name)
+        return result.to_dict()
+
+    def get_space_by_id(self, space_id: str) -> dict:
+        """Retrieves a space by its ID.
+
+        Args:
+            space_id (str): ID of the space to retrieve.
+
+        Returns:
+            dict: Space data containing:
+            - id (str): Unique identifier for the space
+            - name (str): Name of the space
+            - createdAt (datetime): When the space was created
+            - description (str): Description of the space
+            - private (bool): Whether the space is private
+
+        Raises:
+            ArizeAPIException: If the space is not found
+        """
+        result = GetSpaceByIdQuery.run_graphql_query(self._graphql_client, spaceId=space_id)
+        return result.to_dict()
+
     def create_new_space(self, name: str, private: bool = True, set_as_active: bool = True) -> str:
-        """Creates a new space in the current organization.
+        """Creates a new space in the current organization, or returns the existing space if one with the same name already exists.
 
         Args:
             name (str): Name for the new space
@@ -422,11 +509,20 @@ class Client:
             set_as_active (bool, optional): Whether to set the new space as the active space. Defaults to True.
 
         Returns:
-            str: The unique identifier (ID) of the newly created space
+            str: The unique identifier (ID) of the created or existing space
 
         Raises:
             ArizeAPIException: If there is an error creating the space
         """
+        try:
+            existing = GetSpaceByNameQuery.run_graphql_query(self._graphql_client, organization_id=self.org_id, spaceName=name)
+            if set_as_active:
+                self.space = existing.name
+                self.space_id = existing.id
+                self._model_cache.clear()
+            return existing.id
+        except ArizeAPIException:
+            pass
         result = CreateNewSpaceMutation.run_graphql_mutation(
             self._graphql_client,
             accountOrganizationId=self.org_id,
@@ -436,7 +532,47 @@ class Client:
         if set_as_active:
             self.space = name
             self.space_id = result.id
+            self._model_cache.clear()
         return result.id
+
+    def update_space(
+        self,
+        name: Optional[str] = None,
+        space_id: Optional[str] = None,
+        private: Optional[bool] = None,
+        description: Optional[str] = None,
+        gradient_start_color: Optional[str] = None,
+        gradient_end_color: Optional[str] = None,
+        ml_models_enabled: Optional[bool] = None,
+    ) -> dict:
+        """Updates a space's properties.
+
+        Args:
+            name (str, optional): New name for the space.
+            space_id (str, optional): ID of the space to update. Defaults to the active space.
+            private (bool, optional): Whether the space should be private.
+            description (str, optional): New description for the space.
+            gradient_start_color (str, optional): Hex color code for gradient start.
+            gradient_end_color (str, optional): Hex color code for gradient end.
+            ml_models_enabled (bool, optional): Whether ML models are enabled.
+
+        Returns:
+            dict: Updated space data containing id, name, description, private, createdAt.
+
+        Raises:
+            ArizeAPIException: If there is an error updating the space.
+        """
+        result = UpdateSpaceMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=space_id or self.space_id,
+            name=name,
+            private=private,
+            description=description,
+            gradientStartColor=gradient_start_color,
+            gradientEndColor=gradient_end_color,
+            mlModelsEnabled=ml_models_enabled,
+        )
+        return result.to_dict()
 
     def create_new_organization_and_space(
         self,
@@ -479,6 +615,7 @@ class Client:
             self.organization = org_name
             self.space_id = space_result.id
             self.space = space_name
+            self._model_cache.clear()
 
         return self._space_url(org_result.id, space_result.id)
 
@@ -697,6 +834,39 @@ class Client:
         )
         return result.to_dict()
 
+    def get_space_users(
+        self,
+        space_id: Optional[str] = None,
+        search: Optional[str] = None,
+        user_type: Optional[str] = None,
+    ) -> List[dict]:
+        """Retrieves all users with access to a space.
+
+        Args:
+            space_id (Optional[str]): ID of the space. Defaults to the active space.
+            search (Optional[str]): Search term to filter users by name or email.
+            user_type (Optional[str]): Filter by user type ('human' or 'bot').
+
+        Returns:
+            List[dict]: A list of user dictionaries, each containing:
+                - role (str): The user's role in the space (admin, member, readOnly, annotator)
+                - membership (str): How the user has access (ACCOUNT_ADMIN, ORGANIZATION_ADMIN, EXPLICIT_MEMBERSHIP, PUBLIC_MEMBERSHIP)
+                - customRole (dict): Custom role info if applicable (id, name), or None
+                - user (dict): User information (id, name, email)
+
+        Raises:
+            ArizeAPIException: If there is an error retrieving space users
+        """
+        sid = space_id or self.space_id
+        results = GetSpaceUsersQuery.iterate_over_pages(
+            self._graphql_client,
+            spaceId=sid,
+            search=search,
+            userType=user_type,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
     def get_user(self, search: str) -> dict:
         """Retrieves a user by searching for their name or email.
 
@@ -726,6 +896,80 @@ class Client:
         )
         return result.to_dict()
 
+    def get_all_datasets(self) -> List[dict]:
+        """Retrieves all datasets in the current space.
+
+        Returns:
+            List[dict]: A list of dataset dictionaries, each containing id, name, createdAt, updatedAt,
+                datasetType, status, columns, experimentCount.
+        """
+        results = GetAllDatasetsQuery.iterate_over_pages(
+            self._graphql_client,
+            spaceId=self.space_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
+    def get_dataset(self, name: str) -> dict:
+        """Retrieves a dataset by name within the current space.
+
+        Args:
+            name (str): Name of the dataset to retrieve.
+
+        Returns:
+            dict: Dataset data containing id, name, createdAt, updatedAt, datasetType, status, columns, experimentCount.
+
+        Raises:
+            ArizeAPIException: If the dataset is not found.
+        """
+        result = GetDatasetByNameQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, datasetName=name)
+        return result.to_dict()
+
+    def get_dataset_by_id(self, dataset_id: str) -> dict:
+        """Retrieves a dataset by its ID.
+
+        Args:
+            dataset_id (str): ID of the dataset to retrieve.
+
+        Returns:
+            dict: Dataset data containing id, name, createdAt, updatedAt, datasetType, status, columns, experimentCount.
+
+        Raises:
+            ArizeAPIException: If the dataset is not found.
+        """
+        result = GetDatasetByIdQuery.run_graphql_query(self._graphql_client, datasetId=dataset_id)
+        return result.to_dict()
+
+    def get_dataset_examples(self, name: Optional[str] = None, dataset_id: Optional[str] = None) -> List[dict]:
+        """Retrieves all examples from the latest version of a dataset.
+
+        Args:
+            name (str, optional): Name of the dataset. Either name or dataset_id must be provided.
+            dataset_id (str, optional): ID of the dataset. Either name or dataset_id must be provided.
+
+        Returns:
+            List[dict]: A list of example dictionaries, each containing:
+            - id (str): Unique identifier for the example
+            - createdAt (datetime): When the example was created
+            - updatedAt (datetime): When the example was last updated
+            - data (dict): Column name to value mapping
+
+        Raises:
+            ValueError: If neither name nor dataset_id is provided.
+            ArizeAPIException: If the dataset or examples are not found.
+        """
+        if dataset_id is None:
+            if name is None:
+                raise ValueError("Either name or dataset_id must be provided")
+            dataset = GetDatasetByNameQuery.run_graphql_query(self._graphql_client, spaceId=self.space_id, datasetName=name)
+            dataset_id = dataset.id
+        results = GetDatasetExamplesQuery.iterate_over_pages(
+            self._graphql_client,
+            datasetId=dataset_id,
+            sleep_time=self.sleep_time,
+        )
+        return [result.to_dict() for result in results]
+
     def get_all_models(self) -> List[dict]:
         """Retrieves all models in the current space.
 
@@ -742,7 +986,10 @@ class Client:
 
         """
         results = GetAllModelsQuery.iterate_over_pages(self._graphql_client, space_id=self.space_id, sleep_time=self.sleep_time)
-        return [result.to_dict() for result in results]
+        models = [result.to_dict() for result in results]
+        for model in models:
+            self._model_cache[model["name"]] = model["id"]
+        return models
 
     def get_model_by_id(self, model_id: str) -> dict:
         """Retrieves a specific model by ID.
@@ -784,6 +1031,7 @@ class Client:
 
         """
         results = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+        self._model_cache[model_name] = results.id
         return results.to_dict()
 
     def get_model_url(self, model_name: str) -> str:
@@ -796,8 +1044,8 @@ class Client:
             str: The path to the model
 
         """
-        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
-        return self.model_url(model.id)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.model_url(model_id)
 
     def get_model_volume_by_id(
         self,
@@ -856,12 +1104,8 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
-        return self.get_model_volume_by_id(model_id=model.id, start_time=start_time, end_time=end_time)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.get_model_volume_by_id(model_id=model_id, start_time=start_time, end_time=end_time)
 
     def get_total_volume(
         self,
@@ -968,12 +1212,8 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
-        return self.delete_data_by_id(model.id, start_time, end_time, environment)
+        model_id = self.resolve_model_id(model_name=model_name)
+        return self.delete_data_by_id(model_id, start_time, end_time, environment)
 
     def get_performance_metric_over_time(
         self,
@@ -1003,15 +1243,7 @@ class Client:
             a pandas DataFrame with columns "metricDisplayDate" and "metricValue"
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         if start_time:
             start_time = parse_datetime(start_time)
         else:
@@ -1080,15 +1312,7 @@ class Client:
             ArizeAPIException: If the model is not found or there is an API error
 
         """
-        if not model_id and not model_name:
-            raise ValueError("Either model_id or model_name must be provided")
-        if not model_id:
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         annotation_data = {
             "name": name,
             "updatedBy": updated_by,
@@ -1549,6 +1773,613 @@ class Client:
         prompt_id = self.get_prompt(prompt_name)["id"]
         return self.delete_prompt_by_id(prompt_id)
 
+    def get_llm_integrations(self) -> List[dict]:
+        """Get all LLM integrations available to this space.
+
+        Returns:
+            List[dict]: List of LLM integrations with id, name, provider, modelNames, etc.
+
+        Example:
+            ```python
+            integrations = client.get_llm_integrations()
+            ```
+        """
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            space_id=self.space_id,
+        )
+        return [r.to_dict() for r in results]
+
+    def _resolve_llm_integration_id(self, llm_integration_name: Optional[str] = None) -> Optional[str]:
+        """Resolve an LLM integration name to its relay global ID.
+
+        If a name is provided, looks up that specific integration.
+        If no name is provided, returns the first available integration in the space.
+        Returns None if no integrations are available.
+
+        Args:
+            llm_integration_name: The name of the LLM integration to look up.
+                If None, defaults to the first available integration.
+
+        Returns:
+            Optional[str]: The relay global ID of the integration, or None if unavailable.
+
+        Raises:
+            ValueError: If a name is provided but no matching integration is found.
+        """
+        results = GetLlmIntegrationsQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            space_id=self.space_id,
+        )
+        if not results:
+            return None
+        if llm_integration_name is None:
+            return results[0].id
+        for integration in results:
+            if integration.name == llm_integration_name:
+                return integration.id
+        available = [r.name for r in results]
+        raise ValueError(f"No LLM integration found with name '{llm_integration_name}'. " f"Available integrations: {available}")
+
+    def list_integrations(
+        self,
+        provider_name: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> List[dict]:
+        """List alert integration keys (slack, pagerduty, opsgenie) for the organization.
+
+        Args:
+            provider_name (Optional[str]): Filter by provider name (e.g. "slack", "pagerduty", "opsgenie")
+            search (Optional[str]): Search by integration name
+
+        Returns:
+            List[dict]: List of integration keys with id, name, providerName, channelName, alertSeverity, etc.
+
+        Example:
+            ```python
+            # List all integrations
+            integrations = client.list_integrations()
+
+            # List only slack integrations
+            slack_integrations = client.list_integrations(provider_name="slack")
+            ```
+        """
+        results = GetIntegrationKeysQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            organization_id=self.org_id,
+            providerName=provider_name,
+            search=search,
+        )
+        return [r.to_dict() for r in results]
+
+    def _resolve_integration_key_ids(
+        self,
+        integration_names: Union[str, List[str]],
+    ) -> List[str]:
+        """Resolve alert integration names to their IDs.
+
+        Args:
+            integration_names: Name(s) of alert integrations (slack, pagerduty, opsgenie) to look up.
+
+        Returns:
+            List[str]: The IDs of the matching integrations.
+
+        Raises:
+            ValueError: If any name does not match an existing integration.
+        """
+        if isinstance(integration_names, str):
+            integration_names = [integration_names]
+        results = GetIntegrationKeysQuery.run_graphql_query_to_list(
+            self._graphql_client,
+            organization_id=self.org_id,
+        )
+        available = {r.name: r.id for r in results}
+        resolved_ids = []
+        for name in integration_names:
+            if name not in available:
+                raise ValueError(f"No alert integration found with name '{name}'. " f"Available integrations: {list(available.keys())}")
+            resolved_ids.append(available[name])
+        return resolved_ids
+
+    def get_evaluators(
+        self,
+        search: Optional[str] = None,
+        name: Optional[str] = None,
+        task_type: Optional[str] = None,
+    ) -> List[dict]:
+        """Get all evaluators in the space.
+
+        Args:
+            search (Optional[str]): Search string to filter evaluators
+            name (Optional[str]): Exact name to filter by
+            task_type (Optional[str]): Filter by task type ("template_evaluation" or "code_evaluation")
+
+        Returns:
+            List[dict]: List of evaluators with id, name, description, taskType, etc.
+
+        Example:
+            ```python
+            evaluators = client.get_evaluators()
+            template_evals = client.get_evaluators(task_type="template_evaluation")
+            ```
+        """
+        results = GetEvaluatorsQuery.iterate_over_pages(
+            self._graphql_client,
+            space_id=self.space_id,
+            search=search,
+            name=name,
+            taskType=task_type,
+        )
+        return [r.to_dict() for r in results]
+
+    def get_evaluator_by_id(self, id: str) -> dict:
+        """Get an evaluator by id.
+
+        Args:
+            id (str): The id of the evaluator
+
+        Returns:
+            dict: The evaluator with id, name, description, taskType, etc.
+
+        Raises:
+            ArizeAPIException: If the evaluator is not found
+
+        Example:
+            ```python
+            evaluator = client.get_evaluator_by_id("eval_id")
+            ```
+        """
+        result = GetEvaluatorQuery.run_graphql_query(
+            self._graphql_client,
+            eval_id=id,
+        )
+        return result.to_dict()
+
+    def get_evaluator(self, name: str) -> dict:
+        """Get an evaluator by name.
+
+        Args:
+            name (str): The name of the evaluator
+
+        Returns:
+            dict: The evaluator with id, name, description, taskType, etc.
+
+        Raises:
+            ArizeAPIException: If the evaluator is not found
+
+        Example:
+            ```python
+            evaluator = client.get_evaluator("Hallucination Detector")
+            ```
+        """
+        result = GetEvaluatorByNameQuery.run_graphql_query(
+            self._graphql_client,
+            space_id=self.space_id,
+            name=name,
+        )
+        return result.to_dict()
+
+    def create_template_evaluator(
+        self,
+        name: str,
+        template: str,
+        metric_name: str,
+        commit_message: str = "Initial version",
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        classification_choices: Optional[Dict[str, float]] = None,
+        direction: Optional[str] = None,
+        data_granularity_type: str = "span",
+        include_explanations: bool = True,
+        use_function_calling: bool = False,
+        position: int = 0,
+        rails: Optional[List[str]] = None,
+        query_filter: Optional[str] = None,
+        llm_integration_name: Optional[str] = None,
+        llm_model_name: Optional[str] = None,
+        llm_invocation_parameters: Optional[dict] = None,
+        llm_provider_parameters: Optional[dict] = None,
+    ) -> dict:
+        """Create a template (LLM-based) evaluator.
+
+        Args:
+            name (str): The name of the evaluator (displayed in UI)
+            template (str): The prompt template with {{variables}} for the LLM evaluator
+            metric_name (str): The name of the evaluator metric/output
+            commit_message (str): Version control message for this evaluator (default: "Initial version")
+            description (Optional[str]): Description of the evaluator
+            tags (Optional[List[str]]): Tags for the evaluator
+            classification_choices (Optional[Dict[str, float]]): Maps labels to scores for categorical evaluations
+                Example: {"Yes": 0, "No": 1} or {"Poor": 0, "Good": 0.5, "Excellent": 1}
+            direction (Optional[str]): Whether higher or lower scores are better ("maximize" or "minimize"). Only sent when explicitly provided.
+            data_granularity_type (str): The granularity level ("span", "trace", or "session", default: "span")
+            include_explanations (bool): Whether to include explanations in the evaluation (default: True)
+            use_function_calling (bool): Whether to use function calling if available (default: False)
+            position (int): The position/order of the evaluator (default: 0)
+            rails (Optional[List[str]]): Rails associated with the config
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+            llm_integration_name (Optional[str]): The name of the LLM integration to use.
+                Only resolved when explicitly provided (or when llm_model_name is set).
+            llm_model_name (Optional[str]): The LLM model name (e.g. "gpt-4o")
+            llm_invocation_parameters (Optional[dict]): Parameters used when running the LLM (e.g. {"temperature": 0.0})
+            llm_provider_parameters (Optional[dict]): Parameters used to initialize the LLM provider
+
+        Returns:
+            dict: The created evaluator with id, name, description, createdAt, etc.
+
+        Raises:
+            ValueError: If required parameters are missing or invalid
+            ArizeAPIException: If the evaluator creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_template_evaluator(
+                name="Hallucination Detector",
+                template="Does the response contain factual errors?\\n\\nContext: {{context}}\\nResponse: {{output}}",
+                metric_name="hallucination_score",
+                description="Detects hallucinations in LLM responses",
+                classification_choices={"Yes": 0, "No": 1},
+                direction="maximize",
+                llm_integration_name="My OpenAI Integration",
+                llm_model_name="gpt-4o",
+            )
+            ```
+        """
+        if not name:
+            raise ValueError("name is required")
+        if not template:
+            raise ValueError("template is required")
+        if not metric_name:
+            raise ValueError("metric_name is required")
+
+        template_config = {
+            "name": metric_name,
+            "template": template,
+            "position": position,
+            "includeExplanations": include_explanations,
+            "useFunctionCallingIfAvailable": use_function_calling,
+            "dataGranularityType": data_granularity_type,
+            "rails": rails,
+            "queryFilter": query_filter,
+        }
+        if llm_integration_name or llm_model_name:
+            llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
+            if llm_integration_id is not None:
+                template_config["llmConfig"] = {
+                    "integrationId": llm_integration_id,
+                    "modelName": llm_model_name or "",
+                    "invocationParameters": llm_invocation_parameters or {},
+                    "providerParameters": llm_provider_parameters or {},
+                }
+        if direction:
+            template_config["direction"] = direction
+        if classification_choices:
+            template_config["classificationChoices"] = classification_choices
+
+        result = CreateEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=self.space_id,
+            name=name,
+            description=description,
+            tags=tags,
+            commitMessage=commit_message,
+            templateEvaluator=template_config,
+        )
+        return result.to_dict()
+
+    def create_code_evaluator(
+        self,
+        name: str,
+        metric_name: str,
+        code_block: str,
+        evaluation_class: str,
+        span_attributes: List[str],
+        commit_message: str = "Initial version",
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        data_granularity_type: str = "span",
+        position: int = 0,
+        package_imports: Optional[str] = None,
+        evaluation_input_params: Optional[dict] = None,
+        query_filter: Optional[str] = None,
+    ) -> dict:
+        """Create a code (Python-based) evaluator.
+
+        The code_block must define a class extending CodeEvaluator with an evaluate method.
+
+        Args:
+            name (str): The name of the evaluator (displayed in UI)
+            metric_name (str): The name of the evaluator metric/output
+            code_block (str): Python code defining the evaluator class (must extend CodeEvaluator)
+            evaluation_class (str): The name of the evaluator class in the code block
+            span_attributes (List[str]): Which span fields to pass as inputs (e.g., ["output", "input"])
+            commit_message (str): Version control message for this evaluator (default: "Initial version")
+            description (Optional[str]): Description of the evaluator
+            tags (Optional[List[str]]): Tags for the evaluator
+            data_granularity_type (str): The granularity level ("span", "trace", or "session", default: "span")
+            position (int): The position/order of the evaluator (default: 0)
+            package_imports (Optional[str]): Package imports for the evaluation class (must be valid Python imports)
+            evaluation_input_params (Optional[dict]): Evaluation input parameters (JSON object)
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+
+        Returns:
+            dict: The created evaluator with id, name, description, createdAt, etc.
+
+        Raises:
+            ValueError: If required parameters are missing or code block format is invalid
+            ArizeAPIException: If the evaluator creation fails
+
+        Example:
+            ```python
+            code = '''class ResponseLengthEvaluator(CodeEvaluator):
+                def evaluate(self, *, dataset_row=None, **kwargs):
+                    output = dataset_row.get("attributes.output.value") if dataset_row else None
+                    length = len(output) if output else 0
+                    if length < 50:
+                        return EvaluationResult(score=0, label="too_short")
+                    elif length > 500:
+                        return EvaluationResult(score=0, label="too_long")
+                    else:
+                        return EvaluationResult(score=1, label="appropriate")'''
+
+            evaluator = client.create_code_evaluator(
+                name="Response Length Checker",
+                code_block=code,
+                evaluation_class="ResponseLengthEvaluator",
+                metric_name="response_length_score",
+                span_attributes=["output"],
+                description="Checks if response length is appropriate",
+            )
+            ```
+        """
+        if not name:
+            raise ValueError("name is required")
+        if not metric_name:
+            raise ValueError("metric_name is required")
+
+        code_config = {
+            "name": metric_name,
+            "evalClassCodeBlock": code_block,
+            "evaluationClass": evaluation_class,
+            "position": position,
+            "spanAttributes": span_attributes,
+            "dataGranularityType": data_granularity_type,
+            "packageImports": package_imports,
+            "evaluationInputParams": evaluation_input_params,
+            "queryFilter": query_filter,
+        }
+
+        result = CreateEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            spaceId=self.space_id,
+            name=name,
+            description=description,
+            tags=tags,
+            commitMessage=commit_message,
+            codeEvaluator=code_config,
+        )
+        return result.to_dict()
+
+    def create_template_evaluator_version(
+        self,
+        evaluator_id: str,
+        metric_name: str,
+        template: str,
+        commit_message: Optional[str] = None,
+        position: int = 0,
+        include_explanations: bool = True,
+        use_function_calling: bool = False,
+        rails: Optional[List[str]] = None,
+        query_filter: Optional[str] = None,
+        classification_choices: Optional[Dict[str, float]] = None,
+        direction: Optional[str] = None,
+        data_granularity_type: Optional[str] = None,
+        llm_integration_name: Optional[str] = None,
+        llm_model_name: Optional[str] = None,
+        llm_invocation_parameters: Optional[dict] = None,
+        llm_provider_parameters: Optional[dict] = None,
+    ) -> dict:
+        """Create a new version of a template evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to version
+            metric_name (str): The name of the evaluator metric
+            template (str): The prompt template with {{variables}}
+            commit_message (Optional[str]): Version control message
+            position (int): The position/order of the evaluator (default: 0)
+            include_explanations (bool): Whether to include explanations (default: True)
+            use_function_calling (bool): Whether to use function calling if available (default: False)
+            rails (Optional[List[str]]): Rails associated with the config
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+            classification_choices (Optional[Dict[str, float]]): Maps labels to scores
+            direction (Optional[str]): "maximize" or "minimize"
+            data_granularity_type (Optional[str]): "span", "trace", or "session"
+            llm_integration_name (Optional[str]): The name of the LLM integration to use.
+                Only resolved when explicitly provided (or when llm_model_name is set).
+            llm_model_name (Optional[str]): The LLM model name
+            llm_invocation_parameters (Optional[dict]): Parameters for running the LLM
+            llm_provider_parameters (Optional[dict]): Parameters for initializing the LLM provider
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ArizeAPIException: If the version creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_template_evaluator_version(
+                evaluator_id="eval123",
+                metric_name="hallucination_score",
+                template="Updated prompt: {{output}}",
+                commit_message="Improved prompt",
+                llm_integration_name="My OpenAI Integration",
+                llm_model_name="gpt-4o",
+            )
+            ```
+        """
+        template_config = {
+            "name": metric_name,
+            "template": template,
+            "position": position,
+            "includeExplanations": include_explanations,
+            "useFunctionCallingIfAvailable": use_function_calling,
+            "dataGranularityType": data_granularity_type,
+            "rails": rails,
+            "queryFilter": query_filter,
+        }
+        if llm_integration_name or llm_model_name:
+            llm_integration_id = self._resolve_llm_integration_id(llm_integration_name)
+            if llm_integration_id is not None:
+                template_config["llmConfig"] = {
+                    "integrationId": llm_integration_id,
+                    "modelName": llm_model_name or "",
+                    "invocationParameters": llm_invocation_parameters or {},
+                    "providerParameters": llm_provider_parameters or {},
+                }
+        if direction:
+            template_config["direction"] = direction
+        if classification_choices:
+            template_config["classificationChoices"] = classification_choices
+
+        result = CreateEvaluatorVersionMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            commitMessage=commit_message,
+            templateEvaluator=template_config,
+        )
+        return result.to_dict()
+
+    def create_code_evaluator_version(
+        self,
+        evaluator_id: str,
+        metric_name: str,
+        code_block: str,
+        evaluation_class: str,
+        span_attributes: List[str],
+        commit_message: Optional[str] = None,
+        position: int = 0,
+        data_granularity_type: Optional[str] = None,
+        package_imports: Optional[str] = None,
+        evaluation_input_params: Optional[dict] = None,
+        query_filter: Optional[str] = None,
+    ) -> dict:
+        """Create a new version of a code evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to version
+            metric_name (str): The name of the evaluator metric
+            code_block (str): Python code defining the evaluator class (must extend CodeEvaluator)
+            evaluation_class (str): The name of the evaluator class in the code block
+            span_attributes (List[str]): Which span fields to pass as inputs
+            commit_message (Optional[str]): Version control message
+            position (int): The position/order of the evaluator (default: 0)
+            data_granularity_type (Optional[str]): "span", "trace", or "session"
+            package_imports (Optional[str]): Package imports for the evaluation class (must be valid Python imports)
+            evaluation_input_params (Optional[dict]): Evaluation input parameters (JSON object)
+            query_filter (Optional[str]): Optional query filter over a given data granularity
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ValueError: If code block format is invalid
+            ArizeAPIException: If the version creation fails
+
+        Example:
+            ```python
+            evaluator = client.create_code_evaluator_version(
+                evaluator_id="eval123",
+                metric_name="response_length_score",
+                code_block="class Eval(CodeEvaluator):\\n    def evaluate(self, **kwargs):\\n        pass",
+                evaluation_class="Eval",
+                span_attributes=["output"],
+                commit_message="Updated code",
+            )
+            ```
+        """
+        code_config = {
+            "name": metric_name,
+            "evalClassCodeBlock": code_block,
+            "evaluationClass": evaluation_class,
+            "position": position,
+            "spanAttributes": span_attributes,
+            "dataGranularityType": data_granularity_type,
+            "packageImports": package_imports,
+            "evaluationInputParams": evaluation_input_params,
+            "queryFilter": query_filter,
+        }
+
+        result = CreateEvaluatorVersionMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            commitMessage=commit_message,
+            codeEvaluator=code_config,
+        )
+        return result.to_dict()
+
+    def edit_evaluator(
+        self,
+        evaluator_id: str,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+    ) -> dict:
+        """Edit an evaluator's metadata (name, description, tags).
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to edit
+            name (Optional[str]): New name for the evaluator
+            description (Optional[str]): New description
+            tags (Optional[List[str]]): New tags
+
+        Returns:
+            dict: The updated evaluator
+
+        Raises:
+            ArizeAPIException: If the edit fails
+
+        Example:
+            ```python
+            evaluator = client.edit_evaluator(
+                evaluator_id="eval123",
+                name="Updated Name",
+                tags=["production", "llm"],
+            )
+            ```
+        """
+        result = EditEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+            name=name,
+            description=description,
+            tags=tags,
+        )
+        return result.to_dict()
+
+    def delete_evaluator(self, evaluator_id: str) -> bool:
+        """Delete an evaluator.
+
+        Args:
+            evaluator_id (str): The ID of the evaluator to delete
+
+        Returns:
+            bool: True if deletion was successful
+
+        Raises:
+            ArizeAPIException: If the deletion fails
+
+        Example:
+            ```python
+            client.delete_evaluator("eval123")
+            ```
+        """
+        result = DeleteEvaluatorMutation.run_graphql_mutation(
+            self._graphql_client,
+            evaluatorId=evaluator_id,
+        )
+        return result.success
+
     def get_all_custom_metrics(self, model_name: Optional[str] = None) -> Union[List[dict], Dict[str, List[dict]]]:
         """Retrieves all custom metrics for all models in the space.
         If model_name is provided, retrieves custom metrics for the specified model.
@@ -1708,37 +2539,38 @@ class Client:
             ArizeAPIException: If the model or custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(self._graphql_client, model_name=model_name, space_id=self.space_id)
+        model_id = self.resolve_model_id(model_name=model_name)
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
             model_name=model_name,
             metric_name=metric_name,
         )
-        return self.custom_metric_url(model.id, custom_metric.id)
+        return self.custom_metric_url(model_id, custom_metric.id)
 
     def create_custom_metric(
         self,
         metric: str,
         metric_name: str,
+        metric_environment: str = "production",
         model_id: Optional[str] = None,
         model_name: Optional[str] = None,
         metric_description: Optional[str] = None,
-        metric_environment: Optional[str] = None,
     ) -> str:
         """Creates a new custom metric for a model.
 
         Args:
             metric (str): The metric expression/formula (e.g. "select avg(prediction) from model")
             metric_name (str): Name for the new metric
+            metric_environment (Optional[str]): Environment name for the metric.
+                Valid values are: "tracing", "production", "staging", "development"
+                Defaults to "production" if not specified.
+                For generative use cases, only use "tracing"
             model_id (Optional[str]): ID of the model to create metric for.
                 Either model_id or model_name must be provided.
             model_name (Optional[str]): Name of the model to create metric for.
                 Used to look up model_id if not provided.
             metric_description (Optional[str]): Description of what the metric measures
-            metric_environment (Optional[str]): Environment name for the metric.
-                Valid values are: "production", "staging", "development"
-                Defaults to "production" if not specified.
 
         Returns:
             str: The path to the newly created custom metric
@@ -1748,15 +2580,7 @@ class Client:
             ArizeAPIException: If metric creation fails or there is an API error
 
         """
-        if not model_id:
-            if not model_name:
-                raise ValueError("Either model_id or model_name must be provided")
-            model = GetModelQuery.run_graphql_query(
-                self._graphql_client,
-                model_name=model_name,
-                space_id=self.space_id,
-            )
-            model_id = model.id
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
         inputs = {
             "metric": metric,
             "modelId": model_id,
@@ -1807,18 +2631,14 @@ class Client:
             ArizeAPIException: If the custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
+        model_id = self.resolve_model_id(model_name=model_name)
         metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
             model_name=model_name,
             metric_name=metric_name,
         )
-        return self.delete_custom_metric_by_id(metric.id, model.id)
+        return self.delete_custom_metric_by_id(metric.id, model_id)
 
     def update_custom_metric_by_id(
         self,
@@ -1901,11 +2721,7 @@ class Client:
             ArizeAPIException: If the custom metric is not found or there is an API error
 
         """
-        model = GetModelQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            space_id=self.space_id,
-        )
+        model_id = self.resolve_model_id(model_name=model_name)
         custom_metric = GetCustomMetricQuery.run_graphql_query(
             self._graphql_client,
             space_id=self.space_id,
@@ -1914,7 +2730,7 @@ class Client:
         )
         inputs = {
             "customMetricId": custom_metric.id,
-            "modelId": model.id,
+            "modelId": model_id,
             "name": name or custom_metric_name,
             "metric": metric or custom_metric.metric,
             "modelEnvironmentName": environment or "production",
@@ -2119,6 +2935,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = None,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new performance metric monitor for a model.
@@ -2149,6 +2966,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (only used if threshold_mode is "double")
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -2163,6 +2982,14 @@ class Client:
         """
         if performance_metric is None and custom_metric_id is None:
             raise ValueError("Either performance_metric or custom_metric_id must be provided")
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
@@ -2240,6 +3067,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new drift monitor for a model.
@@ -2268,6 +3096,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[List[str]]): Email addresses to notify when the monitor is triggered
             integration_key_ids (Optional[List[str]]): IDs of integration keys to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -2281,6 +3111,14 @@ class Client:
             ArizeAPIException: If monitor creation fails or there is an API error
 
         """
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
@@ -2357,6 +3195,7 @@ class Client:
         std_dev_multiplier2: Optional[float] = 2.0,
         email_addresses: Optional[Union[str, List[str]]] = None,
         integration_key_ids: Optional[Union[str, List[str]]] = None,
+        integration_names: Optional[Union[str, List[str]]] = None,
         filters: Optional[Union[List[Dict], List[DimensionFilterInput]]] = None,
     ) -> str:
         """Creates a new data quality monitor for a model.
@@ -2386,6 +3225,8 @@ class Client:
             std_dev_multiplier2 (Optional[float]): Standard deviation multiplier for the second threshold (default is 2.0 if threshold_mode is "double" and a threshold2 is not provided)
             email_addresses (Optional[Union[str, List[str]]]): Email address(es) to notify when the monitor is triggered
             integration_key_ids (Optional[Union[str, List[str]]]): ID(s) of integration key(s) to notify when the monitor is triggered
+            integration_names (Optional[Union[str, List[str]]]): Name(s) of alert integrations (slack, pagerduty, opsgenie) to notify.
+                These are resolved to integration key IDs automatically. Use this as an alternative to integration_key_ids.
             filters (Optional[Union[List[Dict], List[DimensionFilterInput]]]): Filters to apply to the monitor
                 - filterType (FilterRowType): Type of filter to apply (featureLabel, tagLabel, actuals, predictionScore, etc)
                 - operator (ComparisonOperator): Comparison operator to apply (equals, notEquals, greaterThan, lessThan, greaterThanOrEqual, lessThanOrEqual)
@@ -2399,6 +3240,14 @@ class Client:
             ArizeAPIException: If monitor creation fails or there is an API error
 
         """
+        if integration_names:
+            resolved_ids = self._resolve_integration_key_ids(integration_names)
+            if integration_key_ids:
+                if isinstance(integration_key_ids, str):
+                    integration_key_ids = [integration_key_ids]
+                integration_key_ids = list(integration_key_ids) + resolved_ids
+            else:
+                integration_key_ids = resolved_ids
         contacts = []
         if email_addresses:
             if isinstance(email_addresses, str):
@@ -3462,3 +4311,212 @@ class Client:
                 logger.warning(f"Failed to create widget for model '{model_name}': {e}")
 
         return self.dashboard_url(dashboard_id)
+
+    # ── Trace Tools ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _flatten_span_dicts(span_dicts: List[dict]) -> List[dict]:
+        """Flatten span dicts by merging parsed attributes and columns into top-level keys.
+
+        The ``attributes`` JSON string is parsed and each key is promoted to a
+        top-level column (prefixed with ``attributes.``).  Structured ``columns``
+        data takes precedence over parsed attributes.  The raw ``attributes``
+        and ``columns`` fields are removed from the output.
+        """
+        flat: List[dict] = []
+        for span_dict in span_dicts:
+            row = {k: v for k, v in span_dict.items() if k not in ("attributes", "columns")}
+            attrs_str = span_dict.get("attributes")
+            if attrs_str:
+                for k, v in json.loads(attrs_str).items():
+                    row[f"attributes.{k}"] = v
+            # Process structured columns data (takes precedence over attributes)
+            columns = span_dict.get("columns")
+            if columns:
+                for col in columns:
+                    val_obj = col.get("value")
+                    if val_obj is not None:
+                        val = val_obj.get("stringValue") if val_obj.get("stringValue") is not None else val_obj.get("numericValue")
+                        row[col["name"]] = val
+            flat.append(row)
+        return flat
+
+    def get_span_columns(
+        self,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+    ) -> List[str]:
+        """Get available span column names for a model.
+
+        Returns list of column name strings (e.g., ["attributes.input.value", ...])
+        ready to plug into list_traces() or get_trace() column_names parameter.
+        """
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        results = GetSpanColumnsQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            startTime=start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            endTime=end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            count=20,
+            sleep_time=self.sleep_time,
+        )
+        return [entry.dimension.name for entry in results]
+
+    def list_traces(
+        self,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+        count: int = 20,
+        sort_direction: str = "desc",
+        to_dataframe: bool = False,
+    ) -> Union[List[dict], DataFrame]:
+        """List root spans (traces) for a model in a time window.
+
+        Args:
+            model_name (Optional[str]): Name of the model (either model_name or model_id required)
+            model_id (Optional[str]): ID of the model (either model_name or model_id required)
+            start_time (Optional[datetime | str]): Start of time window (defaults to 7 days ago)
+            end_time (Optional[datetime | str]): End of time window (defaults to now)
+            count (int): Number of traces to return per page (default 20)
+            sort_direction (str): Sort direction, "desc" or "asc" (default "desc")
+            to_dataframe (bool): If True, return a DataFrame with span fields and flattened
+                attributes as columns (default False)
+
+        Returns:
+            Union[List[dict], DataFrame]: List of span record dicts (default), or a DataFrame
+                with span fields and flattened attributes prefixed with ``attributes.``
+
+        Raises:
+            ValueError: If neither model_name nor model_id is provided
+            ArizeAPIException: If the model or traces are not found
+
+        """
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        dataset = {
+            "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "endTime": end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "environmentName": "tracing",
+        }
+        sort = {"column": "start_time", "dir": sort_direction.upper()}
+
+        results = ListTracesQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            dataset=dataset,
+            sort=sort,
+            count=count,
+            columnNames=LIST_TRACES_COLUMN_NAMES,
+            truncateStringLength=5000,
+            sleep_time=self.sleep_time,
+        )
+        span_dicts = [result.to_dict() for result in results]
+        if to_dataframe:
+            return DataFrame.from_records(self._flatten_span_dicts(span_dicts))
+        return span_dicts
+
+    def get_trace(
+        self,
+        trace_id: str,
+        model_name: Optional[str] = None,
+        model_id: Optional[str] = None,
+        start_time: Optional[Any] = None,
+        end_time: Optional[Any] = None,
+        column_names: Optional[List[str]] = None,
+        count: int = 20,
+        to_dataframe: bool = False,
+    ) -> Union[List[dict], DataFrame]:
+        """Get all spans for a specific trace with full attributes.
+
+        Args:
+            trace_id (str): The trace ID to look up
+            model_name (Optional[str]): Name of the model (either model_name or model_id required)
+            model_id (Optional[str]): ID of the model (either model_name or model_id required)
+            start_time (Optional[datetime | str]): Start of time window (defaults to 7 days ago)
+            end_time (Optional[datetime | str]): End of time window (defaults to now)
+            column_names (Optional[List[str]]): If specified, only include these attribute keys.
+                If None, all attributes are returned.
+            count (int): Number of spans per page (default 20)
+            to_dataframe (bool): If True, return a DataFrame with span fields and flattened
+                attributes as columns (default False)
+
+        Returns:
+            Union[List[dict], DataFrame]: List of span record dicts (default), or a DataFrame
+                with span fields and flattened attributes prefixed with ``attributes.``
+
+        Raises:
+            ValueError: If neither model_name nor model_id is provided
+            ArizeAPIException: If the model or trace is not found
+
+        """
+        model_id = self.resolve_model_id(model_name=model_name, model_id=model_id)
+        if start_time:
+            start_time = parse_datetime(start_time)
+        else:
+            start_time = datetime.now(tz=timezone.utc) - timedelta(days=7)
+        if end_time:
+            end_time = parse_datetime(end_time)
+        else:
+            end_time = datetime.now(tz=timezone.utc)
+
+        dataset = {
+            "startTime": start_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "endTime": end_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "environmentName": "tracing",
+            "filters": [
+                {
+                    "filterType": "spanProperty",
+                    "operator": "equals",
+                    "dimension": {
+                        "id": "context.trace_id",
+                        "name": "context.trace_id",
+                        "dataType": "STRING",
+                        "category": "spanProperty",
+                    },
+                    "dimensionValues": [
+                        {"id": trace_id, "value": trace_id},
+                    ],
+                }
+            ],
+        }
+        sort = {"column": "start_time", "dir": "ASC"}
+
+        if column_names is None:
+            column_names = self.get_span_columns(model_id=model_id, start_time=start_time, end_time=end_time)
+
+        results = GetTraceDetailQuery.iterate_over_pages(
+            self._graphql_client,
+            id=model_id,
+            dataset=dataset,
+            sort=sort,
+            count=count,
+            columnNames=column_names,
+            includeRootSpans=True,
+            truncateStringLength=5000,
+            sleep_time=self.sleep_time,
+        )
+        span_dicts = [result.to_dict() for result in results]
+        if to_dataframe:
+            return DataFrame.from_records(self._flatten_span_dicts(span_dicts))
+        return span_dicts

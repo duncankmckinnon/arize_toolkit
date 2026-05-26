@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional, Tuple
 
-from arize_toolkit.models.space_models import AccountUser, Organization, Space, SpaceMember, SpaceMemberInput
+from arize_toolkit.models.space_models import AccountUser, Organization, Space, SpaceMember, SpaceMemberInput, SpaceUser
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -9,14 +9,16 @@ class OrgIDandSpaceIDQuery(BaseQuery):
     graphql_query = """
     query orgIDandSpaceID($organization: String!, $space: String!) {
         account {
-            organizations(search: $organization, first: 1) {
+            organizations(search: $organization, first: 10) {
                 edges {
                     node {
                         id
-                        spaces(search: $space, first: 1) {
+                        name
+                        spaces(search: $space, first: 10) {
                             edges {
                                 node {
                                     id
+                                    name
                                 }
                             }
                         }
@@ -41,13 +43,23 @@ class OrgIDandSpaceIDQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        org_name = variables.get("organization", "")
+        space_name = variables.get("space", "")
         if "account" not in result or "organizations" not in result["account"] or "edges" not in result["account"]["organizations"] or len(result["account"]["organizations"]["edges"]) == 0:
             cls.raise_exception("No organization found with the given name")
-        node = result["account"]["organizations"]["edges"][0]["node"]
-        organization_id = node["id"]
-        if "spaces" not in node or "edges" not in node["spaces"] or len(node["spaces"]["edges"]) == 0:
+        org_edges = result["account"]["organizations"]["edges"]
+        org_node = cls._find_exact_name_match(org_edges, org_name)
+        if org_node is None:
+            cls.raise_exception(f"No organization found with the exact name '{org_name}'")
+        organization_id = org_node["id"]
+        if "spaces" not in org_node or "edges" not in org_node["spaces"] or len(org_node["spaces"]["edges"]) == 0:
             cls.raise_exception("No space found with the given name")
-        space_id = node["spaces"]["edges"][0]["node"]["id"]
+        space_edges = org_node["spaces"]["edges"]
+        space_node = cls._find_exact_name_match(space_edges, space_name)
+        if space_node is None:
+            cls.raise_exception(f"No space found with the exact name '{space_name}'")
+        space_id = space_node["id"]
         return (
             [cls.QueryResponse(organization_id=organization_id, space_id=space_id)],
             False,
@@ -59,10 +71,11 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
     graphql_query = """
     query orgAndFirstSpace($organization: String!) {
         account {
-            organizations(search: $organization, first: 1) {
+            organizations(search: $organization, first: 10) {
                 edges {
                     node {
                         id
+                        name
                         spaces(first: 1) {
                             edges {
                                 node {
@@ -92,14 +105,19 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        org_name = variables.get("organization", "")
         if "account" not in result or "organizations" not in result["account"] or "edges" not in result["account"]["organizations"] or len(result["account"]["organizations"]["edges"]) == 0:
             cls.raise_exception("No organization found with the given name")
-        node = result["account"]["organizations"]["edges"][0]["node"]
-        organization_id = node["id"]
-        if "spaces" not in node or "edges" not in node["spaces"] or len(node["spaces"]["edges"]) == 0:
+        org_edges = result["account"]["organizations"]["edges"]
+        org_node = cls._find_exact_name_match(org_edges, org_name)
+        if org_node is None:
+            cls.raise_exception(f"No organization found with the exact name '{org_name}'")
+        organization_id = org_node["id"]
+        if "spaces" not in org_node or "edges" not in org_node["spaces"] or len(org_node["spaces"]["edges"]) == 0:
             cls.raise_exception("No spaces found in the organization")
-        space_id = node["spaces"]["edges"][0]["node"]["id"]
-        space_name = node["spaces"]["edges"][0]["node"]["name"]
+        space_id = org_node["spaces"]["edges"][0]["node"]["id"]
+        space_name = org_node["spaces"]["edges"][0]["node"]["name"]
         return (
             [
                 cls.QueryResponse(
@@ -111,6 +129,77 @@ class OrgAndFirstSpaceQuery(OrgIDandSpaceIDQuery):
             False,
             None,
         )
+
+
+class GetSpaceByNameQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceByName($organization_id: ID!, $spaceName: String!) {
+        node(id: $organization_id) {
+            ... on AccountOrganization {
+                spaces(search: $spaceName, first: 10) {
+                    edges {
+                        node { """
+        + Space.to_graphql_fields()
+        + """
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a space by name within an organization"
+
+    class Variables(BaseVariables):
+        organization_id: str
+        spaceName: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space by name"
+
+    class QueryResponse(Space):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        space_name = variables.get("spaceName", "")
+        if "node" not in result or "spaces" not in result["node"] or "edges" not in result["node"]["spaces"]:
+            cls.raise_exception("No spaces found")
+        edges = result["node"]["spaces"]["edges"]
+        if len(edges) == 0:
+            cls.raise_exception("No space found matching the given name")
+        space = cls._find_exact_name_match(edges, space_name)
+        if space is None:
+            cls.raise_exception(f"No space found with the exact name '{space_name}'")
+        return ([cls.QueryResponse(**space)], False, None)
+
+
+class GetSpaceByIdQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceById($spaceId: ID!) {
+        node(id: $spaceId) {
+            ... on Space { """
+        + Space.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get a space by its ID"
+
+    class Variables(BaseVariables):
+        spaceId: str
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space by ID"
+
+    class QueryResponse(Space):
+        pass
 
 
 class GetAllSpacesQuery(BaseQuery):
@@ -392,12 +481,100 @@ class RemoveSpaceMemberMutation(BaseQuery):
         )
 
 
+class UpdateSpaceMutation(BaseQuery):
+    graphql_query = (
+        """
+    mutation updateSpace($input: UpdateSpaceMutationInput!) {
+        updateSpace(input: $input) {
+            space { """
+        + Space.to_graphql_fields()
+        + """
+            }
+        }
+    }
+    """
+    )
+    query_description = "Update a space within an organization"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        name: Optional[str] = None
+        private: Optional[bool] = None
+        description: Optional[str] = None
+        gradientStartColor: Optional[str] = None
+        gradientEndColor: Optional[str] = None
+        mlModelsEnabled: Optional[bool] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running mutation to update space"
+
+    class QueryResponse(Space):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "updateSpace" not in result or "space" not in result["updateSpace"]:
+            cls.raise_exception("Failed to update space")
+        space = result["updateSpace"]["space"]
+        return ([cls.QueryResponse(**space)], False, None)
+
+
+class GetSpaceUsersQuery(BaseQuery):
+    graphql_query = (
+        """
+    query getSpaceUsers($spaceId: ID!, $first: Int, $endCursor: String, $search: String, $userType: UserType) {
+        node(id: $spaceId) {
+            ... on Space {
+                spaceUsers(first: $first, after: $endCursor, search: $search, userType: $userType) {
+                    totalCount
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                    edges {
+                        node { """
+        + SpaceUser.to_graphql_fields()
+        + """
+                        }
+                    }
+                }
+            }
+        }
+    }
+    """
+    )
+    query_description = "Get all users with access to a space"
+
+    class Variables(BaseVariables):
+        spaceId: str
+        first: int = 50
+        search: Optional[str] = None
+        userType: Optional[str] = None
+
+    class QueryException(ArizeAPIException):
+        message: str = "Error running query to retrieve space users"
+
+    class QueryResponse(SpaceUser):
+        pass
+
+    @classmethod
+    def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        if "node" not in result or "spaceUsers" not in result["node"] or "edges" not in result["node"]["spaceUsers"]:
+            cls.raise_exception("No space users found")
+        space_users = result["node"]["spaceUsers"]
+        page_info = space_users["pageInfo"]
+        user_nodes = [cls.QueryResponse(**edge["node"]) for edge in space_users["edges"]]
+        has_next_page = page_info["hasNextPage"]
+        end_cursor = page_info["endCursor"]
+        return (user_nodes, has_next_page, end_cursor)
+
+
 class GetUserQuery(BaseQuery):
     graphql_query = (
         """
     query getUser($search: String!) {
         account {
-            users(search: $search, first: 1) {
+            users(search: $search, first: 10) {
                 edges {
                     node { """
         + AccountUser.to_graphql_fields()
@@ -422,10 +599,17 @@ class GetUserQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
+        variables = result.pop("__query_variables__", {})
+        search_term = variables.get("search", "")
         if "account" not in result or "users" not in result["account"] or "edges" not in result["account"]["users"]:
             cls.raise_exception("Failed to retrieve user")
         edges = result["account"]["users"]["edges"]
         if len(edges) == 0:
             cls.raise_exception("No user found matching the search criteria")
-        user = edges[0]["node"]
+        # Check for exact match on email first, then name
+        user = cls._find_exact_name_match(edges, search_term, name_field="email")
+        if user is None:
+            user = cls._find_exact_name_match(edges, search_term, name_field="name")
+        if user is None:
+            cls.raise_exception(f"No user found with the exact name or email '{search_term}'")
         return ([cls.QueryResponse(**user)], False, None)

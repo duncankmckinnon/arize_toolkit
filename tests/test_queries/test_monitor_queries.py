@@ -17,6 +17,11 @@ from arize_toolkit.types import ComparisonOperator, DataQualityMetric, Dimension
 
 
 class TestGetMonitorQuery:
+    def test_get_monitor_query_fetches_multiple_candidates(self):
+        """Test that the GraphQL query requests multiple candidates (first: 10) for exact matching."""
+        assert "first: 10" in GetMonitorQuery.graphql_query
+        assert "first: 1," not in GetMonitorQuery.graphql_query
+
     def test_get_monitor_query(self, gql_client):
         """Test getting a monitor"""
         gql_client.execute.return_value = {
@@ -103,6 +108,131 @@ class TestGetMonitorQuery:
         assert results[0].id == "monitor1"
         assert results[1].id == "monitor2"
         gql_client.execute.assert_called_once()
+
+    def test_get_monitor_exact_match_with_multiple_candidates(self, gql_client):
+        """Test that exact name match is used when multiple candidates are returned."""
+        gql_client.execute.return_value = {
+            "node": {
+                "monitors": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "mon_wrong",
+                                "name": "test_monitor_v2",
+                                "monitorCategory": "drift",
+                                "dimensionCategory": "featureLabel",
+                                "driftMetric": "psi",
+                            }
+                        },
+                        {
+                            "node": {
+                                "id": "mon_correct",
+                                "name": "test_monitor",
+                                "monitorCategory": "drift",
+                                "dimensionCategory": "featureLabel",
+                                "driftMetric": "psi",
+                            }
+                        },
+                    ]
+                }
+            }
+        }
+
+        result = GetMonitorQuery.run_graphql_query(
+            gql_client,
+            model_name="test_model",
+            monitor_name="test_monitor",
+            space_id="test_space",
+        )
+
+        assert result.id == "mon_correct"
+        assert result.name == "test_monitor"
+
+    def test_get_monitor_no_exact_match(self, gql_client):
+        """Test that partial monitor name matches are rejected."""
+        gql_client.execute.return_value = {
+            "node": {
+                "monitors": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "mon1",
+                                "name": "Latency Monitor Production",
+                                "monitorCategory": "performance",
+                                "dimensionCategory": "featureLabel",
+                                "performanceMetric": "accuracy",
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+
+        with pytest.raises(
+            GetMonitorQuery.QueryException,
+            match="No monitor found with the exact name",
+        ):
+            GetMonitorQuery.run_graphql_query(
+                gql_client,
+                space_id="space1",
+                model_name="model1",
+                monitor_name="Latency Monitor",
+            )
+
+    def test_get_monitor_no_exact_match_similar_names(self, gql_client):
+        """Test that a search for 'model-v1' rejects 'model-v10' and 'model-v1-prod'."""
+        gql_client.execute.return_value = {
+            "node": {
+                "monitors": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "mon1",
+                                "name": "model-v10",
+                                "monitorCategory": "drift",
+                                "dimensionCategory": "featureLabel",
+                                "driftMetric": "psi",
+                            }
+                        },
+                        {
+                            "node": {
+                                "id": "mon2",
+                                "name": "model-v1-prod",
+                                "monitorCategory": "drift",
+                                "dimensionCategory": "featureLabel",
+                                "driftMetric": "psi",
+                            }
+                        },
+                    ]
+                }
+            }
+        }
+
+        with pytest.raises(
+            GetMonitorQuery.QueryException,
+            match="No monitor found with the exact name 'model-v1'",
+        ):
+            GetMonitorQuery.run_graphql_query(
+                gql_client,
+                space_id="space1",
+                model_name="model1",
+                monitor_name="model-v1",
+            )
+
+    def test_get_monitor_empty_edges(self, gql_client):
+        """Test that empty edges raises the original error."""
+        gql_client.execute.return_value = {"node": {"monitors": {"edges": []}}}
+
+        with pytest.raises(
+            GetMonitorQuery.QueryException,
+            match="No monitor found with the given name",
+        ):
+            GetMonitorQuery.run_graphql_query(
+                gql_client,
+                space_id="space1",
+                model_name="model1",
+                monitor_name="nonexistent",
+            )
 
     def test_get_all_monitors_pagination(self, gql_client):
         """Test monitor pagination"""
@@ -218,6 +348,14 @@ class TestDeleteMonitorMutation:
 
 
 class TestGetModelMetricValueQuery:
+    def test_monitor_query_fetches_multiple_candidates(self):
+        """Test that the monitor search in GetModelMetricValueQuery uses first: 10."""
+        query = GetModelMetricValueQuery.graphql_query
+        # Model search uses useExactSearchMatch: true, so first: 1 is OK there
+        # But monitor search should use first: 10 for client-side exact matching
+        assert "monitors(first: 10" in query
+        assert "monitors(first: 1," not in query
+
     def test_query_structure(self):
         """Test that the query structure is correct and includes all necessary fields."""
         query = GetModelMetricValueQuery.graphql_query
@@ -247,6 +385,7 @@ class TestGetModelMetricValueQuery:
                                     "edges": [
                                         {
                                             "node": {
+                                                "name": "test_monitor",
                                                 "metricHistory": {
                                                     "key": "accuracy_metric",
                                                     "dataPoints": [
@@ -277,7 +416,7 @@ class TestGetModelMetricValueQuery:
                                                             "y": 0.90,
                                                         },
                                                     ],
-                                                }
+                                                },
                                             }
                                         }
                                     ]
@@ -326,6 +465,7 @@ class TestGetModelMetricValueQuery:
                                     "edges": [
                                         {
                                             "node": {
+                                                "name": "volume_monitor",
                                                 "metricHistory": {
                                                     "key": "volume_metric",
                                                     "dataPoints": [
@@ -339,7 +479,7 @@ class TestGetModelMetricValueQuery:
                                                         },
                                                     ],
                                                     "thresholdDataPoints": None,
-                                                }
+                                                },
                                             }
                                         }
                                     ]
@@ -483,6 +623,155 @@ class TestGetModelMetricValueQuery:
         assert result.dataPoints[1].y is None
         assert result.dataPoints[2].y == 0.93
         assert result.thresholdDataPoints == []
+
+    def test_get_model_metric_value_no_exact_monitor_match(self, gql_client):
+        """Test that partial monitor name matches are rejected in metric value query."""
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "name": "Accuracy Monitor Production",
+                                                "metricHistory": {
+                                                    "key": "accuracy_metric",
+                                                    "dataPoints": [
+                                                        {"x": "2024-01-01T00:00:00Z", "y": 0.95},
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                },
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetModelMetricValueQuery.QueryException,
+            match="No monitor found with the exact name 'Accuracy Monitor'",
+        ):
+            GetModelMetricValueQuery.run_graphql_query(
+                gql_client,
+                space_id="test_space_id",
+                model_name="test_model",
+                monitor_name="Accuracy Monitor",
+                start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
+                time_series_data_granularity="hour",
+            )
+
+    def test_get_model_metric_value_exact_monitor_match_multiple_candidates(self, gql_client):
+        """Test that exact match is selected from multiple monitor candidates."""
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "name": "test_monitor_v2",
+                                                "metricHistory": {
+                                                    "key": "wrong_metric",
+                                                    "dataPoints": [
+                                                        {"x": "2024-01-01T00:00:00Z", "y": 0.5},
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                },
+                                            }
+                                        },
+                                        {
+                                            "node": {
+                                                "name": "test_monitor",
+                                                "metricHistory": {
+                                                    "key": "correct_metric",
+                                                    "dataPoints": [
+                                                        {"x": "2024-01-01T00:00:00Z", "y": 0.95},
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                },
+                                            }
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        result = GetModelMetricValueQuery.run_graphql_query(
+            gql_client,
+            space_id="test_space_id",
+            model_name="test_model",
+            monitor_name="test_monitor",
+            start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
+            time_series_data_granularity="hour",
+        )
+
+        assert result.key == "correct_metric"
+        assert result.dataPoints[0].y == 0.95
+
+    def test_get_model_metric_value_no_exact_match_similar_names(self, gql_client):
+        """Test that searching for 'monitor-v1' rejects 'monitor-v10'."""
+        mock_response = {
+            "node": {
+                "models": {
+                    "edges": [
+                        {
+                            "node": {
+                                "monitors": {
+                                    "edges": [
+                                        {
+                                            "node": {
+                                                "name": "monitor-v10",
+                                                "metricHistory": {
+                                                    "key": "some_metric",
+                                                    "dataPoints": [
+                                                        {"x": "2024-01-01T00:00:00Z", "y": 0.9},
+                                                    ],
+                                                    "thresholdDataPoints": None,
+                                                },
+                                            }
+                                        },
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+
+        with pytest.raises(
+            GetModelMetricValueQuery.QueryException,
+            match="No monitor found with the exact name 'monitor-v1'",
+        ):
+            GetModelMetricValueQuery.run_graphql_query(
+                gql_client,
+                space_id="test_space_id",
+                model_name="test_model",
+                monitor_name="monitor-v1",
+                start_date=datetime(2024, 1, 1, tzinfo=timezone.utc),
+                end_date=datetime(2024, 1, 2, tzinfo=timezone.utc),
+                time_series_data_granularity="day",
+            )
 
     def test_get_model_metric_value_different_granularities(self, gql_client):
         """Test query with different time series data granularities."""

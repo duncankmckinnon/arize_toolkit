@@ -18,7 +18,8 @@ def mock_graphql_client():
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -172,6 +173,7 @@ class TestClientInitialization:
                         {
                             "node": {
                                 "id": "existing_org_123",
+                                "name": "Existing Organization",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -229,6 +231,7 @@ class TestClientInitialization:
                         {
                             "node": {
                                 "id": "org_456",
+                                "name": "My Organization",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -322,6 +325,195 @@ class TestModel:
             client.get_model("non_existent_model")
         assert "No model found" in str(exc_info.value)
 
+    def test_get_all_datasets(self, client, mock_graphql_client):
+        """Test listing all datasets in a space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "datasets": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "d1",
+                                "name": "Dataset One",
+                                "datasetType": "generative",
+                                "status": "active",
+                            }
+                        },
+                        {
+                            "node": {
+                                "id": "d2",
+                                "name": "Dataset Two",
+                                "datasetType": "generative",
+                                "status": "active",
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_all_datasets()
+
+        assert len(result) == 2
+        assert result[0]["name"] == "Dataset One"
+        assert result[1]["name"] == "Dataset Two"
+
+    def test_get_dataset(self, client, mock_graphql_client):
+        """Test getting a dataset by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "datasets": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "dataset_123",
+                                "name": "My Dataset",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "updatedAt": "2024-01-02T00:00:00Z",
+                                "datasetType": "generative",
+                                "status": "active",
+                                "columns": ["input", "output"],
+                                "experimentCount": 2,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        dataset = client.get_dataset("My Dataset")
+
+        assert dataset["id"] == "dataset_123"
+        assert dataset["name"] == "My Dataset"
+        assert dataset["columns"] == ["input", "output"]
+        assert dataset["experimentCount"] == 2
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_by_id(self, client, mock_graphql_client):
+        """Test getting a dataset by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "id": "dataset_456",
+                "name": "Another Dataset",
+                "createdAt": "2024-02-01T00:00:00Z",
+                "updatedAt": "2024-02-02T00:00:00Z",
+                "datasetType": "generative",
+                "status": "active",
+                "columns": ["question", "answer"],
+                "experimentCount": 0,
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        dataset = client.get_dataset_by_id("dataset_456")
+
+        assert dataset["id"] == "dataset_456"
+        assert dataset["name"] == "Another Dataset"
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_examples(self, client, mock_graphql_client):
+        """Test getting dataset examples by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        # First call resolves name to ID, second gets examples
+        name_response = {
+            "node": {
+                "datasets": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "dataset_789",
+                                "name": "Test Dataset",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "updatedAt": "2024-01-01T00:00:00Z",
+                                "datasetType": "generative",
+                                "status": "active",
+                                "columns": ["input", "output"],
+                                "experimentCount": 0,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        examples_response = {
+            "node": {
+                "latestDatasetVersion": {
+                    "examples": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "ex_1",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "updatedAt": "2024-01-01T00:00:00Z",
+                                    "columns": [
+                                        {"dimension": {"name": "input"}, "dimensionValue": {"sv": "Hello"}},
+                                        {"dimension": {"name": "output"}, "dimensionValue": {"sv": "Hi there"}},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [name_response, examples_response]
+
+        examples = client.get_dataset_examples(name="Test Dataset")
+
+        assert len(examples) == 1
+        assert examples[0]["data"] == {"input": "Hello", "output": "Hi there"}
+        assert mock_graphql_client.return_value.execute.call_count == 2
+
+    def test_get_dataset_examples_by_id(self, client, mock_graphql_client):
+        """Test getting dataset examples by ID directly"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "latestDatasetVersion": {
+                    "examples": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "ex_1",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "updatedAt": "2024-01-01T00:00:00Z",
+                                    "columns": [
+                                        {"dimension": {"name": "question"}, "dimensionValue": {"sv": "Why?"}},
+                                    ],
+                                }
+                            }
+                        ],
+                    }
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        examples = client.get_dataset_examples(dataset_id="dataset_direct")
+
+        assert len(examples) == 1
+        assert examples[0]["data"] == {"question": "Why?"}
+        # Only one call - no name resolution needed
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_dataset_examples_no_args(self, client, mock_graphql_client):
+        """Test that get_dataset_examples raises ValueError with no args"""
+        with pytest.raises(ValueError, match="Either name or dataset_id must be provided"):
+            client.get_dataset_examples()
+
     def test_get_all_models(self, client, mock_graphql_client):
         mock_graphql_client.return_value.execute.reset_mock()
 
@@ -388,7 +580,7 @@ class TestModel:
                         "edges": [
                             {
                                 "node": {
-                                    "name": "model1",
+                                    "name": "test_model",
                                     "id": "id1",
                                     "modelType": "numeric",
                                     "createdAt": "2021-01-01T00:00:00Z",
@@ -589,7 +781,7 @@ class TestCustomMetrics:
                             {
                                 "node": {
                                     "id": "test_model_id",
-                                    "name": "test_model",
+                                    "name": "new_model",
                                     "modelType": "score_categorical",
                                     "createdAt": "2021-01-01T00:00:00Z",
                                     "isDemoModel": False,
@@ -1243,7 +1435,7 @@ class TestLanguageModel:
                         {
                             "node": {
                                 "id": "prompt_id",
-                                "name": "test_prompt",
+                                "name": "prompt_id",
                                 "description": "test_description",
                                 "tags": ["test_tag"],
                                 "commitMessage": "test_commit_message",
@@ -1308,7 +1500,7 @@ class TestLanguageModel:
                                 {
                                     "node": {
                                         "id": "prompt_id",
-                                        "name": "test_prompt",
+                                        "name": "test_prompt_1",
                                         "description": "test_description",
                                         "tags": ["test_tag"],
                                         "commitMessage": "test_commit_message",
@@ -1665,21 +1857,39 @@ class TestUtilityMethods:
         """Test switching spaces"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock response for new space lookup
-        mock_graphql_client.return_value.execute.return_value = {
-            "account": {
-                "organizations": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "new_org_id",
-                                "spaces": {"edges": [{"node": {"id": "new_space_id"}}]},
+        # Mock responses for two space lookups
+        mock_graphql_client.return_value.execute.side_effect = [
+            {
+                "account": {
+                    "organizations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "new_org_id",
+                                    "name": "new_org",
+                                    "spaces": {"edges": [{"node": {"id": "new_space_id", "name": "new_space"}}]},
+                                }
                             }
-                        }
-                    ]
+                        ]
+                    }
                 }
-            }
-        }
+            },
+            {
+                "account": {
+                    "organizations": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "new_org_id",
+                                    "name": "new_org",
+                                    "spaces": {"edges": [{"node": {"id": "another_space_id", "name": "another_space"}}]},
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+        ]
 
         # Test switching to a new space
         new_url = client.switch_space("new_space", "new_org")
@@ -1705,6 +1915,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "org_only_id",
+                                "name": "test_org_only",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -1941,24 +2152,79 @@ class TestUtilityMethods:
         spaces = client.get_all_spaces()
         assert len(spaces) == 0
 
+    def test_get_space(self, client, mock_graphql_client):
+        """Test getting a space by name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaces": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "space_123",
+                                "name": "Production Space",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "description": "Main production space",
+                                "private": False,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        space = client.get_space("Production Space")
+
+        assert space["id"] == "space_123"
+        assert space["name"] == "Production Space"
+        assert space["description"] == "Main production space"
+        assert space["private"] is False
+        assert mock_graphql_client.return_value.execute.call_count == 1
+
+    def test_get_space_by_id(self, client, mock_graphql_client):
+        """Test getting a space by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "id": "space_456",
+                "name": "Dev Space",
+                "createdAt": "2024-02-01T00:00:00Z",
+                "description": "Development space",
+                "private": True,
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        space = client.get_space_by_id("space_456")
+
+        assert space["id"] == "space_456"
+        assert space["name"] == "Dev Space"
+        assert space["description"] == "Development space"
+        assert space["private"] is True
+        assert mock_graphql_client.return_value.execute.call_count == 1
+
     def test_create_new_space_private_default(self, client, mock_graphql_client):
         """Test creating a new private space (default behavior)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
+        lookup_response = {"node": {"spaces": {"edges": []}}}
         create_space_response = {"createSpace": {"space": {"name": "Test Space", "id": "space_new_123"}}}
-        mock_graphql_client.return_value.execute.return_value = create_space_response
+        mock_graphql_client.return_value.execute.side_effect = [lookup_response, create_space_response]
 
         space_id = client.create_new_space("Test Space")
 
         assert space_id == "space_new_123"
-        assert mock_graphql_client.return_value.execute.call_count == 1
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
         # Verify client was updated
         assert client.space == "Test Space"
         assert client.space_id == "space_new_123"
 
         # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
+        call_args = mock_graphql_client.return_value.execute.call_args_list[1]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Test Space"
@@ -1968,16 +2234,17 @@ class TestUtilityMethods:
         """Test creating a new public space"""
         mock_graphql_client.return_value.execute.reset_mock()
 
+        lookup_response = {"node": {"spaces": {"edges": []}}}
         create_space_response = {"createSpace": {"space": {"name": "Public Test Space", "id": "space_public_456"}}}
-        mock_graphql_client.return_value.execute.return_value = create_space_response
+        mock_graphql_client.return_value.execute.side_effect = [lookup_response, create_space_response]
 
         space_id = client.create_new_space("Public Test Space", private=False)
 
         assert space_id == "space_public_456"
-        assert mock_graphql_client.return_value.execute.call_count == 1
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
         # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
+        call_args = mock_graphql_client.return_value.execute.call_args_list[1]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Public Test Space"
@@ -1987,20 +2254,51 @@ class TestUtilityMethods:
         """Test creating a new private space (explicitly set)"""
         mock_graphql_client.return_value.execute.reset_mock()
 
+        lookup_response = {"node": {"spaces": {"edges": []}}}
         create_space_response = {"createSpace": {"space": {"name": "Private Test Space", "id": "space_private_789"}}}
-        mock_graphql_client.return_value.execute.return_value = create_space_response
+        mock_graphql_client.return_value.execute.side_effect = [lookup_response, create_space_response]
 
         space_id = client.create_new_space("Private Test Space", private=True)
 
         assert space_id == "space_private_789"
-        assert mock_graphql_client.return_value.execute.call_count == 1
+        assert mock_graphql_client.return_value.execute.call_count == 2
 
         # Verify the mutation was called with correct parameters
-        call_args = mock_graphql_client.return_value.execute.call_args_list[0]
+        call_args = mock_graphql_client.return_value.execute.call_args_list[1]
         variables = call_args[1]["variable_values"]["input"]
         assert variables["accountOrganizationId"] == "test_org_id"
         assert variables["name"] == "Private Test Space"
-        assert variables["private"] is True
+
+    def test_create_new_space_already_exists(self, client, mock_graphql_client):
+        """Test that create_new_space returns existing space if one with the same name exists"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        lookup_response = {
+            "node": {
+                "spaces": {
+                    "edges": [
+                        {
+                            "node": {
+                                "id": "space_existing_999",
+                                "name": "Existing Space",
+                                "createdAt": "2024-01-01T00:00:00Z",
+                                "description": "Already exists",
+                                "private": True,
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = lookup_response
+
+        space_id = client.create_new_space("Existing Space")
+
+        assert space_id == "space_existing_999"
+        # Only the lookup call should be made, no create mutation
+        assert mock_graphql_client.return_value.execute.call_count == 1
+        assert client.space == "Existing Space"
+        assert client.space_id == "space_existing_999"
 
     def test_create_space_admin_api_key(self, client, mock_graphql_client):
         """Test creating a space admin API key"""
@@ -2047,6 +2345,63 @@ class TestUtilityMethods:
         assert api_key_info["expiresAt"] is None
         assert api_key_info["id"] == "key_permanent_456"
         mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_update_space(self, client, mock_graphql_client):
+        """Test updating a space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "test_space_id",
+                    "name": "Updated Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": "New description",
+                    "private": False,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.update_space(name="Updated Space", description="New description")
+
+        assert result["id"] == "test_space_id"
+        assert result["name"] == "Updated Space"
+        assert result["description"] == "New description"
+        assert result["private"] is False
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+        # Verify the mutation was called with correct parameters
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "test_space_id"
+        assert variables["name"] == "Updated Space"
+        assert variables["description"] == "New description"
+
+    def test_update_space_with_explicit_id(self, client, mock_graphql_client):
+        """Test updating a space with an explicit space ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "updateSpace": {
+                "space": {
+                    "id": "other_space_id",
+                    "name": "Other Space",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "description": None,
+                    "private": True,
+                }
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.update_space(space_id="other_space_id", private=True)
+
+        assert result["id"] == "other_space_id"
+        assert result["private"] is True
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]["input"]
+        assert variables["spaceId"] == "other_space_id"
 
     def test_spaces_and_organizations_integration(self, client, mock_graphql_client):
         """Test integration between space and organization methods"""
@@ -2107,6 +2462,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "org2",
+                                "name": "Development Org",
                                 "spaces": {
                                     "edges": [
                                         {
@@ -2428,7 +2784,8 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "target_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "target_space_id", "name": "Target Space"}}]},
                             }
                         }
                     ]
@@ -2548,7 +2905,8 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "other_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "other_space_id", "name": "Other Space"}}]},
                             }
                         }
                     ]
@@ -2580,6 +2938,132 @@ class TestUtilityMethods:
         """Test that empty user_name raises ValueError"""
         with pytest.raises(ValueError, match="user_name must not be empty"):
             client.remove_space_member(user_name="")
+
+    def test_get_space_users(self, client, mock_graphql_client):
+        """Test getting space users for the current space"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 2,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "admin",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+                            }
+                        },
+                        {
+                            "node": {
+                                "role": "member",
+                                "membership": "ACCOUNT_ADMIN",
+                                "customRole": None,
+                                "user": {"id": "user_2", "name": "Regular User", "email": "user@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users()
+
+        assert len(results) == 2
+        assert results[0]["user"]["id"] == "user_1"
+        assert results[0]["role"] == "admin"
+        assert results[0]["membership"] == "EXPLICIT_MEMBERSHIP"
+        assert results[1]["user"]["email"] == "user@example.com"
+
+    def test_get_space_users_with_search(self, client, mock_graphql_client):
+        """Test getting space users with search filter"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 1,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "admin",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users(search="admin")
+
+        assert len(results) == 1
+        assert results[0]["user"]["name"] == "Admin User"
+
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]
+        assert variables["search"] == "admin"
+
+    def test_get_space_users_with_user_type(self, client, mock_graphql_client):
+        """Test getting space users filtered by user type"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 1,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "node": {
+                                "role": "member",
+                                "membership": "EXPLICIT_MEMBERSHIP",
+                                "customRole": None,
+                                "user": {"id": "bot_1", "name": "CI Bot", "email": "bot@example.com"},
+                            }
+                        },
+                    ],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users(user_type="bot")
+
+        assert len(results) == 1
+        call_args = mock_graphql_client.return_value.execute.call_args
+        variables = call_args[1]["variable_values"]
+        assert variables["userType"] == "bot"
+
+    def test_get_space_users_empty(self, client, mock_graphql_client):
+        """Test getting space users when none exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+
+        mock_response = {
+            "node": {
+                "spaceUsers": {
+                    "totalCount": 0,
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [],
+                }
+            }
+        }
+
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        results = client.get_space_users()
+        assert len(results) == 0
 
     def test_get_user_by_email(self, client, mock_graphql_client):
         """Test getting a user by email"""
@@ -2632,7 +3116,7 @@ class TestUtilityMethods:
                         {
                             "node": {
                                 "id": "user_456",
-                                "name": "John Doe",
+                                "name": "John",
                                 "email": "john.doe@example.com",
                                 "status": "active",
                                 "accountRole": "admin",
@@ -2650,7 +3134,7 @@ class TestUtilityMethods:
         result = client.get_user(search="John")
 
         assert result["id"] == "user_456"
-        assert result["name"] == "John Doe"
+        assert result["name"] == "John"
         assert result["accountRole"] == "admin"
 
     def test_get_user_empty_search_raises(self, client, mock_graphql_client):
@@ -2919,6 +3403,7 @@ class TestPromptsExtended:
                         "edges": [
                             {
                                 "node": {
+                                    "name": "test_prompt",
                                     "versionHistory": {
                                         "pageInfo": {
                                             "hasNextPage": True,
@@ -2943,7 +3428,7 @@ class TestPromptsExtended:
                                                 }
                                             }
                                         ],
-                                    }
+                                    },
                                 }
                             }
                         ]
@@ -2956,6 +3441,7 @@ class TestPromptsExtended:
                         "edges": [
                             {
                                 "node": {
+                                    "name": "test_prompt",
                                     "versionHistory": {
                                         "pageInfo": {
                                             "hasNextPage": False,
@@ -2980,7 +3466,7 @@ class TestPromptsExtended:
                                                 }
                                             }
                                         ],
-                                    }
+                                    },
                                 }
                             }
                         ]
@@ -5652,7 +6138,8 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -5754,7 +6241,8 @@ class TestDashboards:
                         {
                             "node": {
                                 "id": "test_org_id",
-                                "spaces": {"edges": [{"node": {"id": "test_space_id"}}]},
+                                "name": "test_org",
+                                "spaces": {"edges": [{"node": {"id": "test_space_id", "name": "test_space"}}]},
                             }
                         }
                     ]
@@ -5855,3 +6343,606 @@ class TestDashboards:
 
         # Verify the correct number of calls (1 create dashboard + 3 get model + 2 create widget)
         assert mock_graphql_client.return_value.execute.call_count == 1
+
+
+class TestGetEvaluatorById:
+    """Test get_evaluator_by_id functionality"""
+
+    def test_get_evaluator_by_id_success(self, client, mock_graphql_client):
+        """Test getting an evaluator by ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval123",
+                "name": "Hallucination Detector",
+                "description": "Detects hallucinations in LLM responses",
+                "taskType": "template_evaluation",
+                "commitHash": "abc123",
+                "commitMessage": "Initial version",
+                "tags": ["llm", "quality"],
+                "createdAt": "2024-01-01T00:00:00Z",
+                "updatedAt": "2024-01-02T00:00:00Z",
+                "createdBy": {
+                    "id": "user123",
+                    "name": "Test User",
+                    "email": "test@example.com",
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval123")
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+        assert result["tags"] == ["llm", "quality"]
+        mock_graphql_client.return_value.execute.assert_called_once()
+
+    def test_get_evaluator_by_id_not_found(self, client, mock_graphql_client):
+        """Test getting an evaluator that doesn't exist"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {"node": None}
+
+        with pytest.raises(ArizeAPIException, match="Error getting evaluator by id"):
+            client.get_evaluator_by_id("nonexistent")
+
+    def test_get_evaluator_by_id_minimal(self, client, mock_graphql_client):
+        """Test getting an evaluator with minimal fields"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_response = {
+            "node": {
+                "id": "eval_min",
+                "name": "Minimal Evaluator",
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.get_evaluator_by_id("eval_min")
+
+        assert result["id"] == "eval_min"
+        assert result["name"] == "Minimal Evaluator"
+        assert result.get("description") is None
+
+
+class TestEvaluators:
+    """Test evaluator functionality"""
+
+    def test_create_template_evaluator(self, client, mock_graphql_client):
+        """Test creating a template (LLM-based) evaluator without explicit LLM integration"""
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Hallucination Detector",
+                    "description": "Detects hallucinations in LLM responses",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": {
+                        "id": "user123",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    },
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_create_response
+
+        result = client.create_template_evaluator(
+            name="Hallucination Detector",
+            template="Does the response contain factual errors?\n\nContext: {{context}}\nResponse: {{output}}",
+            metric_name="hallucination_score",
+            description="Detects hallucinations in LLM responses",
+            classification_choices={"Yes": 0, "No": 1},
+            direction="maximize",
+        )
+
+        assert result["id"] == "eval123"
+        assert result["name"] == "Hallucination Detector"
+        assert result["description"] == "Detects hallucinations in LLM responses"
+
+    def test_create_template_evaluator_with_integration_name(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a specific LLM integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                    {"id": "integration2", "name": "My Bedrock", "provider": "awsBedrock"},
+                ]
+            }
+        }
+        mock_create_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval123",
+                    "name": "Test Evaluator",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [
+            mock_integrations_response,
+            mock_create_response,
+        ]
+
+        result = client.create_template_evaluator(
+            name="Test Evaluator",
+            template="Evaluate: {{output}}",
+            metric_name="test_score",
+            llm_integration_name="My Bedrock",
+            llm_model_name="claude-3-sonnet",
+        )
+
+        assert result["id"] == "eval123"
+
+    def test_create_template_evaluator_integration_not_found(self, client, mock_graphql_client):
+        """Test creating a template evaluator with a non-existent integration name"""
+        mock_integrations_response = {
+            "node": {
+                "llmIntegrations": [
+                    {"id": "integration1", "name": "My OpenAI", "provider": "openAI"},
+                ]
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_integrations_response
+
+        with pytest.raises(ValueError, match="No LLM integration found with name 'Nonexistent'"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="Evaluate: {{output}}",
+                metric_name="test_score",
+                llm_integration_name="Nonexistent",
+            )
+
+    def test_create_code_evaluator(self, client, mock_graphql_client):
+        """Test creating a code (Python-based) evaluator"""
+        code_block = """class ResponseLengthEvaluator(CodeEvaluator):
+    def evaluate(self, *, dataset_row=None, **kwargs):
+        output = dataset_row.get("attributes.output.value") if dataset_row else None
+        length = len(output) if output else 0
+        if length < 50:
+            return EvaluationResult(score=0, label="too_short")
+        elif length > 500:
+            return EvaluationResult(score=0, label="too_long")
+        else:
+            return EvaluationResult(score=1, label="appropriate")"""
+
+        mock_response = {
+            "createEvaluator": {
+                "evaluator": {
+                    "id": "eval456",
+                    "name": "Response Length Checker",
+                    "description": "Checks if response length is appropriate",
+                    "createdAt": "2024-01-01T00:00:00Z",
+                    "createdBy": None,
+                },
+                "errors": [],
+            }
+        }
+        mock_graphql_client.return_value.execute.return_value = mock_response
+
+        result = client.create_code_evaluator(
+            name="Response Length Checker",
+            code_block=code_block,
+            evaluation_class="ResponseLengthEvaluator",
+            metric_name="response_length_score",
+            span_attributes=["output"],
+            description="Checks if response length is appropriate",
+        )
+
+        assert result["id"] == "eval456"
+        assert result["name"] == "Response Length Checker"
+        assert result["description"] == "Checks if response length is appropriate"
+
+    def test_create_template_evaluator_missing_name(self, client):
+        """Test creating template evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_template_evaluator(
+                name="",
+                template="Test template",
+                metric_name="test_score",
+            )
+
+    def test_create_template_evaluator_missing_template(self, client):
+        """Test creating template evaluator without template raises error"""
+        with pytest.raises(ValueError, match="template is required"):
+            client.create_template_evaluator(
+                name="Test Evaluator",
+                template="",
+                metric_name="test_score",
+            )
+
+    def test_create_code_evaluator_missing_name(self, client):
+        """Test creating code evaluator without name raises error"""
+        with pytest.raises(ValueError, match="name is required"):
+            client.create_code_evaluator(
+                name="",
+                metric_name="test_score",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )
+
+    def test_create_code_evaluator_missing_metric_name(self, client):
+        """Test creating code evaluator without metric_name raises error"""
+        with pytest.raises(ValueError, match="metric_name is required"):
+            client.create_code_evaluator(
+                name="Test Evaluator",
+                metric_name="",
+                code_block="class E(CodeEvaluator):\n    def evaluate(self): pass",
+                evaluation_class="E",
+                span_attributes=["output"],
+            )
+
+
+class TestTraces:
+    def test_list_traces_by_name(self, client, mock_graphql_client):
+        """Test listing traces by model name"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        # First call resolves model name, second call lists traces
+        mock_graphql_client.return_value.execute.side_effect = [
+            {
+                "node": {
+                    "models": {
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "model-123",
+                                    "name": "my-model",
+                                    "modelType": "generative_llm",
+                                    "createdAt": "2025-01-01T00:00:00Z",
+                                    "isDemoModel": False,
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "node": {
+                    "__typename": "Model",
+                    "id": "model-123",
+                    "spans": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {
+                                "span": {
+                                    "name": "LLMChain",
+                                    "spanKind": "LLM",
+                                    "statusCode": "OK",
+                                    "startTime": "2025-01-01T00:00:00Z",
+                                    "parentId": None,
+                                    "latencyMs": 150.5,
+                                    "traceId": "trace-1",
+                                    "spanId": "span-1",
+                                    "attributes": '{"input.value": "hello", "llm.model_name": "gpt-4"}',
+                                }
+                            }
+                        ],
+                    },
+                }
+            },
+        ]
+
+        result = client.list_traces(model_name="my-model")
+        assert len(result) == 1
+        assert result[0]["traceId"] == "trace-1"
+        assert result[0]["name"] == "LLMChain"
+        assert result[0]["spanKind"] == "LLM"
+        assert result[0]["attributes"] == '{"input.value": "hello", "llm.model_name": "gpt-4"}'
+
+    def test_list_traces_by_id(self, client, mock_graphql_client):
+        """Test listing traces by model ID (skips model name resolution)"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "Agent",
+                                "spanKind": "AGENT",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 200.0,
+                                "traceId": "trace-2",
+                                "spanId": "span-2",
+                                "attributes": '{"openinference.span.kind": "AGENT"}',
+                            }
+                        }
+                    ],
+                },
+            }
+        }
+
+        result = client.list_traces(model_id="model-123")
+        assert len(result) == 1
+        assert result[0]["traceId"] == "trace-2"
+        assert result[0]["attributes"] is not None
+        # Should only have called execute once (no model name resolution)
+        assert mock_graphql_client.return_value.execute.call_count == 1
+
+    def test_list_traces_missing_model(self, client):
+        """Test that ValueError is raised when neither model_name nor model_id is given"""
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
+            client.list_traces()
+
+    def test_get_trace(self, client, mock_graphql_client):
+        """Test getting trace detail by trace ID"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        span_columns_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {"node": {"dimension": {"name": "attributes.input.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.output.value", "dataType": "STRING", "category": "spanProperty"}}},
+                        ],
+                    }
+                },
+            }
+        }
+        trace_detail_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello", "output.value": "world"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
+                                ],
+                            }
+                        },
+                        {
+                            "span": {
+                                "name": "Retriever",
+                                "spanKind": "RETRIEVER",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:01Z",
+                                "parentId": "span-1",
+                                "latencyMs": 50.0,
+                                "traceId": "trace-1",
+                                "spanId": "span-2",
+                                "attributes": '{"input.value": "query text"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "query text"},
+                                    },
+                                ],
+                            }
+                        },
+                    ],
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [span_columns_response, trace_detail_response]
+
+        result = client.get_trace(trace_id="trace-1", model_id="model-123")
+        assert len(result) == 2
+        assert result[0]["traceId"] == "trace-1"
+        assert result[0]["spanId"] == "span-1"
+        assert result[0]["attributes"] is not None
+        assert result[1]["parentId"] == "span-1"
+        assert result[1]["attributes"] is not None
+
+    def test_get_trace_with_column_names(self, client, mock_graphql_client):
+        """Test that column_names are passed to the API query and get_span_columns is skipped"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello", "output.value": "world"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
+                                    {
+                                        "name": "attributes.output.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "world"},
+                                    },
+                                ],
+                            }
+                        }
+                    ],
+                },
+            }
+        }
+
+        result = client.get_trace(
+            trace_id="trace-1",
+            model_id="model-123",
+            column_names=["attributes.input.value", "attributes.output.value"],
+        )
+        assert len(result) == 1
+        assert result[0]["traceId"] == "trace-1"
+        # Only one execute call (no get_span_columns call since column_names was provided)
+        assert mock_graphql_client.return_value.execute.call_count == 1
+
+    def test_list_traces_to_dataframe(self, client, mock_graphql_client):
+        """Test list_traces with to_dataframe=True returns a DataFrame with flattened attributes"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello", "llm.model_name": "gpt-4"}',
+                            }
+                        }
+                    ],
+                },
+            }
+        }
+
+        from pandas import DataFrame
+
+        result = client.list_traces(model_id="model-123", to_dataframe=True)
+        assert isinstance(result, DataFrame)
+        assert "traceId" in result.columns
+        assert "attributes.input.value" in result.columns
+        assert "attributes.llm.model_name" in result.columns
+        assert "attributes" not in result.columns
+        assert result.iloc[0]["attributes.input.value"] == "hello"
+        assert result.iloc[0]["attributes.llm.model_name"] == "gpt-4"
+
+    def test_get_trace_to_dataframe(self, client, mock_graphql_client):
+        """Test get_trace with to_dataframe=True returns a DataFrame with flattened attributes"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        span_columns_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "tracingSchema": {
+                    "spanProperties": {
+                        "pageInfo": {"hasNextPage": False, "endCursor": None},
+                        "edges": [
+                            {"node": {"dimension": {"name": "attributes.input.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.output.value", "dataType": "STRING", "category": "spanProperty"}}},
+                            {"node": {"dimension": {"name": "attributes.llm.model_name", "dataType": "STRING", "category": "spanProperty"}}},
+                        ],
+                    }
+                },
+            }
+        }
+        trace_detail_response = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello", "output.value": "world", "llm.model_name": "gpt-4"}',
+                                "columns": [],
+                            }
+                        }
+                    ],
+                },
+            }
+        }
+        mock_graphql_client.return_value.execute.side_effect = [span_columns_response, trace_detail_response]
+
+        from pandas import DataFrame
+
+        result = client.get_trace(
+            trace_id="trace-1",
+            model_id="model-123",
+            to_dataframe=True,
+        )
+        assert isinstance(result, DataFrame)
+        assert "attributes.input.value" in result.columns
+        assert "attributes.output.value" in result.columns
+        assert "attributes.llm.model_name" in result.columns
+        assert "attributes" not in result.columns
+        assert "columns" not in result.columns
+
+    def test_get_trace_to_dataframe_with_column_names(self, client, mock_graphql_client):
+        """Test get_trace with to_dataframe=True and column_names passes through to API"""
+        mock_graphql_client.return_value.execute.reset_mock()
+        mock_graphql_client.return_value.execute.return_value = {
+            "node": {
+                "__typename": "Model",
+                "id": "model-123",
+                "spans": {
+                    "pageInfo": {"hasNextPage": False, "endCursor": None},
+                    "edges": [
+                        {
+                            "span": {
+                                "name": "LLMChain",
+                                "spanKind": "LLM",
+                                "statusCode": "OK",
+                                "startTime": "2025-01-01T00:00:00Z",
+                                "parentId": None,
+                                "latencyMs": 150.5,
+                                "traceId": "trace-1",
+                                "spanId": "span-1",
+                                "attributes": '{"input.value": "hello"}',
+                                "columns": [
+                                    {
+                                        "name": "attributes.input.value",
+                                        "value": {"__typename": "CategoricalDimensionValue", "stringValue": "hello"},
+                                    },
+                                ],
+                            }
+                        }
+                    ],
+                },
+            }
+        }
+
+        from pandas import DataFrame
+
+        result = client.get_trace(
+            trace_id="trace-1",
+            model_id="model-123",
+            column_names=["attributes.input.value"],
+            to_dataframe=True,
+        )
+        assert isinstance(result, DataFrame)
+        assert "attributes.input.value" in result.columns
+        assert result.iloc[0]["attributes.input.value"] == "hello"
+
+    def test_get_trace_missing_model(self, client):
+        """Test that ValueError is raised when neither model_name nor model_id is given"""
+        with pytest.raises(ValueError, match="Either model_id or model_name must be provided"):
+            client.get_trace(trace_id="trace-1")

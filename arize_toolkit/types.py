@@ -222,6 +222,28 @@ class PromptVersionInputVariableFormatEnum(InputValidationEnum):
     MUSTACHE = "MUSTACHE", "Mustache", "mustache", "{{}}"
 
 
+class IntegrationProvider(InputValidationEnum):
+    """Alert integration providers for monitor notifications (slack, pagerduty, opsgenie)"""
+
+    slack = "slack", "Slack", "SLACK"
+    pagerduty = "pagerduty", "PagerDuty", "Pagerduty", "PAGERDUTY"
+    opsgenie = "opsgenie", "OpsGenie", "Opsgenie", "OPSGENIE"
+
+
+class IntegrationAlertSeverity(InputValidationEnum):
+    """Alert severity levels for PagerDuty and OpsGenie integrations"""
+
+    opsgenieP1 = "opsgenieP1", "OpsGenie P1", "P1"
+    opsgenieP2 = "opsgenieP2", "OpsGenie P2", "P2"
+    opsgenieP3 = "opsgenieP3", "OpsGenie P3", "P3"
+    opsgenieP4 = "opsgenieP4", "OpsGenie P4", "P4"
+    opsgenieP5 = "opsgenieP5", "OpsGenie P5", "P5"
+    pagerdutycritical = "pagerdutycritical", "PagerDuty Critical", "critical"
+    pagerdutyerror = "pagerdutyerror", "PagerDuty Error", "error"
+    pagerdutywarning = "pagerdutywarning", "PagerDuty Warning", "warning"
+    pagerdutyinfo = "pagerdutyinfo", "PagerDuty Info", "info"
+
+
 class LLMIntegrationProvider(InputValidationEnum):
     """The LLM provider used for execution with the prompt"""
 
@@ -635,3 +657,90 @@ class UserType(InputValidationEnum):
 
     human = "human", "Human"
     bot = "bot", "Bot"
+
+
+class TemplateEvaluationConfigDirection(InputValidationEnum):
+    """The direction for template evaluation config scoring"""
+
+    maximize = "maximize", "Maximize", "higher", "HIGHER_IS_BETTER"
+    minimize = "minimize", "Minimize", "lower", "LOWER_IS_BETTER"
+
+
+class EvalDataGranularityType(InputValidationEnum):
+    """The data granularity type for evaluators (span, trace, or session)"""
+
+    span = "span", "Span", "SPAN"
+    trace = "trace", "Trace", "TRACE"
+    session = "session", "Session", "SESSION"
+
+
+class OnlineTaskType(InputValidationEnum):
+    """Types of online tasks"""
+
+    template_evaluation = "template_evaluation", "Template Evaluation"
+    code_evaluation = "code_evaluation", "Code Evaluation"
+    prompt_optimization = "prompt_optimization", "Prompt Optimization"
+    run_experiment = "run_experiment", "Run Experiment"
+
+
+class EvaluatorSortColumn(InputValidationEnum):
+    """Sort columns for evaluators"""
+
+    name = "name", "Name"
+    createdAt = "createdAt", "Created At"
+    updatedAt = "updatedAt", "Updated At"
+
+
+class SpanKind(InputValidationEnum):
+    """The kind of span in a trace"""
+
+    CHAIN = "CHAIN", "chain", "Chain"
+    RETRIEVER = "RETRIEVER", "retriever", "Retriever"
+    RERANKER = "RERANKER", "reranker", "Reranker"
+    LLM = "LLM", "llm", "Llm"
+    TOOL = "TOOL", "tool", "Tool"
+    AGENT = "AGENT", "agent", "Agent"
+    EMBEDDING = "EMBEDDING", "embedding", "Embedding"
+    GUARDRAIL = "GUARDRAIL", "guardrail", "Guardrail"
+    EVALUATOR = "EVALUATOR", "evaluator", "Evaluator"
+    UNKNOWN = "UNKNOWN", "unknown", "Unknown"
+
+
+class SpanStatusCode(InputValidationEnum):
+    """The status code of a span"""
+
+    OK = "OK", "ok", "Ok"
+    ERROR = "ERROR", "error", "Error"
+    UNSET = "UNSET", "unset", "Unset"
+
+
+class SpanSortColumn(InputValidationEnum):
+    """Columns available for sorting spans. Values verified from GraphQL SpanColumn enum."""
+
+    start_time = "start_time", "startTime", "Start Time"
+    end_time = "end_time", "endTime", "End Time"
+    latency_ms = "latency_ms", "latencyMs", "Latency"
+    totalTokenCount = "totalTokenCount", "total_token_count", "Total Token Count"
+    metadata = "metadata", "Metadata"
+
+
+class SortDirection(InputValidationEnum):
+    """Sort direction for queries. Values verified from GraphQL SortDirection enum."""
+
+    ASC = "ASC", "asc", "ascending"
+    DESC = "DESC", "desc", "descending"
+
+
+class DatasetType(InputValidationEnum):
+    """Type of dataset. Values verified from GraphQL DatasetType enum."""
+
+    generative = "generative", "Generative"
+
+
+class DatasetStatus(InputValidationEnum):
+    """Status of a dataset. Values verified from GraphQL DatasetStatus enum."""
+
+    active = "active", "Active"
+    deleted = "deleted", "Deleted"
+    importing = "importing", "Importing"
+    failed = "failed", "Failed"

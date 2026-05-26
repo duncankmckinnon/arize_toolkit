@@ -1,7 +1,79 @@
 import pytest
 
-from arize_toolkit.queries.dashboard_queries import CreateDashboardMutation, CreateLineChartWidgetMutation, GetDashboardPerformanceSlicesQuery
+from arize_toolkit.queries.dashboard_queries import CreateDashboardMutation, CreateLineChartWidgetMutation, GetDashboardPerformanceSlicesQuery, GetDashboardQuery
 from arize_toolkit.types import WidgetCreationStatus
+
+
+class TestGetDashboardQuery:
+    def test_get_dashboard_by_name_success(self, gql_client):
+        """Test that an exact name match returns the correct dashboard"""
+        mock_response = {
+            "node": {
+                "dashboards": {
+                    "edges": [
+                        {"node": {"id": "dash1", "name": "My Dashboard"}},
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        result = GetDashboardQuery.run_graphql_query(gql_client, spaceId="space1", dashboardName="My Dashboard")
+        assert result.id == "dash1"
+        assert result.name == "My Dashboard"
+
+    def test_get_dashboard_by_name_no_exact_match(self, gql_client):
+        """Test that a fuzzy match (no exact match) raises an error"""
+        mock_response = {
+            "node": {
+                "dashboards": {
+                    "edges": [
+                        {"node": {"id": "dash1", "name": "My Dashboard Production"}},
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        with pytest.raises(GetDashboardQuery.QueryException, match="No dashboard found with the exact name"):
+            GetDashboardQuery.run_graphql_query(gql_client, spaceId="space1", dashboardName="My Dashboard")
+
+    def test_get_dashboard_by_name_multiple_results(self, gql_client):
+        """Test that the exact match is found among multiple fuzzy results"""
+        mock_response = {
+            "node": {
+                "dashboards": {
+                    "edges": [
+                        {"node": {"id": "dash2", "name": "My Dashboard v2"}},
+                        {"node": {"id": "dash1", "name": "My Dashboard"}},
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        result = GetDashboardQuery.run_graphql_query(gql_client, spaceId="space1", dashboardName="My Dashboard")
+        assert result.id == "dash1"
+        assert result.name == "My Dashboard"
+
+    def test_get_dashboard_by_name_not_found(self, gql_client):
+        """Test that empty results raise a 'not found' error"""
+        mock_response = {"node": {"dashboards": {"edges": []}}}
+        gql_client.execute.return_value = mock_response
+        with pytest.raises(GetDashboardQuery.QueryException, match="No dashboard found with the given name"):
+            GetDashboardQuery.run_graphql_query(gql_client, spaceId="space1", dashboardName="Missing")
+
+    def test_get_dashboard_by_name_case_sensitive(self, gql_client):
+        """Test that name matching is case-sensitive"""
+        mock_response = {
+            "node": {
+                "dashboards": {
+                    "edges": [
+                        {"node": {"id": "dash1", "name": "my dashboard"}},
+                    ]
+                }
+            }
+        }
+        gql_client.execute.return_value = mock_response
+        with pytest.raises(GetDashboardQuery.QueryException, match="No dashboard found with the exact name"):
+            GetDashboardQuery.run_graphql_query(gql_client, spaceId="space1", dashboardName="My Dashboard")
 
 
 class TestDashboardQueries:

@@ -52,6 +52,17 @@ from arize_toolkit.models.data_import_models import (
     TableImportJobInput,
     TableIngestionParameters,
 )
+from arize_toolkit.models.dataset_models import Dataset, DatasetExample
+from arize_toolkit.models.evaluator_models import (
+    CodeEvaluationConfig,
+    CreateEvaluatorMutationInput,
+    CreateEvaluatorVersionMutationInput,
+    DeleteEvaluatorMutationInput,
+    EditEvaluatorMutationInput,
+    Evaluator,
+    TemplateEvaluationConfig,
+    TemplateEvaluationLlmConfig,
+)
 from arize_toolkit.models.llm_utils_models import (
     AnnotationInput,
     AnnotationWithConfigIdInput,
@@ -60,6 +71,7 @@ from arize_toolkit.models.llm_utils_models import (
     CreatePromptVersionMutationInput,
     FunctionDetailsInput,
     InvocationParamsInput,
+    LlmIntegration,
     LLMMessageInput,
     NoteInput,
     Prompt,
@@ -88,3 +100,4 @@ from arize_toolkit.models.monitor_models import (
     TimeSeriesWithThresholdDataType,
 )
 from arize_toolkit.models.space_models import Space
+from arize_toolkit.models.trace_models import DimensionInput, DimensionValueInput, FilterItemInput, ModelDatasetInput, SpanColumn, SpanColumnValue, SpanRecord, SpanSortInput

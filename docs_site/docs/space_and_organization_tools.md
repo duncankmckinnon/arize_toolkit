@@ -15,10 +15,14 @@ These tools and properties on the `Client` object help you manage the client's a
 | Create Client with new Space | [`Client.create_with_new_space`](#create_with_new_space) (Factory) |
 | Switch active Space/Organization | [`switch_space`](#switch_space) |
 | Get all Organizations | [`get_all_organizations`](#get_all_organizations) |
+| Get Space by Name | [`get_space`](#get_space) |
+| Get Space by ID | [`get_space_by_id`](#get_space_by_id) |
 | Get all Spaces in Organization | [`get_all_spaces`](#get_all_spaces) |
 | Create new Organization and Space | [`create_new_organization_and_space`](#create_new_organization_and_space) |
 | Create new Space | [`create_new_space`](#create_new_space) |
+| Update Space | [`update_space`](#update_space) |
 | Create Space Admin API Key | [`create_space_admin_api_key`](#create_space_admin_api_key) |
+| Get Space Users | [`get_space_users`](#get_space_users) |
 | Get User by Name or Email | [`get_user`](#get_user) |
 | Assign Space Membership (by name) | [`assign_space_membership`](#assign_space_membership) |
 | Assign Space Membership (by ID) | [`assign_space_membership_by_id`](#assign_space_membership_by_id) |
@@ -283,6 +287,81 @@ for org in organizations:
 
 ______________________________________________________________________
 
+### `get_space`
+
+```python
+space: dict = client.get_space(name: str)
+```
+
+Retrieves a space by name within the current organization.
+
+**Parameters**
+
+- `name` (str): Name of the space to retrieve.
+
+**Returns**
+
+A space dictionary containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
+
+**Raises**
+
+- `ArizeAPIException` – If the space is not found
+
+**Example**
+
+```python
+# Get a specific space by name
+space = client.get_space("Production Space")
+print(f"Space ID: {space['id']}")
+print(f"Private: {space['private']}")
+print(f"Description: {space['description']}")
+```
+
+______________________________________________________________________
+
+### `get_space_by_id`
+
+```python
+space: dict = client.get_space_by_id(space_id: str)
+```
+
+Retrieves a space by its ID.
+
+**Parameters**
+
+- `space_id` (str): ID of the space to retrieve.
+
+**Returns**
+
+A space dictionary containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
+
+**Raises**
+
+- `ArizeAPIException` – If the space is not found
+
+**Example**
+
+```python
+# Get a space by its ID
+space = client.get_space_by_id("U3BhY2U6MTIzNDU2")
+print(f"Space Name: {space['name']}")
+print(f"Created: {space['createdAt']}")
+```
+
+______________________________________________________________________
+
 ### `get_all_spaces`
 
 ```python
@@ -385,17 +464,17 @@ ______________________________________________________________________
 space_id: str = client.create_new_space(name: str, private: bool = True)
 ```
 
-Creates a new space in the current organization. This method allows you to programmatically create new spaces for organizing your ML models and data.
+Creates a new space in the current organization, or returns the existing space if one with the same name already exists. This method allows you to programmatically create new spaces for organizing your ML models and data without worrying about duplicates.
 
 **Parameters**
 
 - `name` (str) – Name for the new space
 - `private` (bool, optional) – Whether the space should be private. Defaults to True.
-- `set_as_active` (bool, optional) – Whether the client should switch to the new space. Defaults to True.
+- `set_as_active` (bool, optional) – Whether the client should switch to the new or existing space. Defaults to True.
 
 **Returns**
 
-- `str` – The unique identifier (ID) of the newly created space
+- `str` – The unique identifier (ID) of the created or existing space
 
 **Raises**
 
@@ -411,6 +490,68 @@ print(f"Created private space with ID: {new_space_id}")
 # Create a public space
 public_space_id = client.create_new_space("Public Demo Space", private=False)
 print(f"Created public space with ID: {public_space_id}")
+
+# Safe to call again — returns the existing space instead of creating a duplicate
+same_space_id = client.create_new_space("My Production Space")
+assert same_space_id == new_space_id
+```
+
+______________________________________________________________________
+
+### `update_space`
+
+```python
+space: dict = client.update_space(
+    name: Optional[str] = None,
+    space_id: Optional[str] = None,
+    private: Optional[bool] = None,
+    description: Optional[str] = None,
+    gradient_start_color: Optional[str] = None,
+    gradient_end_color: Optional[str] = None,
+    ml_models_enabled: Optional[bool] = None,
+)
+```
+
+Updates a space's properties. Only the fields you provide will be updated; all others remain unchanged. By default, updates the currently active space.
+
+**Parameters**
+
+- `name` (Optional[str]) – New name for the space.
+- `space_id` (Optional[str]) – ID of the space to update. Defaults to the active space.
+- `private` (Optional[bool]) – Whether the space should be private.
+- `description` (Optional[str]) – New description for the space.
+- `gradient_start_color` (Optional[str]) – Hex color code for gradient start.
+- `gradient_end_color` (Optional[str]) – Hex color code for gradient end.
+- `ml_models_enabled` (Optional[bool]) – Whether ML models are enabled.
+
+**Returns**
+
+A space dictionary containing:
+
+- `id` (str): Unique identifier for the space
+- `name` (str): Name of the space
+- `createdAt` (datetime): When the space was created
+- `description` (str): Description of the space
+- `private` (bool): Whether the space is private
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error updating the space
+
+**Example**
+
+```python
+# Update the current space's description
+space = client.update_space(description="Production ML monitoring space")
+print(f"Updated space: {space['name']}")
+
+# Rename a space and make it private
+space = client.update_space(name="Production", private=True)
+
+# Update a different space by ID
+space = client.update_space(
+    space_id="U3BhY2U6MTIzNDU2", description="Staging environment"
+)
 ```
 
 ______________________________________________________________________
@@ -454,6 +595,59 @@ if key_info["expiresAt"]:
     print(f"Expires: {key_info['expiresAt']}")
 else:
     print("Key does not expire")
+```
+
+______________________________________________________________________
+
+### `get_space_users`
+
+```python
+users: List[dict] = client.get_space_users(
+    space_id: Optional[str] = None,
+    search: Optional[str] = None,
+    user_type: Optional[str] = None
+)
+```
+
+Retrieves all users with access to a space, including explicit members, account admins, and organization admins. Supports filtering by search term and user type.
+
+**Parameters**
+
+- `space_id` (Optional[str]) – ID of the space. Defaults to the active space.
+- `search` (Optional[str]) – Search term to filter users by name or email.
+- `user_type` (Optional[str]) – Filter by user type: `'human'` or `'bot'`.
+
+**Returns**
+
+A list of space user dictionaries, each containing:
+
+- `role` (str): The user's legacy role (`admin`, `member`, `readOnly`, `annotator`), or None for custom roles/inherited membership
+- `membership` (str): How the user has access (`ACCOUNT_ADMIN`, `ORGANIZATION_ADMIN`, `EXPLICIT_MEMBERSHIP`, `PUBLIC_MEMBERSHIP`)
+- `customRole` (dict): Custom role info (`id`, `name`) if applicable, or None
+- `user` (dict): User information (`id`, `name`, `email`)
+
+**Raises**
+
+- `ArizeAPIException` – If there is an error retrieving space users
+
+**Example**
+
+```python
+# Get all users in the current space
+users = client.get_space_users()
+for u in users:
+    print(
+        f"{u['user']['name']} ({u['user']['email']}) - role: {u['role']}, membership: {u['membership']}"
+    )
+
+# Search for a specific user by name or email
+results = client.get_space_users(search="john@example.com")
+
+# Filter by user type
+bots = client.get_space_users(user_type="bot")
+
+# Get users for a specific space
+users = client.get_space_users(space_id="U3BhY2U6MTIzNDU2")
 ```
 
 ______________________________________________________________________

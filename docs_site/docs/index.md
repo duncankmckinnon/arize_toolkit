@@ -24,12 +24,49 @@ To get started with the toolkit, check out the [Quickstart Guide 🚀 ](quicksta
 - [Language Model Tools](language_model_tools.md) - Documentation for language model tools
 - [Space & Organization Tools](space_and_organization_tools.md) - Documentation for space, organization, & navigation tools
 - [Data Import Tools](data_import_tools.md) - Documentation for importing data from files and databases
+- [Dataset Tools](dataset_tools.md) - Documentation for dataset tools
 - [Dashboard Tools](dashboard_tools.md) - Documentation for dashboard tools
 - [Utility Tools](utility_tools.md) - Documentation for client configuration and utility functions
+
+## Command-Line Interface
+
+The CLI wraps all `Client` functionality so you can manage Arize resources directly from the terminal. See the [CLI Reference](cli/index.md) for full details.
+
+```bash
+# Install
+pip install arize_toolkit[cli]
+
+# One-time setup
+arize_toolkit config init
+
+# List models
+arize_toolkit models list
+
+# JSON output for scripting
+arize_toolkit --json models list | jq '.[].name'
+```
+
+| Command Group | Description | Docs |
+|---------------|-------------|------|
+| `config` | Manage configuration profiles | [Configuration](cli/config.md) |
+| `models` / `projects` | List models, check volume, pull performance metrics | [Models](cli/models.md) |
+| `monitors` | Create, list, copy, and delete monitors | [Monitors](cli/monitors.md) |
+| `prompts` | Manage prompt templates and versions | [Prompts](cli/prompts.md) |
+| `traces` | List traces, get spans, and discover columns | [Traces](cli/traces.md) |
+| `spaces` / `orgs` / `users` | Organization and space navigation | [Spaces](cli/spaces.md) |
+| `custom-metrics` | Create and manage custom metrics | [Custom Metrics](cli/custom_metrics.md) |
+| `evaluators` | Manage LLM and code evaluators | [Evaluators](cli/evaluators.md) |
+| `dashboards` | Create and view dashboards | [Dashboards](cli/dashboards.md) |
+| `datasets` | Retrieve datasets and example data | [Datasets](cli/datasets.md) |
+| `imports` | Manage file and table import jobs | [Data Imports](cli/imports.md) |
 
 ## Extensions
 
 - [Prompt Optimization](extensions/prompt_optimization.md) - Automated prompt improvement based on historical performance
+
+## Claude Code Plugins
+
+- [Plugin Marketplace](plugins/index.md) - Install AI-assisted skills for querying, managing, and developing with the Arize platform
 
 ## Disclaimer
 
