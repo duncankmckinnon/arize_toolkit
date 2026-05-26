@@ -57,6 +57,38 @@ class TestClientInitialization:
             assert client.org_id == "test_org_id"
             assert client.space_id == "test_space_id"
 
+    def test_client_initialization_verify(self, mock_graphql_client):
+        """Test client passes TLS verification options to the HTTP transport"""
+        with patch("arize_toolkit.client.RequestsHTTPTransport") as mock_transport:
+            Client(
+                organization="test_org",
+                space="test_space",
+                arize_developer_key="test_token",
+                _skip_org_space_lookup=True,
+            )
+
+            mock_transport.assert_called_once_with(
+                url="https://app.arize.com/graphql",
+                headers={"x-api-key": "test_token"},
+                verify=True,
+            )
+
+            mock_transport.reset_mock()
+
+            Client(
+                organization="test_org",
+                space="test_space",
+                arize_developer_key="test_token",
+                verify="/path/to/ca-bundle.pem",
+                _skip_org_space_lookup=True,
+            )
+
+            mock_transport.assert_called_once_with(
+                url="https://app.arize.com/graphql",
+                headers={"x-api-key": "test_token"},
+                verify="/path/to/ca-bundle.pem",
+            )
+
     def test_create_with_new_organization(self, mock_graphql_client):
         """Test factory method that creates a new organization and space"""
         # Reset for this specific test

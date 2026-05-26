@@ -55,7 +55,7 @@ integration = [
 ]
 prompt_optimizer = [
     "tiktoken>=0.9.0",
-    "arize-phoenix-evals>=0.22.0",
+    "arize-phoenix-evals>=0.22.0,<3.0.0",
     "arize-phoenix-client>=1.0",
 ]
 cli = [
