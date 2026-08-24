@@ -81,7 +81,7 @@ from arize_toolkit.queries.monitor_queries import (
     GetAllModelMonitorsQuery,
     GetModelMetricValueQuery,
     GetMonitorByIDQuery,
-    GetMonitorQuery,
+    GetMonitorIdByNameQuery,
 )
 from arize_toolkit.queries.space_queries import (
     AssignSpaceMembershipMutation,
@@ -1494,11 +1494,15 @@ class Client:
             ArizeAPIException: If the prompt is not found or there is an API error
 
         """
+        prompt = GetPromptQuery.run_graphql_query(
+            self._graphql_client,
+            prompt_name=prompt_name,
+            space_id=self.space_id,
+        )
         results = GetAllPromptVersionsQuery.iterate_over_pages(
             self._graphql_client,
             sleep_time=self.sleep_time,
-            space_id=self.space_id,
-            prompt_name=prompt_name,
+            prompt_id=prompt.id,
         )
         return [result.to_dict() for result in results]
 
@@ -2785,6 +2789,22 @@ class Client:
             metric_environment=new_model_environment,
         )
 
+    def _resolve_monitor_id(self, monitor_name: str, model_name: str) -> str:
+        """Resolve a monitor name to its relay global ID."""
+        return GetMonitorIdByNameQuery.run_graphql_query(
+            self._graphql_client,
+            model_name=model_name,
+            monitor_name=monitor_name,
+            space_id=self.space_id,
+        ).id
+
+    def _get_monitor_by_name(self, monitor_name: str, model_name: str) -> GetMonitorByIDQuery.QueryResponse:
+        """Look up a monitor by name and return every field on it."""
+        return GetMonitorByIDQuery.run_graphql_query(
+            self._graphql_client,
+            monitor_id=self._resolve_monitor_id(monitor_name, model_name),
+        )
+
     def get_all_monitors(self, model_id: str = None, model_name: str = None, monitor_category: str = None) -> List[dict]:
         """Retrieves all monitors for a specific model.
 
@@ -2850,13 +2870,7 @@ class Client:
             ArizeAPIException: If the monitor is not found or there is an API error
 
         """
-        result = GetMonitorQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            monitor_name=monitor_name,
-            space_id=self.space_id,
-        )
-        return result.to_dict()
+        return self._get_monitor_by_name(monitor_name, model_name).to_dict()
 
     def get_monitor_by_id(self, monitor_id: str) -> dict:
         """Retrieves a specific monitor by ID.
@@ -2900,13 +2914,7 @@ class Client:
             ArizeAPIException: If the monitor is not found or there is an API error
 
         """
-        monitor = GetMonitorQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            monitor_name=monitor_name,
-            space_id=self.space_id,
-        )
-        return self.monitor_url(monitor.id)
+        return self.monitor_url(self._resolve_monitor_id(monitor_name, model_name))
 
     def create_performance_monitor(
         self,
@@ -3333,13 +3341,7 @@ class Client:
             ArizeAPIException: If monitor deletion fails or there is an API error
 
         """
-        monitor = GetMonitorQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=model_name,
-            monitor_name=monitor_name,
-            space_id=self.space_id,
-        )
-        return self.delete_monitor_by_id(monitor_id=monitor.id)
+        return self.delete_monitor_by_id(monitor_id=self._resolve_monitor_id(monitor_name, model_name))
 
     def copy_monitor(
         self,
@@ -3367,12 +3369,7 @@ class Client:
             ArizeAPIException: If monitor creation fails or there is an API error
 
         """
-        current_monitor = GetMonitorQuery.run_graphql_query(
-            self._graphql_client,
-            model_name=current_model_name,
-            monitor_name=current_monitor_name,
-            space_id=self.space_id,
-        )
+        current_monitor = self._get_monitor_by_name(current_monitor_name, current_model_name)
 
         if new_monitor_name:
             kwargs["name"] = new_monitor_name

@@ -11,19 +11,24 @@ from arize_toolkit.queries.monitor_queries import (
     GetAllModelMonitorsQuery,
     GetModelMetricValueQuery,
     GetMonitorByIDQuery,
-    GetMonitorQuery,
+    GetMonitorIdByNameQuery,
 )
 from arize_toolkit.types import ComparisonOperator, DataQualityMetric, DimensionCategory, DriftMetric, MonitorCategory, PerformanceMetric
 
 
-class TestGetMonitorQuery:
-    def test_get_monitor_query_fetches_multiple_candidates(self):
-        """Test that the GraphQL query requests multiple candidates (first: 10) for exact matching."""
-        assert "first: 10" in GetMonitorQuery.graphql_query
-        assert "first: 1," not in GetMonitorQuery.graphql_query
+class TestGetMonitorIdByNameQuery:
+    def test_fetches_multiple_candidates(self):
+        """Search is a substring match, so several candidates are needed to find the exact name."""
+        assert "first: 10" in GetMonitorIdByNameQuery.graphql_query
+        assert "first: 1," not in GetMonitorIdByNameQuery.graphql_query
 
-    def test_get_monitor_query(self, gql_client):
-        """Test getting a monitor"""
+    def test_requests_only_id_and_name(self):
+        """Pulling the whole monitor for all ten candidates put this query over the API's complexity limit."""
+        assert "node{ id name" in GetMonitorIdByNameQuery.graphql_query
+        assert "monitorCategory" not in GetMonitorIdByNameQuery.graphql_query
+
+    def test_get_monitor_id_by_name(self, gql_client):
+        """Test resolving a monitor name to an id"""
         gql_client.execute.return_value = {
             "node": {
                 "monitors": {
@@ -32,9 +37,6 @@ class TestGetMonitorQuery:
                             "node": {
                                 "id": "test_monitor_id",
                                 "name": "test_monitor",
-                                "monitorCategory": "drift",
-                                "dimensionCategory": "featureLabel",
-                                "driftMetric": "psi",
                             }
                         }
                     ]
@@ -42,7 +44,7 @@ class TestGetMonitorQuery:
             }
         }
 
-        result = GetMonitorQuery.run_graphql_query(
+        result = GetMonitorIdByNameQuery.run_graphql_query(
             gql_client,
             model_name="test_model",
             monitor_name="test_monitor",
@@ -50,7 +52,7 @@ class TestGetMonitorQuery:
         )
 
         assert result.id == "test_monitor_id"
-        assert result.monitorCategory == MonitorCategory.drift
+        assert result.name == "test_monitor"
         gql_client.execute.assert_called_once()
 
     def test_get_monitor_query_by_id(self, gql_client):
@@ -138,7 +140,7 @@ class TestGetMonitorQuery:
             }
         }
 
-        result = GetMonitorQuery.run_graphql_query(
+        result = GetMonitorIdByNameQuery.run_graphql_query(
             gql_client,
             model_name="test_model",
             monitor_name="test_monitor",
@@ -169,10 +171,10 @@ class TestGetMonitorQuery:
         }
 
         with pytest.raises(
-            GetMonitorQuery.QueryException,
+            GetMonitorIdByNameQuery.QueryException,
             match="No monitor found with the exact name",
         ):
-            GetMonitorQuery.run_graphql_query(
+            GetMonitorIdByNameQuery.run_graphql_query(
                 gql_client,
                 space_id="space1",
                 model_name="model1",
@@ -209,10 +211,10 @@ class TestGetMonitorQuery:
         }
 
         with pytest.raises(
-            GetMonitorQuery.QueryException,
+            GetMonitorIdByNameQuery.QueryException,
             match="No monitor found with the exact name 'model-v1'",
         ):
-            GetMonitorQuery.run_graphql_query(
+            GetMonitorIdByNameQuery.run_graphql_query(
                 gql_client,
                 space_id="space1",
                 model_name="model1",
@@ -224,10 +226,10 @@ class TestGetMonitorQuery:
         gql_client.execute.return_value = {"node": {"monitors": {"edges": []}}}
 
         with pytest.raises(
-            GetMonitorQuery.QueryException,
+            GetMonitorIdByNameQuery.QueryException,
             match="No monitor found with the given name",
         ):
-            GetMonitorQuery.run_graphql_query(
+            GetMonitorIdByNameQuery.run_graphql_query(
                 gql_client,
                 space_id="space1",
                 model_name="model1",

@@ -360,6 +360,11 @@ class TestGetPromptQuery:
 
 
 class TestGetAllPromptVersionsQuery:
+    def test_query_addresses_the_prompt_by_id(self):
+        """Wrapping version history in a prompts search multiplied the cost past the API's limit."""
+        assert "$prompt_id: ID!" in GetAllPromptVersionsQuery.graphql_query
+        assert "prompts(" not in GetAllPromptVersionsQuery.graphql_query
+
     def test_get_all_prompt_versions(self, gql_client, mock_prompt_version):
         prompt_version2 = mock_prompt_version.copy()
         prompt_version2.update(
@@ -374,47 +379,29 @@ class TestGetAllPromptVersionsQuery:
         mock_response = [
             {
                 "node": {
-                    "prompts": {
-                        "edges": [
-                            {
-                                "node": {
-                                    "name": "test",
-                                    "versionHistory": {
-                                        "edges": [{"node": mock_prompt_version}],
-                                        "pageInfo": {
-                                            "hasNextPage": True,
-                                            "endCursor": "123",
-                                        },
-                                    },
-                                },
-                            }
-                        ]
-                    }
+                    "versionHistory": {
+                        "edges": [{"node": mock_prompt_version}],
+                        "pageInfo": {
+                            "hasNextPage": True,
+                            "endCursor": "123",
+                        },
+                    },
                 }
             },
             {
                 "node": {
-                    "prompts": {
-                        "edges": [
-                            {
-                                "node": {
-                                    "name": "test",
-                                    "versionHistory": {
-                                        "edges": [{"node": prompt_version2}],
-                                        "pageInfo": {
-                                            "hasNextPage": False,
-                                            "endCursor": None,
-                                        },
-                                    },
-                                }
-                            }
-                        ]
-                    }
+                    "versionHistory": {
+                        "edges": [{"node": prompt_version2}],
+                        "pageInfo": {
+                            "hasNextPage": False,
+                            "endCursor": None,
+                        },
+                    },
                 }
             },
         ]
         gql_client.execute.side_effect = mock_response
-        result = GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
+        result = GetAllPromptVersionsQuery.iterate_over_pages(gql_client, prompt_id="prompt_123")
         assert len(result) == 2
         prompt_version1 = result[0]
         assert prompt_version1.id == "123"
@@ -429,63 +416,27 @@ class TestGetAllPromptVersionsQuery:
         assert prompt_version2.provider == LLMIntegrationProvider.awsBedrock
         assert prompt_version2.modelName is None
 
-    def test_get_all_prompt_versions_failure(self, gql_client):
-        mock_response = {"node": {"prompts": {"edges": []}}}
-        gql_client.execute.return_value = mock_response
-        with pytest.raises(ArizeAPIException, match="Error in getting all prompt versions"):
-            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
-
-    def test_get_all_prompt_versions_no_exact_match(self, gql_client, mock_prompt_version):
-        """Search for 'test' but only 'test-v2' prompt is returned — should raise exception."""
+    def test_get_all_prompt_versions_no_versions(self, gql_client):
         mock_response = {
             "node": {
-                "prompts": {
-                    "edges": [
-                        {
-                            "node": {
-                                "name": "test-v2",
-                                "versionHistory": {
-                                    "edges": [{"node": mock_prompt_version}],
-                                    "pageInfo": {
-                                        "hasNextPage": False,
-                                        "endCursor": None,
-                                    },
-                                },
-                            },
-                        }
-                    ]
-                }
-            }
-        }
-        gql_client.execute.return_value = mock_response
-        with pytest.raises(ArizeAPIException, match="Error in getting all prompt versions") as e:
-            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
-        assert "No prompt found with the exact name 'test'" in str(e.value)
-
-    def test_get_all_prompt_versions_failure_no_prompts(self, gql_client):
-        mock_response = {
-            "node": {
-                "prompts": {
-                    "edges": [
-                        {
-                            "node": {
-                                "name": "test",
-                                "versionHistory": {
-                                    "pageInfo": {
-                                        "hasNextPage": False,
-                                        "endCursor": None,
-                                    },
-                                    "edges": [],
-                                },
-                            }
-                        }
-                    ]
+                "versionHistory": {
+                    "pageInfo": {
+                        "hasNextPage": False,
+                        "endCursor": None,
+                    },
+                    "edges": [],
                 }
             }
         }
         gql_client.execute.return_value = mock_response
         with pytest.raises(ArizeAPIException, match="No versions found"):
-            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, space_id="123", prompt_name="test")
+            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, prompt_id="prompt_123")
+
+    def test_get_all_prompt_versions_unknown_prompt(self, gql_client):
+        mock_response = {"node": {}}
+        gql_client.execute.return_value = mock_response
+        with pytest.raises(ArizeAPIException, match="Error in getting all prompt versions"):
+            GetAllPromptVersionsQuery.iterate_over_pages(gql_client, prompt_id="does_not_exist")
 
 
 class TestGetPromptVersionByIDQuery:

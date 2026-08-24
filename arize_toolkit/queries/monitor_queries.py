@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import List, Literal, Optional, Tuple
 
 from arize_toolkit.models import BasicMonitor, DataQualityMonitor, DriftMonitor, Monitor, PerformanceMonitor, TimeSeriesWithThresholdDataType
+from arize_toolkit.models.base_models import BaseNode
 from arize_toolkit.queries.basequery import ArizeAPIException, BaseQuery, BaseResponse, BaseVariables
 
 
@@ -49,16 +50,25 @@ class GetAllModelMonitorsQuery(BaseQuery):
         return monitors, pageInfo["hasNextPage"], pageInfo["endCursor"]
 
 
-class GetMonitorQuery(BaseQuery):
+class GetMonitorIdByNameQuery(BaseQuery):
+    """Resolve a monitor name to its id.
+
+    `search` is a substring match, so several monitors can come back for one name and
+    the exact match has to be picked client side. Only `id` and `name` are requested:
+    the API charges a connection as page size x fields per node, so pulling the full
+    monitor for all ten candidates costs over ten times as much as pulling it once by
+    id afterwards.
+    """
+
     graphql_query = (
         """
-        query getMonitorQuery($space_id: ID!, $model_name: String, $monitor_name: String){
+        query getMonitorIdByName($space_id: ID!, $model_name: String, $monitor_name: String){
             node(id:$space_id){
                 ...on Space{
                     monitors(first: 10, search: $monitor_name, modelName: $model_name){
                         edges{
                             node{ """
-        + Monitor.to_graphql_fields()
+        + BaseNode.to_graphql_fields()
         + """     }
                         }
                     }
@@ -67,7 +77,7 @@ class GetMonitorQuery(BaseQuery):
         }
     """
     )
-    query_description = "Get a monitor by name"
+    query_description = "Get the id of a monitor by name"
 
     class Variables(BaseVariables):
         space_id: str
@@ -77,7 +87,7 @@ class GetMonitorQuery(BaseQuery):
     class QueryException(ArizeAPIException):
         message: str = "Error getting a monitor by name"
 
-    class QueryResponse(Monitor):
+    class QueryResponse(BaseNode):
         pass
 
     @classmethod
