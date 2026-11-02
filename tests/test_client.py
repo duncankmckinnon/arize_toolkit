@@ -35,6 +35,14 @@ def client(mock_graphql_client):
     return Client(organization="test_org", space="test_space", arize_developer_key="test_token")
 
 
+def _monitor_lookup_responses(monitor: dict) -> list:
+    """Monitor lookups by name resolve the id first, then fetch the whole monitor by id."""
+    return [
+        {"node": {"monitors": {"edges": [{"node": {"id": monitor["id"], "name": monitor["name"]}}]}}},
+        {"node": monitor},
+    ]
+
+
 class TestClientInitialization:
     def test_client_initialization(self, mock_graphql_client):
         """Test client initialization with different parameters"""
@@ -3395,7 +3403,7 @@ class TestPromptsExtended:
         """Test getting all versions of a prompt"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        # Mock paginated response
+        # The prompt name is resolved to an id once, then every page is fetched by id.
         mock_responses = [
             {
                 "node": {
@@ -3403,32 +3411,21 @@ class TestPromptsExtended:
                         "edges": [
                             {
                                 "node": {
+                                    "id": "prompt_id",
                                     "name": "test_prompt",
-                                    "versionHistory": {
-                                        "pageInfo": {
-                                            "hasNextPage": True,
-                                            "endCursor": "cursor1",
-                                        },
-                                        "edges": [
-                                            {
-                                                "node": {
-                                                    "id": "version1",
-                                                    "commitMessage": "Initial version",
-                                                    "provider": "openai",
-                                                    "modelName": "gpt-4",
-                                                    "messages": [
-                                                        {
-                                                            "role": "system",
-                                                            "content": "Hello",
-                                                        }
-                                                    ],
-                                                    "inputVariableFormat": "f_string",
-                                                    "llmParameters": {"temperature": 0.5},
-                                                    "createdAt": "2024-01-01T00:00:00Z",
-                                                }
-                                            }
-                                        ],
-                                    },
+                                    "commitMessage": "Initial version",
+                                    "inputVariableFormat": "f_string",
+                                    "llmParameters": {"temperature": 0.7},
+                                    "provider": "openai",
+                                    "modelName": "gpt-4",
+                                    "createdAt": "2024-01-01T00:00:00Z",
+                                    "updatedAt": "2024-01-02T00:00:00Z",
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": "Hello",
+                                        }
+                                    ],
                                 }
                             }
                         ]
@@ -3437,39 +3434,59 @@ class TestPromptsExtended:
             },
             {
                 "node": {
-                    "prompts": {
+                    "versionHistory": {
+                        "pageInfo": {
+                            "hasNextPage": True,
+                            "endCursor": "cursor1",
+                        },
                         "edges": [
                             {
                                 "node": {
-                                    "name": "test_prompt",
-                                    "versionHistory": {
-                                        "pageInfo": {
-                                            "hasNextPage": False,
-                                            "endCursor": None,
-                                        },
-                                        "edges": [
-                                            {
-                                                "node": {
-                                                    "id": "version2",
-                                                    "commitMessage": "Updated version",
-                                                    "provider": "openai",
-                                                    "modelName": "gpt-4",
-                                                    "messages": [
-                                                        {
-                                                            "role": "system",
-                                                            "content": "Hello v2",
-                                                        }
-                                                    ],
-                                                    "inputVariableFormat": "f_string",
-                                                    "llmParameters": {"temperature": 0.7},
-                                                    "createdAt": "2024-01-02T00:00:00Z",
-                                                }
-                                            }
-                                        ],
-                                    },
+                                    "id": "version1",
+                                    "commitMessage": "Initial version",
+                                    "provider": "openai",
+                                    "modelName": "gpt-4",
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": "Hello",
+                                        }
+                                    ],
+                                    "inputVariableFormat": "f_string",
+                                    "llmParameters": {"temperature": 0.7},
+                                    "createdAt": "2024-01-01T00:00:00Z",
                                 }
                             }
-                        ]
+                        ],
+                    }
+                }
+            },
+            {
+                "node": {
+                    "versionHistory": {
+                        "pageInfo": {
+                            "hasNextPage": False,
+                            "endCursor": None,
+                        },
+                        "edges": [
+                            {
+                                "node": {
+                                    "id": "version2",
+                                    "commitMessage": "Updated version",
+                                    "provider": "openai",
+                                    "modelName": "gpt-4",
+                                    "messages": [
+                                        {
+                                            "role": "system",
+                                            "content": "Hello v2",
+                                        }
+                                    ],
+                                    "inputVariableFormat": "f_string",
+                                    "llmParameters": {"temperature": 0.7},
+                                    "createdAt": "2024-01-02T00:00:00Z",
+                                }
+                            }
+                        ],
                     }
                 }
             },
@@ -4062,57 +4079,49 @@ class TestMonitorsExtended:
         """Test getting a monitor by name"""
         mock_graphql_client.return_value.execute.reset_mock()
 
-        mock_graphql_client.return_value.execute.return_value = {
-            "node": {
-                "monitors": {
-                    "edges": [
-                        {
-                            "node": {
-                                "id": "monitor123",
-                                "name": "test_monitor",
-                                "monitorCategory": "performance",
-                                "status": "cleared",
-                                "isTriggered": False,
-                                "threshold": 0.95,
-                                "operator": "lessThan",
-                                "createdDate": "2024-03-20T10:00:00Z",
-                                "evaluationIntervalSeconds": 3600,
-                                "evaluatedAt": "2024-03-20T11:00:00Z",
-                                "creator": None,
-                                "notes": None,
-                                "contacts": None,
-                                "dimensionCategory": "prediction",
-                                "isManaged": True,
-                                "thresholdMode": "single",
-                                "threshold2": None,
-                                "notificationsEnabled": True,
-                                "updatedAt": "2024-03-20T11:00:00Z",
-                                "downtimeStart": None,
-                                "downtimeDurationHrs": None,
-                                "downtimeFrequencyDays": None,
-                                "scheduledRuntimeEnabled": False,
-                                "scheduledRuntimeCadenceSeconds": None,
-                                "scheduledRuntimeDaysOfWeek": None,
-                                "latestComputedValue": None,
-                                "performanceMetric": "f_1",
-                                "customMetric": None,
-                                "operator2": None,
-                                "stdDevMultiplier": None,
-                                "stdDevMultiplier2": None,
-                                "dynamicAutoThresholdEnabled": None,
-                                "driftMetric": None,
-                                "dataQualityMetric": None,
-                                "topKPercentileValue": None,
-                                "positiveClassValue": None,
-                                "metricAtRankingKValue": None,
-                                "primaryMetricWindow": None,
-                                "timeSeriesMetricType": "evaluationMetric",
-                            }
-                        }
-                    ]
-                }
+        mock_graphql_client.return_value.execute.side_effect = _monitor_lookup_responses(
+            {
+                "id": "monitor123",
+                "name": "test_monitor",
+                "monitorCategory": "performance",
+                "status": "cleared",
+                "isTriggered": False,
+                "threshold": 0.95,
+                "operator": "lessThan",
+                "createdDate": "2024-03-20T10:00:00Z",
+                "evaluationIntervalSeconds": 3600,
+                "evaluatedAt": "2024-03-20T11:00:00Z",
+                "creator": None,
+                "notes": None,
+                "contacts": None,
+                "dimensionCategory": "prediction",
+                "isManaged": True,
+                "thresholdMode": "single",
+                "threshold2": None,
+                "notificationsEnabled": True,
+                "updatedAt": "2024-03-20T11:00:00Z",
+                "downtimeStart": None,
+                "downtimeDurationHrs": None,
+                "downtimeFrequencyDays": None,
+                "scheduledRuntimeEnabled": False,
+                "scheduledRuntimeCadenceSeconds": None,
+                "scheduledRuntimeDaysOfWeek": None,
+                "latestComputedValue": None,
+                "performanceMetric": "f_1",
+                "customMetric": None,
+                "operator2": None,
+                "stdDevMultiplier": None,
+                "stdDevMultiplier2": None,
+                "dynamicAutoThresholdEnabled": None,
+                "driftMetric": None,
+                "dataQualityMetric": None,
+                "topKPercentileValue": None,
+                "positiveClassValue": None,
+                "metricAtRankingKValue": None,
+                "primaryMetricWindow": None,
+                "timeSeriesMetricType": "evaluationMetric",
             }
-        }
+        )
 
         monitor = client.get_monitor("test_model", "test_monitor")
         assert monitor["id"] == "monitor123"
@@ -4280,44 +4289,36 @@ class TestMonitorsExtended:
         # Mock get monitor and create copy
         mock_graphql_client.return_value.execute.side_effect = [
             # Get monitor - include fields that MonitorManager.performance_monitor expects
-            {
-                "node": {
-                    "monitors": {
-                        "edges": [
-                            {
-                                "node": {
-                                    "id": "monitor123",
-                                    "name": "test_monitor",
-                                    "monitorCategory": "performance",
-                                    "performanceMetric": None,  # Optional field, can be None
-                                    "customMetric": None,
-                                    "operator": "lessThan",
-                                    "operator2": None,
-                                    "threshold": 0.95,
-                                    "threshold2": None,
-                                    "thresholdMode": "single",
-                                    "status": "cleared",
-                                    "isTriggered": False,
-                                    "notes": None,
-                                    "positiveClassValue": None,
-                                    "metricAtRankingKValue": None,
-                                    "topKPercentileValue": None,
-                                    "stdDevMultiplier": None,
-                                    "stdDevMultiplier2": None,
-                                    "contacts": None,
-                                    "downtimeStart": None,
-                                    "downtimeDurationHrs": None,
-                                    "downtimeFrequencyDays": None,
-                                    "scheduledRuntimeEnabled": False,
-                                    "scheduledRuntimeCadenceSeconds": None,
-                                    "scheduledRuntimeDaysOfWeek": None,
-                                    "timeSeriesMetricType": "evaluationMetric",
-                                }
-                            }
-                        ]
-                    }
+            *_monitor_lookup_responses(
+                {
+                    "id": "monitor123",
+                    "name": "test_monitor",
+                    "monitorCategory": "performance",
+                    "performanceMetric": None,  # Optional field, can be None
+                    "customMetric": None,
+                    "operator": "lessThan",
+                    "operator2": None,
+                    "threshold": 0.95,
+                    "threshold2": None,
+                    "thresholdMode": "single",
+                    "status": "cleared",
+                    "isTriggered": False,
+                    "notes": None,
+                    "positiveClassValue": None,
+                    "metricAtRankingKValue": None,
+                    "topKPercentileValue": None,
+                    "stdDevMultiplier": None,
+                    "stdDevMultiplier2": None,
+                    "contacts": None,
+                    "downtimeStart": None,
+                    "downtimeDurationHrs": None,
+                    "downtimeFrequencyDays": None,
+                    "scheduledRuntimeEnabled": False,
+                    "scheduledRuntimeCadenceSeconds": None,
+                    "scheduledRuntimeDaysOfWeek": None,
+                    "timeSeriesMetricType": "evaluationMetric",
                 }
-            },
+            ),
             # Create copy
             {"createPerformanceMonitor": {"monitor": {"id": "new_monitor_id"}}},
         ]
@@ -4339,43 +4340,35 @@ class TestMonitorsExtended:
         # The kwargs update path has an implementation issue that would need to be fixed
         mock_graphql_client.return_value.execute.side_effect = [
             # Get monitor
-            {
-                "node": {
-                    "monitors": {
-                        "edges": [
-                            {
-                                "node": {
-                                    "id": "monitor123",
-                                    "name": "test_monitor",
-                                    "monitorCategory": "drift",
-                                    "driftMetric": "psi",
-                                    "dimensionCategory": "prediction",
-                                    "dimensionName": None,
-                                    "operator": "greaterThan",
-                                    "operator2": None,
-                                    "threshold": 0.1,
-                                    "threshold2": None,
-                                    "thresholdMode": "single",
-                                    "status": "cleared",
-                                    "isTriggered": False,
-                                    "notes": None,
-                                    "stdDevMultiplier": None,
-                                    "stdDevMultiplier2": None,
-                                    "contacts": None,
-                                    "downtimeStart": None,
-                                    "downtimeDurationHrs": None,
-                                    "downtimeFrequencyDays": None,
-                                    "scheduledRuntimeEnabled": False,
-                                    "scheduledRuntimeCadenceSeconds": None,
-                                    "scheduledRuntimeDaysOfWeek": None,
-                                    "primaryMetricWindow": None,
-                                    "timeSeriesMetricType": "evaluationMetric",
-                                }
-                            }
-                        ]
-                    }
+            *_monitor_lookup_responses(
+                {
+                    "id": "monitor123",
+                    "name": "test_monitor",
+                    "monitorCategory": "drift",
+                    "driftMetric": "psi",
+                    "dimensionCategory": "prediction",
+                    "dimensionName": None,
+                    "operator": "greaterThan",
+                    "operator2": None,
+                    "threshold": 0.1,
+                    "threshold2": None,
+                    "thresholdMode": "single",
+                    "status": "cleared",
+                    "isTriggered": False,
+                    "notes": None,
+                    "stdDevMultiplier": None,
+                    "stdDevMultiplier2": None,
+                    "contacts": None,
+                    "downtimeStart": None,
+                    "downtimeDurationHrs": None,
+                    "downtimeFrequencyDays": None,
+                    "scheduledRuntimeEnabled": False,
+                    "scheduledRuntimeCadenceSeconds": None,
+                    "scheduledRuntimeDaysOfWeek": None,
+                    "primaryMetricWindow": None,
+                    "timeSeriesMetricType": "evaluationMetric",
                 }
-            },
+            ),
             # Create copy
             {"createDriftMonitor": {"monitor": {"id": "new_drift_monitor_id"}}},
         ]

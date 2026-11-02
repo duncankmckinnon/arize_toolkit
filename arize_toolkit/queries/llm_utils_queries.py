@@ -137,27 +137,28 @@ class GetPromptVersionByIDQuery(BaseQuery):
 
 
 class GetAllPromptVersionsQuery(BaseQuery):
+    """Page through the version history of one prompt, addressed by id.
+
+    Searching by name here would wrap the version history in a `prompts` connection,
+    and the API multiplies a connection's cost by its page size. Ten candidate prompts
+    x ten versions each priced the query at 1831 against a limit of 1000, so the name
+    lookup happens once in the client and every page is fetched by id.
+    """
+
     graphql_query = (
         """
-    query getAllPromptVersions($space_id: ID!, $prompt_name: String!, $endCursor: String) {
-        node(id: $space_id) {
-            ... on Space {
-                prompts(search: $prompt_name, first: 10) {
+    query getAllPromptVersions($prompt_id: ID!, $endCursor: String) {
+        node(id: $prompt_id) {
+            ... on Prompt {
+                versionHistory(first: 10, after: $endCursor) {
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
                     edges {
-                        node {
-                            name
-                            versionHistory(first: 10, after: $endCursor) {
-                                pageInfo {
-                                    hasNextPage
-                                    endCursor
-                                }
-                                edges {
-                                    node {"""
+                        node {"""
         + PromptVersion.to_graphql_fields()
         + """}
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -168,8 +169,7 @@ class GetAllPromptVersionsQuery(BaseQuery):
     query_description = "Get all prompt versions"
 
     class Variables(BaseVariables):
-        space_id: str
-        prompt_name: str
+        prompt_id: str
 
     class QueryException(ArizeAPIException):
         message: str = "Error in getting all prompt versions"
@@ -179,19 +179,13 @@ class GetAllPromptVersionsQuery(BaseQuery):
 
     @classmethod
     def _parse_graphql_result(cls, result: dict) -> Tuple[List[BaseResponse], bool, Optional[str]]:
-        variables = result.pop("__query_variables__", {})
-        prompt_name = variables.get("prompt_name", "")
-        if not result["node"]["prompts"]["edges"] or len(result["node"]["prompts"]["edges"]) == 0:
-            cls.raise_exception("No prompts found")
-        edges = result["node"]["prompts"]["edges"]
-        prompt = cls._find_exact_name_match(edges, prompt_name)
-        if prompt is None:
-            cls.raise_exception(f"No prompt found with the exact name '{prompt_name}'")
-        version_edges = prompt["versionHistory"]["edges"]
+        result.pop("__query_variables__", {})
+        version_history = result["node"]["versionHistory"]
+        version_edges = version_history["edges"]
         if len(version_edges) == 0:
             cls.raise_exception("No versions found")
-        has_next_page = prompt["versionHistory"]["pageInfo"]["hasNextPage"]
-        end_cursor = prompt["versionHistory"]["pageInfo"]["endCursor"]
+        has_next_page = version_history["pageInfo"]["hasNextPage"]
+        end_cursor = version_history["pageInfo"]["endCursor"]
         versions = [cls.QueryResponse(**version["node"]) for version in version_edges]
         return versions, has_next_page, end_cursor
 
